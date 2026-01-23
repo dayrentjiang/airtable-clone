@@ -40,7 +40,7 @@ export function LoginForm() {
       </div>
 
       {/* Heading */}
-      <h1 className="mb-12 font-semibold text-gray-900 sm:text-[32px] md:text-3xl">
+      <h1 className="mb-12 text-2xl font-semibold text-gray-900 sm:text-3xl md:text-3xl">
         Sign in to Airtable
       </h1>
 
