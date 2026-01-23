@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { api } from "~/trpc/react";
 
@@ -8,8 +9,16 @@ export default function TestPage() {
   const [tableName, setTableName] = useState("");
   const [selectedBaseId, setSelectedBaseId] = useState<string | null>(null);
 
+  // ========== WORKSPACE QUERIES ==========
+  const { data: workspaces } = api.workspace.getAll.useQuery();
+  const defaultWorkspaceId = workspaces?.[0]?.id;
+
   // ========== BASE QUERIES ==========
-  const { data: bases, isLoading: basesLoading, refetch: refetchBases } = api.base.getAll.useQuery();
+  const {
+    data: bases,
+    isLoading: basesLoading,
+    refetch: refetchBases,
+  } = api.base.getAll.useQuery();
 
   const createBase = api.base.create.useMutation({
     onSuccess: () => {
@@ -26,9 +35,13 @@ export default function TestPage() {
   });
 
   // ========== TABLE QUERIES ==========
-  const { data: tables, isLoading: tablesLoading, refetch: refetchTables } = api.table.getAllByBase.useQuery(
+  const {
+    data: tables,
+    isLoading: tablesLoading,
+    refetch: refetchTables,
+  } = api.table.getAllByBase.useQuery(
     { baseId: selectedBaseId! },
-    { enabled: !!selectedBaseId } // Only run query when a base is selected
+    { enabled: !!selectedBaseId }, // Only run query when a base is selected
   );
 
   const createTable = api.table.create.useMutation({
@@ -58,7 +71,12 @@ export default function TestPage() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                if (baseName.trim()) createBase.mutate({ name: baseName });
+                if (baseName.trim() && defaultWorkspaceId) {
+                  createBase.mutate({
+                    name: baseName,
+                    workspaceId: defaultWorkspaceId,
+                  });
+                }
               }}
               className="flex gap-2"
             >
@@ -86,8 +104,10 @@ export default function TestPage() {
             {bases?.map((base) => (
               <li
                 key={base.id}
-                className={`flex items-center justify-between rounded p-3 cursor-pointer ${
-                  selectedBaseId === base.id ? "bg-purple-900" : "bg-gray-800 hover:bg-gray-700"
+                className={`flex cursor-pointer items-center justify-between rounded p-3 ${
+                  selectedBaseId === base.id
+                    ? "bg-purple-900"
+                    : "bg-gray-800 hover:bg-gray-700"
                 }`}
                 onClick={() => setSelectedBaseId(base.id)}
               >
@@ -127,7 +147,10 @@ export default function TestPage() {
                   onSubmit={(e) => {
                     e.preventDefault();
                     if (tableName.trim() && selectedBaseId) {
-                      createTable.mutate({ baseId: selectedBaseId, name: tableName });
+                      createTable.mutate({
+                        baseId: selectedBaseId,
+                        name: tableName,
+                      });
                     }
                   }}
                   className="flex gap-2"
@@ -151,7 +174,9 @@ export default function TestPage() {
 
               {/* List Tables */}
               {tablesLoading && <p className="text-gray-400">Loading...</p>}
-              {tables?.length === 0 && <p className="text-gray-400">No tables yet</p>}
+              {tables?.length === 0 && (
+                <p className="text-gray-400">No tables yet</p>
+              )}
               <ul className="space-y-2">
                 {tables?.map((table) => (
                   <li
@@ -177,9 +202,12 @@ export default function TestPage() {
       </div>
 
       {/* Back link */}
-      <a href="/" className="mt-8 inline-block text-purple-400 hover:text-purple-300">
+      <Link
+        href="/"
+        className="mt-8 inline-block text-purple-400 hover:text-purple-300"
+      >
         ← Back to Home
-      </a>
+      </Link>
     </div>
   );
 }

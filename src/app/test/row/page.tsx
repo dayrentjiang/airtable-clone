@@ -31,12 +31,12 @@ export default function RowTestPage() {
   const { data: tables, isLoading: tablesLoading } =
     api.table.getAllByBase.useQuery(
       { baseId: selectedBaseId! },
-      { enabled: !!selectedBaseId }
+      { enabled: !!selectedBaseId },
     );
 
   const { data: columns } = api.column.getAllByTable.useQuery(
     { tableId: selectedTableId! },
-    { enabled: !!selectedTableId }
+    { enabled: !!selectedTableId },
   );
 
   // ============================================
@@ -55,7 +55,7 @@ export default function RowTestPage() {
     {
       enabled: !!selectedTableId,
       getNextPageParam: (lastPage) => lastPage.nextCursor,
-    }
+    },
   );
 
   // Flatten all pages into a single array
@@ -105,18 +105,26 @@ export default function RowTestPage() {
   // Helper to get cell value
   const getCellValue = (
     rowData: Record<string, unknown>,
-    columnId: string
+    columnId: string,
   ): string => {
     const value = rowData[columnId];
     if (value === null || value === undefined) return "";
-    return String(value);
+    if (typeof value === "object") return JSON.stringify(value);
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      return String(value);
+    }
+    return "";
   };
 
   // Handle cell edit
   const handleCellClick = (
     rowId: string,
     columnId: string,
-    currentValue: string
+    currentValue: string,
   ) => {
     setEditingRowId(rowId);
     setEditingColumnId(columnId);
@@ -265,12 +273,17 @@ export default function RowTestPage() {
                     sampleData[col.id] = `Sample ${Date.now()}`;
                   }
                 });
-                createRow.mutate({ tableId: selectedTableId, data: sampleData });
+                createRow.mutate({
+                  tableId: selectedTableId,
+                  data: sampleData,
+                });
               }}
               disabled={createRow.isPending}
               className="rounded bg-blue-500 px-4 py-2 font-medium text-white hover:bg-blue-600 disabled:bg-gray-600"
             >
-              {createRow.isPending ? "Creating..." : "+ Add Row with Sample Data"}
+              {createRow.isPending
+                ? "Creating..."
+                : "+ Add Row with Sample Data"}
             </button>
           </div>
         </section>
@@ -328,7 +341,7 @@ export default function RowTestPage() {
                       {columns.map((col) => {
                         const cellValue = getCellValue(
                           row.data as Record<string, unknown>,
-                          col.id
+                          col.id,
                         );
                         const isEditing =
                           editingRowId === row.id && editingColumnId === col.id;
@@ -341,7 +354,9 @@ export default function RowTestPage() {
                             {isEditing ? (
                               <div className="flex gap-2">
                                 <input
-                                  type={col.type === "NUMBER" ? "number" : "text"}
+                                  type={
+                                    col.type === "NUMBER" ? "number" : "text"
+                                  }
                                   value={editValue}
                                   onChange={(e) => setEditValue(e.target.value)}
                                   onKeyDown={(e) => {
@@ -421,11 +436,16 @@ export default function RowTestPage() {
       {/* SECTION: Instructions */}
       {/* ============================================ */}
       <section className="rounded-lg border border-blue-300 bg-blue-900 p-6">
-        <h2 className="mb-4 text-xl font-semibold">How to Use This Test Page</h2>
+        <h2 className="mb-4 text-xl font-semibold">
+          How to Use This Test Page
+        </h2>
         <ol className="list-inside list-decimal space-y-2 text-sm">
           <li>Select a base from the left panel</li>
           <li>Select a table from the right panel</li>
-          <li>Click &quot;Add Empty Row&quot; or &quot;Add Row with Sample Data&quot;</li>
+          <li>
+            Click &quot;Add Empty Row&quot; or &quot;Add Row with Sample
+            Data&quot;
+          </li>
           <li>Click on any cell to edit its value</li>
           <li>Press Enter to save, Escape to cancel</li>
           <li>Click &quot;Load More Rows&quot; to test infinite pagination</li>
