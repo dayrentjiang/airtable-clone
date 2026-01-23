@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Input } from "~/app/_components/ui/Input";
 import { AuthButton } from "~/app/_components/ui/AuthButton";
+import { handleGoogleSignIn } from "./actions";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -14,8 +15,8 @@ export function LoginForm() {
     console.log("Email submitted:", email);
   };
 
-  const handleGoogleSignIn = () => {
-    window.location.href = "/api/auth/signin/google";
+  const onGoogleSignIn = async () => {
+    await handleGoogleSignIn();
   };
 
   const handleAppleSignIn = () => {
@@ -72,7 +73,7 @@ export function LoginForm() {
         </AuthButton>
 
         <AuthButton
-          onClick={handleGoogleSignIn}
+          onClick={onGoogleSignIn}
           icon={
             <Image
               src="/images/google_logo.png"
