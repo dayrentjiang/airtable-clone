@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { api } from "~/trpc/react";
 
@@ -201,7 +202,7 @@ export default function TableTestPage() {
       </div>
 
       <div style={{ marginTop: "30px" }}>
-        <a href="/">← Back to Home</a>
+        <Link href="/">← Back to Home</Link>
       </div>
     </div>
   );

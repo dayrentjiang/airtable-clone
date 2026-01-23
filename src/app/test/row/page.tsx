@@ -61,7 +61,11 @@ export default function RowTestPage() {
   ): string => {
     const value = rowData[columnId];
     if (value === null || value === undefined) return "";
-    return String(value);
+    if (typeof value === "object") return JSON.stringify(value);
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+      return String(value);
+    }
+    return "";
   };
 
   const handleSaveCell = () => {
