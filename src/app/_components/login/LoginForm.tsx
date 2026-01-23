@@ -69,7 +69,9 @@ export function LoginForm() {
       {/* OAuth Buttons */}
       <div className="space-y-4">
         <AuthButton onClick={handleSSOSignIn}>
-          Sign in with<span className="font-bold">Single Sign On</span>
+          <span>
+            Sign in with <span className="font-bold">Single Sign On</span>
+          </span>
         </AuthButton>
 
         <AuthButton
@@ -83,7 +85,9 @@ export function LoginForm() {
             />
           }
         >
-          Continue with <span className="font-bold">Google</span>
+          <span>
+            Continue with <span className="font-bold">Google</span>
+          </span>
         </AuthButton>
 
         <AuthButton
@@ -97,12 +101,14 @@ export function LoginForm() {
             />
           }
         >
-          Continue with <span className="font-bold">Apple ID</span>
+          <span>
+            Continue with <span className="font-bold">Apple ID</span>
+          </span>
         </AuthButton>
       </div>
 
       {/* Sign Up Link */}
-      <p className="mt-20 text-xs text-gray-600">
+      <p className="mt-20 text-xs font-medium text-gray-500">
         New to Airtable?{" "}
         <Link
           href="/signup"

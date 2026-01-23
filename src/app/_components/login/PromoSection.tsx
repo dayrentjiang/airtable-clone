@@ -8,7 +8,7 @@ export function PromoSection() {
         alt="Meet Omni, your AI collaborator for building custom apps"
         width={395}
         height={580}
-        className="max-h-[85vh] rounded-2xl object-contain"
+        className="max-h-[80vh] rounded-2xl object-contain transition-transform duration-250 hover:scale-102 hover:cursor-pointer"
       />
     </div>
   );
