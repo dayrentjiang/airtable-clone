@@ -1,19 +1,16 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { api } from "~/trpc/react";
 
-export default function TestPage() {
+export default function TableTestPage() {
   const [baseName, setBaseName] = useState("");
   const [tableName, setTableName] = useState("");
   const [selectedBaseId, setSelectedBaseId] = useState<string | null>(null);
 
-  // ========== WORKSPACE QUERIES ==========
   const { data: workspaces } = api.workspace.getAll.useQuery();
   const defaultWorkspaceId = workspaces?.[0]?.id;
 
-  // ========== BASE QUERIES ==========
   const {
     data: bases,
     isLoading: basesLoading,
@@ -34,14 +31,13 @@ export default function TestPage() {
     },
   });
 
-  // ========== TABLE QUERIES ==========
   const {
     data: tables,
     isLoading: tablesLoading,
     refetch: refetchTables,
   } = api.table.getAllByBase.useQuery(
     { baseId: selectedBaseId! },
-    { enabled: !!selectedBaseId }, // Only run query when a base is selected
+    { enabled: !!selectedBaseId },
   );
 
   const createTable = api.table.create.useMutation({
@@ -52,25 +48,33 @@ export default function TestPage() {
   });
 
   const deleteTable = api.table.delete.useMutation({
-    onSuccess: () => {
-      void refetchTables();
-    },
+    onSuccess: () => void refetchTables(),
   });
 
   return (
-    <div className="min-h-screen bg-gray-900 p-8 text-white">
-      <h1 className="mb-8 text-3xl font-bold">tRPC Test Page</h1>
+    <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
+      <h1>Table Test</h1>
 
-      <div className="grid grid-cols-2 gap-8">
-        {/* ========== LEFT: BASES ========== */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "40px",
+          marginTop: "30px",
+        }}
+      >
         <div>
-          <h2 className="mb-4 text-2xl font-semibold text-purple-400">Bases</h2>
-
-          {/* Create Base Form */}
-          <div className="mb-4 rounded-lg bg-gray-800 p-4">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
+          <h2>Bases</h2>
+          <div style={{ marginBottom: "20px" }}>
+            <input
+              type="text"
+              value={baseName}
+              onChange={(e) => setBaseName(e.target.value)}
+              placeholder="New base name"
+              style={{ padding: "8px", marginRight: "10px", width: "200px" }}
+            />
+            <button
+              onClick={() => {
                 if (baseName.trim() && defaultWorkspaceId) {
                   createBase.mutate({
                     name: baseName,
@@ -78,74 +82,73 @@ export default function TestPage() {
                   });
                 }
               }}
-              className="flex gap-2"
+              disabled={createBase.isPending}
             >
-              <input
-                type="text"
-                value={baseName}
-                onChange={(e) => setBaseName(e.target.value)}
-                placeholder="New base name..."
-                className="flex-1 rounded bg-gray-700 px-3 py-2 text-sm"
-              />
-              <button
-                type="submit"
-                disabled={createBase.isPending}
-                className="rounded bg-purple-600 px-4 py-2 text-sm hover:bg-purple-700"
-              >
-                {createBase.isPending ? "..." : "Create"}
-              </button>
-            </form>
+              {createBase.isPending ? "..." : "Create"}
+            </button>
           </div>
 
-          {/* List Bases */}
-          {basesLoading && <p className="text-gray-400">Loading...</p>}
-          {bases?.length === 0 && <p className="text-gray-400">No bases yet</p>}
-          <ul className="space-y-2">
-            {bases?.map((base) => (
-              <li
-                key={base.id}
-                className={`flex cursor-pointer items-center justify-between rounded p-3 ${
-                  selectedBaseId === base.id
-                    ? "bg-purple-900"
-                    : "bg-gray-800 hover:bg-gray-700"
-                }`}
-                onClick={() => setSelectedBaseId(base.id)}
+          {basesLoading && <p>Loading...</p>}
+          {bases?.length === 0 && <p>No bases yet</p>}
+
+          {bases?.map((base) => (
+            <div
+              key={base.id}
+              onClick={() => setSelectedBaseId(base.id)}
+              style={{
+                border: "1px solid #ccc",
+                padding: "15px",
+                marginBottom: "10px",
+                cursor: "pointer",
+                background: selectedBaseId === base.id ? "#f0f0f0" : "white",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
               >
                 <div>
-                  <p className="font-semibold">{base.name}</p>
-                  <p className="text-xs text-gray-400">{base.id}</p>
+                  <strong>{base.name}</strong>
+                  <div style={{ fontSize: "12px", color: "#666" }}>
+                    {base.id}
+                  </div>
                 </div>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     deleteBase.mutate({ id: base.id });
                   }}
-                  className="rounded bg-red-600 px-2 py-1 text-xs hover:bg-red-700"
                 >
                   Delete
                 </button>
-              </li>
-            ))}
-          </ul>
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* ========== RIGHT: TABLES ========== */}
         <div>
-          <h2 className="mb-4 text-2xl font-semibold text-green-400">
-            Tables {selectedBaseId && `(in selected base)`}
-          </h2>
-
-          {!selectedBaseId && (
-            <p className="text-gray-400">← Select a base to see its tables</p>
-          )}
+          <h2>Tables {selectedBaseId && "(in selected base)"}</h2>
+          {!selectedBaseId && <p>← Select a base to see its tables</p>}
 
           {selectedBaseId && (
             <>
-              {/* Create Table Form */}
-              <div className="mb-4 rounded-lg bg-gray-800 p-4">
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
+              <div style={{ marginBottom: "20px" }}>
+                <input
+                  type="text"
+                  value={tableName}
+                  onChange={(e) => setTableName(e.target.value)}
+                  placeholder="New table name"
+                  style={{
+                    padding: "8px",
+                    marginRight: "10px",
+                    width: "200px",
+                  }}
+                />
+                <button
+                  onClick={() => {
                     if (tableName.trim() && selectedBaseId) {
                       createTable.mutate({
                         baseId: selectedBaseId,
@@ -153,61 +156,53 @@ export default function TestPage() {
                       });
                     }
                   }}
-                  className="flex gap-2"
+                  disabled={createTable.isPending}
                 >
-                  <input
-                    type="text"
-                    value={tableName}
-                    onChange={(e) => setTableName(e.target.value)}
-                    placeholder="New table name..."
-                    className="flex-1 rounded bg-gray-700 px-3 py-2 text-sm"
-                  />
-                  <button
-                    type="submit"
-                    disabled={createTable.isPending}
-                    className="rounded bg-green-600 px-4 py-2 text-sm hover:bg-green-700"
-                  >
-                    {createTable.isPending ? "..." : "Create"}
-                  </button>
-                </form>
+                  {createTable.isPending ? "..." : "Create"}
+                </button>
               </div>
 
-              {/* List Tables */}
-              {tablesLoading && <p className="text-gray-400">Loading...</p>}
-              {tables?.length === 0 && (
-                <p className="text-gray-400">No tables yet</p>
-              )}
-              <ul className="space-y-2">
-                {tables?.map((table) => (
-                  <li
-                    key={table.id}
-                    className="flex items-center justify-between rounded bg-gray-800 p-3"
+              {tablesLoading && <p>Loading...</p>}
+              {tables?.length === 0 && <p>No tables yet</p>}
+
+              {tables?.map((table) => (
+                <div
+                  key={table.id}
+                  style={{
+                    border: "1px solid #ccc",
+                    padding: "15px",
+                    marginBottom: "10px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
                   >
                     <div>
-                      <p className="font-semibold">{table.name}</p>
-                      <p className="text-xs text-gray-400">{table.id}</p>
+                      <strong>{table.name}</strong>
+                      <div style={{ fontSize: "12px", color: "#666" }}>
+                        {table.id}
+                      </div>
                     </div>
                     <button
                       onClick={() => deleteTable.mutate({ id: table.id })}
-                      className="rounded bg-red-600 px-2 py-1 text-xs hover:bg-red-700"
                     >
                       Delete
                     </button>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                </div>
+              ))}
             </>
           )}
         </div>
       </div>
 
-      {/* Back link */}
-      <Link
-        href="/"
-        className="mt-8 inline-block text-purple-400 hover:text-purple-300"
-      >
-        ← Back to Home
-      </Link>
+      <div style={{ marginTop: "30px" }}>
+        <a href="/">← Back to Home</a>
+      </div>
     </div>
   );
 }

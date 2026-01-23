@@ -3,388 +3,262 @@
 import { useState } from "react";
 import { api } from "~/trpc/react";
 
-/**
- * TEST PAGE FOR COLUMN ROUTER
- *
- * This page demonstrates all column operations:
- * 1. Get all columns for a table
- * 2. Create a new column
- * 3. Update a column (rename/change type)
- * 4. Delete a column
- * 5. Reorder columns
- */
-
 export default function ColumnTestPage() {
-  // State for base and table selection
   const [selectedBaseId, setSelectedBaseId] = useState<string | null>(null);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
-
-  // State for column operations
-  const [columnName, setColumnName] = useState("New Column");
+  const [columnName, setColumnName] = useState("");
   const [columnType, setColumnType] = useState<"TEXT" | "NUMBER">("TEXT");
   const [updateColumnId, setUpdateColumnId] = useState("");
   const [updateName, setUpdateName] = useState("");
 
-  // ============================================
-  // QUERIES: Get bases and tables
-  // ============================================
   const { data: bases, isLoading: basesLoading } = api.base.getAll.useQuery();
-
   const { data: tables, isLoading: tablesLoading } =
     api.table.getAllByBase.useQuery(
       { baseId: selectedBaseId! },
       { enabled: !!selectedBaseId },
     );
-
-  // ============================================
-  // QUERY: Get all columns for a table
-  // ============================================
   const {
     data: columns,
     isLoading: columnsLoading,
-    error: columnsError,
     refetch: refetchColumns,
   } = api.column.getAllByTable.useQuery(
     { tableId: selectedTableId! },
-    { enabled: !!selectedTableId }, // Only fetch if tableId is provided
+    { enabled: !!selectedTableId },
   );
 
-  // ============================================
-  // MUTATION: Create a new column
-  // ============================================
   const createColumn = api.column.create.useMutation({
     onSuccess: () => {
-      alert("✅ Column created successfully!");
-      void refetchColumns(); // Refresh the columns list
-      setColumnName(""); // Clear input
-    },
-    onError: (error) => {
-      alert(`❌ Error: ${error.message}`);
+      setColumnName("");
+      void refetchColumns();
     },
   });
 
-  // ============================================
-  // MUTATION: Update a column
-  // ============================================
   const updateColumn = api.column.update.useMutation({
     onSuccess: () => {
-      alert("✅ Column updated successfully!");
-      void refetchColumns();
       setUpdateColumnId("");
       setUpdateName("");
-    },
-    onError: (error) => {
-      alert(`❌ Error: ${error.message}`);
+      void refetchColumns();
     },
   });
 
-  // ============================================
-  // MUTATION: Delete a column
-  // ============================================
   const deleteColumn = api.column.delete.useMutation({
-    onSuccess: () => {
-      alert("✅ Column deleted successfully!");
-      void refetchColumns();
-    },
-    onError: (error) => {
-      alert(`❌ Error: ${error.message}`);
-    },
+    onSuccess: () => void refetchColumns(),
   });
 
   return (
-    <div className="min-h-screen bg-gray-900 p-8 text-white">
-      <h1 className="mb-8 text-3xl font-bold">🧪 Column Router Test Page</h1>
+    <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
+      <h1>Column Test</h1>
 
-      <div className="mb-8 grid grid-cols-2 gap-8">
-        {/* ============================================ */}
-        {/* LEFT: BASES */}
-        {/* ============================================ */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "40px",
+          marginTop: "30px",
+        }}
+      >
         <div>
-          <h2 className="mb-4 text-2xl font-semibold text-purple-400">
-            1️⃣ Select a Base
-          </h2>
-
-          {basesLoading && <p className="text-gray-400">Loading...</p>}
+          <h2>1. Select Base</h2>
+          {basesLoading && <p>Loading...</p>}
           {bases?.length === 0 && (
-            <p className="text-gray-400">
-              No bases yet. Go to{" "}
-              <a href="/test/table" className="text-purple-400 underline">
-                /test/table
-              </a>{" "}
-              to create one.
+            <p>
+              No bases. <a href="/test/table">Create one</a>
             </p>
           )}
-          <ul className="space-y-2">
-            {bases?.map((base) => (
-              <li
-                key={base.id}
-                className={`cursor-pointer rounded p-3 ${
-                  selectedBaseId === base.id
-                    ? "bg-purple-900"
-                    : "bg-gray-800 hover:bg-gray-700"
-                }`}
-                onClick={() => {
-                  setSelectedBaseId(base.id);
-                  setSelectedTableId(null); // Reset table selection
-                }}
-              >
-                <p className="font-semibold">{base.name}</p>
-                <p className="text-xs text-gray-400">{base.id}</p>
-              </li>
-            ))}
-          </ul>
+
+          {bases?.map((base) => (
+            <div
+              key={base.id}
+              onClick={() => {
+                setSelectedBaseId(base.id);
+                setSelectedTableId(null);
+              }}
+              style={{
+                border: "1px solid #ccc",
+                padding: "15px",
+                marginBottom: "10px",
+                cursor: "pointer",
+                background: selectedBaseId === base.id ? "#f0f0f0" : "white",
+              }}
+            >
+              <strong>{base.name}</strong>
+              <div style={{ fontSize: "12px", color: "#666" }}>{base.id}</div>
+            </div>
+          ))}
         </div>
 
-        {/* ============================================ */}
-        {/* RIGHT: TABLES */}
-        {/* ============================================ */}
         <div>
-          <h2 className="mb-4 text-2xl font-semibold text-green-400">
-            2️⃣ Select a Table
-          </h2>
-
-          {!selectedBaseId && (
-            <p className="text-gray-400">← Select a base first</p>
-          )}
-
+          <h2>2. Select Table</h2>
+          {!selectedBaseId && <p>← Select a base first</p>}
           {selectedBaseId && (
             <>
-              {tablesLoading && <p className="text-gray-400">Loading...</p>}
+              {tablesLoading && <p>Loading...</p>}
               {tables?.length === 0 && (
-                <p className="text-gray-400">
-                  No tables yet. Create one at{" "}
-                  <a href="/test/table" className="text-green-400 underline">
-                    /test/table
-                  </a>
+                <p>
+                  No tables. <a href="/test/table">Create one</a>
                 </p>
               )}
-              <ul className="space-y-2">
-                {tables?.map((table) => (
-                  <li
-                    key={table.id}
-                    className={`cursor-pointer rounded p-3 ${
-                      selectedTableId === table.id
-                        ? "bg-green-900"
-                        : "bg-gray-800 hover:bg-gray-700"
-                    }`}
-                    onClick={() => setSelectedTableId(table.id)}
-                  >
-                    <p className="font-semibold">{table.name}</p>
-                    <p className="text-xs text-gray-400">{table.id}</p>
-                  </li>
-                ))}
-              </ul>
+
+              {tables?.map((table) => (
+                <div
+                  key={table.id}
+                  onClick={() => setSelectedTableId(table.id)}
+                  style={{
+                    border: "1px solid #ccc",
+                    padding: "15px",
+                    marginBottom: "10px",
+                    cursor: "pointer",
+                    background:
+                      selectedTableId === table.id ? "#f0f0f0" : "white",
+                  }}
+                >
+                  <strong>{table.name}</strong>
+                  <div style={{ fontSize: "12px", color: "#666" }}>
+                    {table.id}
+                  </div>
+                </div>
+              ))}
             </>
           )}
         </div>
       </div>
 
-      {/* ============================================ */}
-      {/* SECTION: Display Columns */}
-      {/* ============================================ */}
       {selectedTableId && (
-        <section className="mb-8 rounded-lg border border-blue-500 bg-gray-800 p-6">
-          <h2 className="mb-4 text-2xl font-semibold text-blue-400">
-            3️⃣ Current Columns
-          </h2>
+        <>
+          <section style={{ marginTop: "30px" }}>
+            <h2>3. Current Columns</h2>
+            {columnsLoading && <p>Loading...</p>}
+            {columns?.length === 0 && <p>No columns yet</p>}
 
-          {columnsLoading && (
-            <p className="text-gray-400">Loading columns...</p>
-          )}
-
-          {columnsError && (
-            <p className="text-red-400">Error: {columnsError.message}</p>
-          )}
-
-          {columns?.length === 0 && (
-            <p className="text-gray-400">No columns found. Create one below!</p>
-          )}
-
-          {columns && columns.length > 0 && (
-            <div className="space-y-2">
-              {columns.map((column) => (
+            {columns?.map((column) => (
+              <div
+                key={column.id}
+                style={{
+                  border: "1px solid #ccc",
+                  padding: "15px",
+                  marginBottom: "10px",
+                }}
+              >
                 <div
-                  key={column.id}
-                  className="flex items-center justify-between rounded border border-gray-600 bg-gray-700 p-4"
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
                 >
-                  <div className="flex-1">
-                    <p className="font-medium">{column.name}</p>
-                    <p className="text-sm text-gray-400">
-                      Type: {column.type} | Order: {column.order} | ID:{" "}
-                      {column.id}
-                    </p>
+                  <div>
+                    <strong>{column.name}</strong>
+                    <div style={{ fontSize: "12px", color: "#666" }}>
+                      Type: {column.type} | Order: {column.order}
+                    </div>
                   </div>
-
-                  <div className="flex gap-2">
-                    {/* Update Button */}
+                  <div>
                     <button
                       onClick={() => {
                         setUpdateColumnId(column.id);
                         setUpdateName(column.name);
                       }}
-                      className="rounded bg-yellow-500 px-3 py-1 text-sm text-white hover:bg-yellow-600"
+                      style={{ marginRight: "5px" }}
                     >
-                      ✏️ Edit
+                      Edit
                     </button>
-
-                    {/* Delete Button */}
                     <button
                       onClick={() => {
-                        if (confirm(`Delete column "${column.name}"?`)) {
+                        if (confirm("Delete?"))
                           deleteColumn.mutate({ id: column.id });
-                        }
                       }}
-                      disabled={deleteColumn.isPending}
-                      className="rounded bg-red-500 px-3 py-1 text-sm text-white hover:bg-red-600 disabled:bg-gray-600"
                     >
-                      🗑️ Delete
+                      Delete
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+              </div>
+            ))}
+          </section>
 
-      {/* ============================================ */}
-      {/* SECTION: Create Column */}
-      {/* ============================================ */}
-      {selectedTableId && (
-        <section className="mb-8 rounded-lg border border-green-500 bg-gray-800 p-6">
-          <h2 className="mb-4 text-2xl font-semibold text-green-400">
-            4️⃣ Create New Column
-          </h2>
-
-          <div className="space-y-4">
+          <section style={{ marginTop: "30px" }}>
+            <h2>4. Create Column</h2>
             <div>
-              <label className="mb-2 block text-sm font-medium">
-                Column Name
-              </label>
               <input
                 type="text"
                 value={columnName}
                 onChange={(e) => setColumnName(e.target.value)}
-                placeholder="e.g., Email, Age, Status"
-                className="w-full rounded border border-gray-600 bg-gray-700 px-4 py-2 focus:border-green-500 focus:outline-none"
+                placeholder="Column name"
+                style={{ padding: "8px", marginRight: "10px", width: "200px" }}
               />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium">
-                Column Type
-              </label>
               <select
                 value={columnType}
                 onChange={(e) =>
                   setColumnType(e.target.value as "TEXT" | "NUMBER")
                 }
-                className="w-full rounded border border-gray-600 bg-gray-700 px-4 py-2 focus:border-green-500 focus:outline-none"
+                style={{ padding: "8px", marginRight: "10px" }}
               >
                 <option value="TEXT">TEXT</option>
                 <option value="NUMBER">NUMBER</option>
               </select>
+              <button
+                onClick={() => {
+                  if (columnName.trim()) {
+                    createColumn.mutate({
+                      tableId: selectedTableId,
+                      name: columnName,
+                      type: columnType,
+                    });
+                  }
+                }}
+                disabled={createColumn.isPending}
+              >
+                {createColumn.isPending ? "Creating..." : "Create"}
+              </button>
             </div>
+          </section>
 
-            <button
-              onClick={() => {
-                if (!columnName.trim()) {
-                  alert("Please enter a column name");
-                  return;
-                }
-                createColumn.mutate({
-                  tableId: selectedTableId,
-                  name: columnName,
-                  type: columnType,
-                });
+          {updateColumnId && (
+            <section
+              style={{
+                marginTop: "30px",
+                border: "2px solid #f90",
+                padding: "20px",
               }}
-              disabled={createColumn.isPending}
-              className="w-full rounded bg-green-500 px-4 py-2 font-medium text-white hover:bg-green-600 disabled:bg-gray-600"
             >
-              {createColumn.isPending ? "Creating..." : "➕ Create Column"}
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* ============================================ */}
-      {/* SECTION: Update Column */}
-      {/* ============================================ */}
-      {updateColumnId && (
-        <section className="mb-8 rounded-lg border border-yellow-500 bg-gray-800 p-6">
-          <h2 className="mb-4 text-2xl font-semibold text-yellow-400">
-            5️⃣ Update Column
-          </h2>
-
-          <div className="space-y-4">
-            <div>
-              <label className="mb-2 block text-sm font-medium">New Name</label>
+              <h2>5. Update Column</h2>
               <input
                 type="text"
                 value={updateName}
                 onChange={(e) => setUpdateName(e.target.value)}
-                placeholder="Enter new name"
-                className="w-full rounded border border-gray-600 bg-gray-700 px-4 py-2 focus:border-yellow-500 focus:outline-none"
+                placeholder="New name"
+                style={{ padding: "8px", marginRight: "10px", width: "200px" }}
               />
-            </div>
-
-            <div className="flex gap-2">
               <button
                 onClick={() => {
-                  if (!updateName.trim()) {
-                    alert("Please enter a new name");
-                    return;
+                  if (updateName.trim()) {
+                    updateColumn.mutate({
+                      id: updateColumnId,
+                      name: updateName,
+                    });
                   }
-                  updateColumn.mutate({
-                    id: updateColumnId,
-                    name: updateName,
-                  });
                 }}
                 disabled={updateColumn.isPending}
-                className="flex-1 rounded bg-yellow-500 px-4 py-2 font-medium hover:bg-yellow-600 disabled:bg-gray-600"
+                style={{ marginRight: "5px" }}
               >
-                {updateColumn.isPending ? "Updating..." : "💾 Save Changes"}
+                {updateColumn.isPending ? "Saving..." : "Save"}
               </button>
-
               <button
                 onClick={() => {
                   setUpdateColumnId("");
                   setUpdateName("");
                 }}
-                className="rounded bg-gray-600 px-4 py-2 font-medium hover:bg-gray-500"
               >
-                ❌ Cancel
+                Cancel
               </button>
-            </div>
-          </div>
-        </section>
+            </section>
+          )}
+        </>
       )}
 
-      {/* ============================================ */}
-      {/* SECTION: Instructions */}
-      {/* ============================================ */}
-      <section className="rounded-lg border border-blue-300 bg-blue-900 p-6">
-        <h2 className="mb-4 text-xl font-semibold">
-          📖 How to Use This Test Page
-        </h2>
-        <ol className="list-inside list-decimal space-y-2 text-sm">
-          <li>Select a base from the left panel</li>
-          <li>Select a table from the right panel</li>
-          <li>You&apos;ll see the default columns created with the table</li>
-          <li>Try creating new columns with different names and types</li>
-          <li>Edit a column by clicking the &quot;✏️ Edit&quot; button</li>
-          <li>Delete columns using the &quot;🗑️ Delete&quot; button</li>
-        </ol>
-
-        <div className="mt-4">
-          <a
-            href="/test/table"
-            className="text-blue-300 underline hover:text-blue-200"
-          >
-            ← Back to Table Test Page
-          </a>
-        </div>
-      </section>
+      <div style={{ marginTop: "30px" }}>
+        <a href="/test/table">← Back to Table Test</a>
+      </div>
     </div>
   );
 }
