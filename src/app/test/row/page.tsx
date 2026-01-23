@@ -62,7 +62,11 @@ export default function RowTestPage() {
     const value = rowData[columnId];
     if (value === null || value === undefined) return "";
     if (typeof value === "object") return JSON.stringify(value);
-    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
       return String(value);
     }
     return "";

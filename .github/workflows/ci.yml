@@ -24,21 +24,15 @@ jobs:
 
       - name: Run linter
         env:
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET || 'dummy-secret-for-ci-only' }}
-          AUTH_GOOGLE_ID: ${{ secrets.AUTH_GOOGLE_ID || 'dummy-google-id' }}
-          AUTH_GOOGLE_SECRET: ${{ secrets.AUTH_GOOGLE_SECRET || 'dummy-google-secret' }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://user:password@localhost:5432/test' }}
+          SKIP_ENV_VALIDATION: true
         run: npm run lint
 
       - name: Run type check
         env:
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET || 'dummy-secret-for-ci-only' }}
-          AUTH_GOOGLE_ID: ${{ secrets.AUTH_GOOGLE_ID || 'dummy-google-id' }}
-          AUTH_GOOGLE_SECRET: ${{ secrets.AUTH_GOOGLE_SECRET || 'dummy-google-secret' }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://user:password@localhost:5432/test' }}
+          SKIP_ENV_VALIDATION: true
         run: npm run typecheck
 
       - name: Generate Prisma Client
-        run: npx prisma generate
         env:
-          DATABASE_URL: postgresql://user:password@localhost:5432/test
+          SKIP_ENV_VALIDATION: true
+        run: npx prisma generate
