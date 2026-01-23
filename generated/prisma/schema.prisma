@@ -15,17 +15,86 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Post {
-  id        Int      @id @default(autoincrement())
+// ==========================================
+// AIRTABLE CLONE MODELS
+// ==========================================
+
+// Base = A workspace containing multiple tables (like an Airtable "base")
+model Base {
+  id        String   @id @default(cuid())
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  createdBy   User   @relation(fields: [createdById], references: [id])
-  createdById String
+  // Owner of this base
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
 
-  @@index([name])
+  // A base contains multiple tables
+  tables Table[]
+
+  @@index([userId]) // Fast lookup: "Get all bases for this user"
 }
+
+// Table = A spreadsheet within a base
+model Table {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Which base this table belongs to
+  base   Base   @relation(fields: [baseId], references: [id], onDelete: Cascade)
+  baseId String
+
+  // A table has columns and rows
+  columns Column[]
+  rows    Row[]
+
+  @@index([baseId]) // Fast lookup: "Get all tables in this base"
+}
+
+// Column = Defines structure (name, type, order)
+model Column {
+  id        String     @id @default(cuid())
+  name      String
+  type      ColumnType @default(TEXT)
+  order     Int        @default(0) // Display order (left to right)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Which table this column belongs to
+  table   Table  @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  tableId String
+
+  @@index([tableId]) // Fast lookup: "Get all columns for this table"
+  @@index([tableId, order]) // Fast lookup: "Get columns in display order"
+}
+
+// Row = A record in the table, with data stored as JSONB
+model Row {
+  id        String   @id @default(cuid())
+  data      Json     @default("{}") // JSONB: { "columnId1": "value", "columnId2": 123 }
+  order     Int      @default(0) // Display order (top to bottom)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Which table this row belongs to
+  table   Table  @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  tableId String
+  // Note: GIN index on 'data' will be added via raw SQL migration for fast JSONB search
+
+  @@index([tableId]) // Fast lookup: "Get all rows for this table"
+  @@index([tableId, order]) // Fast pagination: "Get rows 100-200"
+}
+
+// Column types supported
+enum ColumnType {
+  TEXT
+  NUMBER
+}
+
+//To Implement --> View Table
 
 // Necessary for Next auth
 model Account {
@@ -63,7 +132,7 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
-  posts         Post[]
+  bases         Base[] // User's Airtable bases
 }
 
 model VerificationToken {
