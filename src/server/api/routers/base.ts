@@ -1,5 +1,11 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+
+/***ctx created in Created in src/server/api/trpc.ts
+ * ctx is an object that gets passed to every procedure.
+ * It contains shared data needed by your routes.
+ ***/
 
 export const baseRouter = createTRPCRouter({
   // ============================================
@@ -7,7 +13,7 @@ export const baseRouter = createTRPCRouter({
   // ============================================
   // Frontend: const { data: bases } = trpc.base.getAll.useQuery();
   // This is a "query" = read-only operation (like GET)
-  getAll: protectedProcedure.query(async ({ ctx }) => {
+  getAll: protectedProcedure.query(({ ctx }) => {
     // ctx.session.user.id = current logged-in user (from NextAuth)
     // ctx.db = Prisma client
     return ctx.db.base.findMany({
@@ -25,12 +31,14 @@ export const baseRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const base = await ctx.db.base.findFirst({
-        where: {
-          id: input.id,
-          userId: ctx.session.user.id, // Security: only owner can access
-        },
-        include: { tables: true }, // Also fetch related tables
+        where: { id: input.id, userId: ctx.session.user.id },
+        include: { tables: true },
       });
+
+      if (!base) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Base not found" });
+      }
+
       return base;
     }),
 
@@ -42,7 +50,7 @@ export const baseRouter = createTRPCRouter({
   // This is a "mutation" = write operation (like POST/PUT/DELETE)
   create: protectedProcedure
     .input(z.object({ name: z.string().min(1) }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(({ ctx, input }) => {
       return ctx.db.base.create({
         data: {
           name: input.name,
@@ -59,12 +67,14 @@ export const baseRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // Security: verify ownership before deleting
-      return ctx.db.base.deleteMany({
-        where: {
-          id: input.id,
-          userId: ctx.session.user.id,
-        },
+      const base = await ctx.db.base.findFirst({
+        where: { id: input.id, userId: ctx.session.user.id },
       });
+
+      if (!base) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Base not found" });
+      }
+
+      return ctx.db.base.delete({ where: { id: input.id } });
     }),
 });
