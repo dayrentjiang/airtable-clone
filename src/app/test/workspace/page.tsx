@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api } from "~/trpc/react";
+import { LogoutButton } from "~/app/_components/ui/LogoutButton";
 
 export default function WorkspaceTestPage() {
   const [name, setName] = useState("");
@@ -33,7 +34,10 @@ export default function WorkspaceTestPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 p-8 text-white">
-      <h1 className="mb-8 text-3xl font-bold">Workspace Test Page</h1>
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Workspace Test Page</h1>
+        <LogoutButton />
+      </div>
 
       {/* Create */}
       <section className="mb-8 rounded-lg border border-green-500 bg-gray-800 p-6">
