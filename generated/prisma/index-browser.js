@@ -121,12 +121,21 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.WorkspaceScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  starred: 'starred',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  userId: 'userId'
+};
+
 exports.Prisma.BaseScalarFieldEnum = {
   id: 'id',
   name: 'name',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
-  userId: 'userId'
+  workspaceId: 'workspaceId'
 };
 
 exports.Prisma.TableScalarFieldEnum = {
@@ -223,6 +232,7 @@ exports.ColumnType = exports.$Enums.ColumnType = {
 };
 
 exports.Prisma.ModelName = {
+  Workspace: 'Workspace',
   Base: 'Base',
   Table: 'Table',
   Column: 'Column',

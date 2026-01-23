@@ -3,107 +3,140 @@
 import { useState } from "react";
 import { api } from "~/trpc/react";
 
-export default function TestPage() {
+export default function BaseTestPage() {
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
   const [baseName, setBaseName] = useState("");
 
-  // Query: Get all bases
-  const { data: bases, isLoading, refetch } = api.base.getAll.useQuery();
+  // Query: Get all workspaces
+  const { data: workspaces, isLoading: workspacesLoading } = api.workspace.getAll.useQuery();
+
+  // Query: Get bases for selected workspace
+  const { data: bases, isLoading: basesLoading, refetch } = api.base.getAll.useQuery(
+    undefined,
+    { enabled: !!selectedWorkspaceId }
+  );
+
+  // Filter bases by selected workspace
+  const filteredBases = bases?.filter((b) => b.workspaceId === selectedWorkspaceId) ?? [];
 
   // Mutation: Create a base
   const createBase = api.base.create.useMutation({
     onSuccess: () => {
       setBaseName("");
-      void refetch(); // Refresh the list
+      void refetch();
     },
   });
 
   // Mutation: Delete a base
   const deleteBase = api.base.delete.useMutation({
-    onSuccess: () => {
-      void refetch();
-    },
+    onSuccess: () => void refetch(),
   });
 
   return (
     <div className="min-h-screen bg-gray-900 p-8 text-white">
-      <h1 className="mb-8 text-3xl font-bold">tRPC Test Page - Base Router</h1>
+      <h1 className="mb-8 text-3xl font-bold">Base Test Page</h1>
 
-      {/* Create Base Form */}
-      <div className="mb-8 rounded-lg bg-gray-800 p-6">
-        <h2 className="mb-4 text-xl font-semibold">Create Base</h2>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (baseName.trim()) {
-              createBase.mutate({ name: baseName });
-            }
-          }}
-          className="flex gap-4"
-        >
-          <input
-            type="text"
-            value={baseName}
-            onChange={(e) => setBaseName(e.target.value)}
-            placeholder="Enter base name..."
-            className="flex-1 rounded bg-gray-700 px-4 py-2 text-white"
-          />
-          <button
-            type="submit"
-            disabled={createBase.isPending}
-            className="rounded bg-purple-600 px-6 py-2 font-semibold hover:bg-purple-700 disabled:opacity-50"
-          >
-            {createBase.isPending ? "Creating..." : "Create Base"}
-          </button>
-        </form>
-        {createBase.error && (
-          <p className="mt-2 text-red-400">Error: {createBase.error.message}</p>
+      {/* Select Workspace */}
+      <section className="mb-8 rounded-lg border border-purple-500 bg-gray-800 p-6">
+        <h2 className="mb-4 text-xl font-semibold text-purple-400">1. Select Workspace</h2>
+
+        {workspacesLoading && <p className="text-gray-400">Loading...</p>}
+
+        {workspaces?.length === 0 && (
+          <p className="text-gray-400">
+            No workspaces yet. Create one at{" "}
+            <a href="/test/workspace" className="text-purple-400 underline">/test/workspace</a>
+          </p>
         )}
-      </div>
+
+        <div className="flex flex-wrap gap-2">
+          {workspaces?.map((ws) => (
+            <button
+              key={ws.id}
+              onClick={() => setSelectedWorkspaceId(ws.id)}
+              className={`rounded px-4 py-2 ${
+                selectedWorkspaceId === ws.id
+                  ? "bg-purple-600"
+                  : "bg-gray-700 hover:bg-gray-600"
+              }`}
+            >
+              {ws.starred && "⭐ "}{ws.name}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Create Base */}
+      {selectedWorkspaceId && (
+        <section className="mb-8 rounded-lg border border-green-500 bg-gray-800 p-6">
+          <h2 className="mb-4 text-xl font-semibold text-green-400">2. Create Base</h2>
+          <div className="flex gap-4">
+            <input
+              type="text"
+              value={baseName}
+              onChange={(e) => setBaseName(e.target.value)}
+              placeholder="Base name"
+              className="flex-1 rounded border border-gray-600 bg-gray-700 px-4 py-2"
+            />
+            <button
+              onClick={() => {
+                if (baseName.trim()) {
+                  createBase.mutate({ name: baseName, workspaceId: selectedWorkspaceId });
+                }
+              }}
+              disabled={!baseName || createBase.isPending}
+              className="rounded bg-green-500 px-4 py-2 font-medium hover:bg-green-600 disabled:bg-gray-600"
+            >
+              {createBase.isPending ? "Creating..." : "Create Base"}
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* List Bases */}
-      <div className="rounded-lg bg-gray-800 p-6">
-        <h2 className="mb-4 text-xl font-semibold">Your Bases</h2>
+      {selectedWorkspaceId && (
+        <section className="rounded-lg border border-blue-500 bg-gray-800 p-6">
+          <h2 className="mb-4 text-xl font-semibold text-blue-400">
+            3. Bases ({filteredBases.length})
+          </h2>
 
-        {isLoading && <p className="text-gray-400">Loading...</p>}
+          {basesLoading && <p className="text-gray-400">Loading...</p>}
 
-        {bases && bases.length === 0 && (
-          <p className="text-gray-400">No bases yet. Create one above!</p>
-        )}
+          {filteredBases.length === 0 && !basesLoading && (
+            <p className="text-gray-400">No bases in this workspace yet</p>
+          )}
 
-        {bases && bases.length > 0 && (
-          <ul className="space-y-2">
-            {bases.map((base) => (
-              <li
+          <div className="space-y-3">
+            {filteredBases.map((base) => (
+              <div
                 key={base.id}
-                className="flex items-center justify-between rounded bg-gray-700 p-4"
+                className="flex items-center justify-between rounded border border-gray-600 bg-gray-700 p-4"
               >
                 <div>
-                  <p className="font-semibold">{base.name}</p>
-                  <p className="text-sm text-gray-400">ID: {base.id}</p>
-                  <p className="text-sm text-gray-400">
-                    Created: {new Date(base.createdAt).toLocaleString()}
-                  </p>
+                  <p className="font-medium">{base.name}</p>
+                  <p className="text-xs text-gray-400">{base.id}</p>
                 </div>
                 <button
-                  onClick={() => deleteBase.mutate({ id: base.id })}
-                  disabled={deleteBase.isPending}
-                  className="rounded bg-red-600 px-4 py-2 text-sm hover:bg-red-700 disabled:opacity-50"
+                  onClick={() => {
+                    if (confirm("Delete this base?")) {
+                      deleteBase.mutate({ id: base.id });
+                    }
+                  }}
+                  className="rounded bg-red-500 px-3 py-1 text-sm hover:bg-red-600"
                 >
                   Delete
                 </button>
-              </li>
+              </div>
             ))}
-          </ul>
-        )}
-      </div>
+          </div>
+        </section>
+      )}
 
-      {/* Back link */}
-      <a
-        href="/"
-        className="mt-8 inline-block text-purple-400 hover:text-purple-300"
-      >
-        ← Back to Home
-      </a>
+      {/* Links */}
+      <div className="mt-8 space-x-4">
+        <a href="/test/workspace" className="text-blue-300 underline">Workspace Test</a>
+        <a href="/test/table" className="text-blue-300 underline">Table Test</a>
+      </div>
     </div>
   );
 }

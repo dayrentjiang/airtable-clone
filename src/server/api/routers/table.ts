@@ -7,7 +7,10 @@ export const tableRouter = createTRPCRouter({
     .input(z.object({ baseId: z.string() }))
     .query(async ({ ctx, input }) => {
       const base = await ctx.db.base.findFirst({
-        where: { id: input.baseId, userId: ctx.session.user.id },
+        where: {
+          id: input.baseId,
+          workspace: { userId: ctx.session.user.id },
+        },
       });
 
       if (!base) {
@@ -26,12 +29,12 @@ export const tableRouter = createTRPCRouter({
       const table = await ctx.db.table.findFirst({
         where: { id: input.id },
         include: {
-          base: true,
+          base: { include: { workspace: true } },
           columns: { orderBy: { order: "asc" } },
         },
       });
 
-      if (!table || table.base.userId !== ctx.session.user.id) {
+      if (!table || table.base.workspace.userId !== ctx.session.user.id) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Table not found" });
       }
 
@@ -39,13 +42,18 @@ export const tableRouter = createTRPCRouter({
     }),
 
   create: protectedProcedure
-    .input(z.object({
-      baseId: z.string(),
-      name: z.string().min(1),
-    }))
+    .input(
+      z.object({
+        baseId: z.string(),
+        name: z.string().min(1),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const base = await ctx.db.base.findFirst({
-        where: { id: input.baseId, userId: ctx.session.user.id },
+        where: {
+          id: input.baseId,
+          workspace: { userId: ctx.session.user.id },
+        },
       });
 
       if (!base) {
@@ -73,10 +81,10 @@ export const tableRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const table = await ctx.db.table.findFirst({
         where: { id: input.id },
-        include: { base: true },
+        include: { base: { include: { workspace: true } } },
       });
 
-      if (!table || table.base.userId !== ctx.session.user.id) {
+      if (!table || table.base.workspace.userId !== ctx.session.user.id) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Table not found" });
       }
 

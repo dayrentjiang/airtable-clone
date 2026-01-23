@@ -1,3 +1,4 @@
+import { workspaceRouter } from "~/server/api/routers/workspace";
 import { baseRouter } from "~/server/api/routers/base";
 import { tableRouter } from "~/server/api/routers/table";
 import { columnRouter } from "~/server/api/routers/column";
@@ -10,6 +11,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
+  workspace: workspaceRouter,
   base: baseRouter,
   table: tableRouter,
   column: columnRouter,

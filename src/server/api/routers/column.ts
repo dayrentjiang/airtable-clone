@@ -4,127 +4,86 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 /**
  * COLUMN ROUTER
- * 
- * This handles all operations related to columns:
- * - Creating new columns dynamically
- * - Updating column names/types
- * - Deleting columns
- * - Reordering columns
  */
 
 export const columnRouter = createTRPCRouter({
-  // ============================================
-  // GET ALL COLUMNS FOR A TABLE
-  // ============================================
-  // Frontend: const { data: columns } = trpc.column.getAllByTable.useQuery({ tableId: "xxx" });
-  // Returns columns sorted by their display order (left to right)
+  // Get all columns for a table
   getAllByTable: protectedProcedure
-    .input(z.object({ 
-      tableId: z.string() 
-    }))
+    .input(z.object({ tableId: z.string() }))
     .query(async ({ ctx, input }) => {
-      // Step 1: Verify the table exists and user owns it
       const table = await ctx.db.table.findFirst({
         where: { id: input.tableId },
-        include: { base: true },
+        include: { base: { include: { workspace: true } } },
       });
 
-      if (!table || table.base.userId !== ctx.session.user.id) {
-        throw new TRPCError({ 
-          code: "NOT_FOUND", 
-          message: "Table not found" 
-        });
+      if (!table || table.base.workspace.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Table not found" });
       }
 
-      // Step 2: Return all columns in display order
       return ctx.db.column.findMany({
         where: { tableId: input.tableId },
-        orderBy: { order: "asc" }, // Left to right order
+        orderBy: { order: "asc" },
       });
     }),
 
-  // ============================================
-  // CREATE A NEW COLUMN
-  // ============================================
-  // Frontend: const createColumn = trpc.column.create.useMutation();
-  //           createColumn.mutate({ 
-  //             tableId: "xxx", 
-  //             name: "Email", 
-  //             type: "TEXT" 
-  //           });
+  // Create a new column
   create: protectedProcedure
-    .input(z.object({
-      tableId: z.string(),
-      name: z.string().min(1),
-      type: z.enum(["TEXT", "NUMBER"]), // Must match Prisma enum
-    }))
+    .input(
+      z.object({
+        tableId: z.string(),
+        name: z.string().min(1),
+        type: z.enum(["TEXT", "NUMBER"]),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
-      // Step 1: Verify table exists and user owns it
       const table = await ctx.db.table.findFirst({
         where: { id: input.tableId },
-        include: { base: true },
+        include: { base: { include: { workspace: true } } },
       });
 
-      if (!table || table.base.userId !== ctx.session.user.id) {
-        throw new TRPCError({ 
-          code: "NOT_FOUND", 
-          message: "Table not found" 
-        });
+      if (!table || table.base.workspace.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Table not found" });
       }
 
-      // Step 2: Find the highest order number (rightmost column)
       const lastColumn = await ctx.db.column.findFirst({
         where: { tableId: input.tableId },
-        orderBy: { order: "desc" }, // Get the highest order
+        orderBy: { order: "desc" },
         select: { order: true },
       });
 
-      // Step 3: Create the new column at the end
       const newOrder = (lastColumn?.order ?? -1) + 1;
-      
+
       return ctx.db.column.create({
         data: {
           name: input.name,
           type: input.type,
           tableId: input.tableId,
-          order: newOrder, // Place at the end
+          order: newOrder,
         },
       });
     }),
 
-  // ============================================
-  // UPDATE A COLUMN
-  // ============================================
-  // Frontend: const updateColumn = trpc.column.update.useMutation();
-  //           updateColumn.mutate({ 
-  //             id: "xxx", 
-  //             name: "Full Name" 
-  //           });
+  // Update a column
   update: protectedProcedure
-    .input(z.object({
-      id: z.string(),
-      name: z.string().min(1).optional(),
-      type: z.enum(["TEXT", "NUMBER"]).optional(),
-    }))
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().min(1).optional(),
+        type: z.enum(["TEXT", "NUMBER"]).optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
-      // Step 1: Verify column exists and user owns it
       const column = await ctx.db.column.findFirst({
         where: { id: input.id },
-        include: { 
-          table: { 
-            include: { base: true } 
-          } 
+        include: {
+          table: { include: { base: { include: { workspace: true } } } },
         },
       });
 
-      if (!column || column.table.base.userId !== ctx.session.user.id) {
-        throw new TRPCError({ 
-          code: "NOT_FOUND", 
-          message: "Column not found" 
-        });
+      if (!column || column.table.base.workspace.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Column not found" });
       }
 
-      // Step 2: Update the column
       return ctx.db.column.update({
         where: { id: input.id },
         data: {
@@ -134,45 +93,21 @@ export const columnRouter = createTRPCRouter({
       });
     }),
 
-  // ============================================
-  // DELETE A COLUMN
-  // ============================================
-  // Frontend: const deleteColumn = trpc.column.delete.useMutation();
-  //           deleteColumn.mutate({ id: "xxx" });
-  // 
-  // ⚠️ NOTE: When a column is deleted, all data for that column 
-  // in the Row.data JSONB is orphaned (not automatically cleaned).
-  // For 100k+ rows, it's faster to leave orphaned data than to 
-  // update every row. You could add cleanup in a background job.
+  // Delete a column
   delete: protectedProcedure
-    .input(z.object({ 
-      id: z.string() 
-    }))
+    .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // Step 1: Verify column exists and user owns it
       const column = await ctx.db.column.findFirst({
         where: { id: input.id },
-        include: { 
-          table: { 
-            include: { base: true } 
-          } 
+        include: {
+          table: { include: { base: { include: { workspace: true } } } },
         },
       });
 
-      if (!column || column.table.base.userId !== ctx.session.user.id) {
-        throw new TRPCError({ 
-          code: "NOT_FOUND", 
-          message: "Column not found" 
-        });
+      if (!column || column.table.base.workspace.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Column not found" });
       }
 
-      // Step 2: Delete the column
-      // Cascade will NOT delete row data (it's JSONB, not relational)
-      return ctx.db.column.delete({
-        where: { id: input.id },
-      });
+      return ctx.db.column.delete({ where: { id: input.id } });
     }),
-
-  // TODO: Add column reordering later
-  // This is a nice-to-have feature, not essential for MVP
 });

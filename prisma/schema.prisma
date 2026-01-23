@@ -19,21 +19,39 @@ datasource db {
 // AIRTABLE CLONE MODELS
 // ==========================================
 
-// Base = A workspace containing multiple tables (like an Airtable "base")
+// Workspace = A folder containing multiple bases (like an Airtable "workspace")
+model Workspace {
+    id        String   @id @default(cuid())
+    name      String
+    starred   Boolean  @default(false)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Owner of this workspace
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId String
+
+    // A workspace contains multiple bases
+    bases Base[]
+
+    @@index([userId]) // Fast lookup: "Get all workspaces for this user"
+}
+
+// Base = A container for multiple tables (like an Airtable "base")
 model Base {
     id        String   @id @default(cuid())
     name      String
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    // Owner of this base
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-    userId String
+    // Which workspace this base belongs to
+    workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    workspaceId String
 
     // A base contains multiple tables
     tables Table[]
 
-    @@index([userId]) // Fast lookup: "Get all bases for this user"
+    @@index([workspaceId]) // Fast lookup: "Get all bases in this workspace"
 }
 
 // Table = A spreadsheet within a base
@@ -125,14 +143,14 @@ model Session {
 }
 
 model User {
-    id            String    @id @default(cuid())
+    id            String      @id @default(cuid())
     name          String?
-    email         String?   @unique
+    email         String?     @unique
     emailVerified DateTime?
     image         String?
     accounts      Account[]
     sessions      Session[]
-    bases         Base[]    // User's Airtable bases
+    workspaces    Workspace[] // User's workspaces
 }
 
 model VerificationToken {

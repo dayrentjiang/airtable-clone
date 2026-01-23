@@ -17,7 +17,11 @@ export const baseRouter = createTRPCRouter({
     // ctx.session.user.id = current logged-in user (from NextAuth)
     // ctx.db = Prisma client
     return ctx.db.base.findMany({
-      where: { userId: ctx.session.user.id },
+      where: {
+        workspace: {
+          userId: ctx.session.user.id,
+        },
+      },
       orderBy: { createdAt: "desc" },
     });
   }),
@@ -31,7 +35,12 @@ export const baseRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const base = await ctx.db.base.findFirst({
-        where: { id: input.id, userId: ctx.session.user.id },
+        where: {
+          id: input.id,
+          workspace: {
+            userId: ctx.session.user.id,
+          },
+        },
         include: { tables: true },
       });
 
@@ -46,15 +55,35 @@ export const baseRouter = createTRPCRouter({
   // CREATE A NEW BASE
   // ============================================
   // Frontend: const createBase = trpc.base.create.useMutation();
-  //           createBase.mutate({ name: "My Base" });
+  //           createBase.mutate({ name: "My Base", workspaceId: "xxx" });
   // This is a "mutation" = write operation (like POST/PUT/DELETE)
   create: protectedProcedure
-    .input(z.object({ name: z.string().min(1) }))
-    .mutation(({ ctx, input }) => {
+    .input(
+      z.object({
+        name: z.string().min(1),
+        workspaceId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify the workspace belongs to the user
+      const workspace = await ctx.db.workspace.findFirst({
+        where: {
+          id: input.workspaceId,
+          userId: ctx.session.user.id,
+        },
+      });
+
+      if (!workspace) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Workspace not found",
+        });
+      }
+
       return ctx.db.base.create({
         data: {
           name: input.name,
-          userId: ctx.session.user.id,
+          workspaceId: input.workspaceId,
         },
       });
     }),
@@ -68,7 +97,12 @@ export const baseRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const base = await ctx.db.base.findFirst({
-        where: { id: input.id, userId: ctx.session.user.id },
+        where: {
+          id: input.id,
+          workspace: {
+            userId: ctx.session.user.id,
+          },
+        },
       });
 
       if (!base) {
