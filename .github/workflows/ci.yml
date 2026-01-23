@@ -24,12 +24,18 @@ jobs:
 
       - name: Run linter
         env:
-          SKIP_ENV_VALIDATION: true
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          AUTH_GOOGLE_ID: ${{ secrets.AUTH_GOOGLE_ID }}
+          AUTH_GOOGLE_SECRET: ${{ secrets.AUTH_GOOGLE_SECRET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run lint
 
       - name: Run type check
         env:
-          SKIP_ENV_VALIDATION: true
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          AUTH_GOOGLE_ID: ${{ secrets.AUTH_GOOGLE_ID }}
+          AUTH_GOOGLE_SECRET: ${{ secrets.AUTH_GOOGLE_SECRET }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: npm run typecheck
 
       - name: Generate Prisma Client
