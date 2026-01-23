@@ -17,7 +17,7 @@ export function middleware(request: NextRequest) {
 
   // For all other routes, check if user has session token
   const sessionToken =
-    request.cookies.get("authjs.session-token")?.value ||
+    request.cookies.get("authjs.session-token")?.value ??
     request.cookies.get("__Secure-authjs.session-token")?.value;
 
   // If no session token, redirect to login

@@ -8,7 +8,7 @@ export default async function Home() {
 
   // If user is logged in, redirect to dashboard or workspace
   if (session) {
-    redirect("/test/workspace");
+    redirect("/workspace");
   }
 
   // Show login page if not authenticated

@@ -1,0 +1,38 @@
+# Don't upload these to Vercel
+
+.env
+.env*.local
+/node_modules
+/.next
+/out
+.DS_Store
+*.log
+
+# Development files
+
+/prisma/db.sqlite
+/prisma/db.sqlite-journal
+
+# Git
+
+.git
+.gitignore
+
+# IDE
+
+.vscode
+.idea
+
+# Testing
+
+/coverage
+_.test.ts
+_.test.tsx
+_.spec.ts
+_.spec.tsx
+
+# Documentation (optional - comment out if you want these deployed)
+
+# \*.md
+
+# !README.md
