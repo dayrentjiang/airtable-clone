@@ -5,16 +5,18 @@ export function middleware(request: NextRequest) {
   // Get the pathname
   const { pathname } = request.nextUrl;
 
-  // Allow public paths
-  const publicPaths = ["/", "/api/auth"];
-  const isPublicPath = publicPaths.some((path) => pathname.startsWith(path));
-
-  if (isPublicPath) {
+  // Allow API routes to handle their own auth
+  if (pathname.startsWith("/api")) {
     return NextResponse.next();
   }
 
-  // Check if user has session token
-  const sessionToken = 
+  // Allow root path (login page)
+  if (pathname === "/") {
+    return NextResponse.next();
+  }
+
+  // For all other routes, check if user has session token
+  const sessionToken =
     request.cookies.get("authjs.session-token")?.value ||
     request.cookies.get("__Secure-authjs.session-token")?.value;
 
@@ -31,6 +33,6 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Match all routes except static files
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|images).*)",
+    "/((?!_next/static|_next/image|favicon.ico|images).*)",
   ],
 };
