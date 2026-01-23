@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api } from "~/trpc/react";
+import { LogoutButton } from "~/app/_components/ui/LogoutButton";
 
 export default function WorkspaceTestPage() {
   const [name, setName] = useState("");
@@ -9,7 +10,11 @@ export default function WorkspaceTestPage() {
   const [editName, setEditName] = useState("");
 
   // Query
-  const { data: workspaces, isLoading, refetch } = api.workspace.getAll.useQuery();
+  const {
+    data: workspaces,
+    isLoading,
+    refetch,
+  } = api.workspace.getAll.useQuery();
 
   // Mutations
   const createWorkspace = api.workspace.create.useMutation({
@@ -33,11 +38,16 @@ export default function WorkspaceTestPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 p-8 text-white">
-      <h1 className="mb-8 text-3xl font-bold">Workspace Test Page</h1>
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Workspace Test Page</h1>
+        <LogoutButton />
+      </div>
 
       {/* Create */}
       <section className="mb-8 rounded-lg border border-green-500 bg-gray-800 p-6">
-        <h2 className="mb-4 text-xl font-semibold text-green-400">Create Workspace</h2>
+        <h2 className="mb-4 text-xl font-semibold text-green-400">
+          Create Workspace
+        </h2>
         <div className="flex gap-4">
           <input
             type="text"
@@ -83,7 +93,9 @@ export default function WorkspaceTestPage() {
                     className="flex-1 rounded border border-gray-500 bg-gray-600 px-3 py-1"
                   />
                   <button
-                    onClick={() => updateWorkspace.mutate({ id: ws.id, name: editName })}
+                    onClick={() =>
+                      updateWorkspace.mutate({ id: ws.id, name: editName })
+                    }
                     className="rounded bg-green-500 px-3 py-1 text-sm"
                   >
                     Save
@@ -106,7 +118,12 @@ export default function WorkspaceTestPage() {
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => updateWorkspace.mutate({ id: ws.id, starred: !ws.starred })}
+                      onClick={() =>
+                        updateWorkspace.mutate({
+                          id: ws.id,
+                          starred: !ws.starred,
+                        })
+                      }
                       className="rounded bg-yellow-500 px-3 py-1 text-sm hover:bg-yellow-600"
                     >
                       {ws.starred ? "Unstar" : "Star"}
@@ -140,9 +157,15 @@ export default function WorkspaceTestPage() {
 
       {/* Links */}
       <div className="mt-8 space-x-4">
-        <a href="/test/base" className="text-blue-300 underline">Base Test</a>
-        <a href="/test/table" className="text-blue-300 underline">Table Test</a>
-        <a href="/test/row" className="text-blue-300 underline">Row Test</a>
+        <a href="/test/base" className="text-blue-300 underline">
+          Base Test
+        </a>
+        <a href="/test/table" className="text-blue-300 underline">
+          Table Test
+        </a>
+        <a href="/test/row" className="text-blue-300 underline">
+          Row Test
+        </a>
       </div>
     </div>
   );

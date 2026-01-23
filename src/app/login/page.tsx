@@ -1,17 +1,7 @@
-import { redirect } from "next/navigation";
-import { auth } from "~/server/auth";
 import { LoginForm } from "~/app/_components/login/LoginForm";
 import { PromoSection } from "~/app/_components/login/PromoSection";
 
-export default async function Home() {
-  const session = await auth();
-
-  // If user is logged in, redirect to dashboard or workspace
-  if (session) {
-    redirect("/test/workspace");
-  }
-
-  // Show login page if not authenticated
+export default function LoginPage() {
   return (
     <div className="flex min-h-screen bg-white">
       {/* Left section - Login Form */}
