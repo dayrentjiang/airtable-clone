@@ -31,18 +31,19 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     },
   );
 
-  // Fetch view config - refetch on mount
+  // Fetch view config - refetch on mount to always get fresh data
   const { data: view } = api.view.getById.useQuery(
     { id: viewId },
     {
       refetchOnMount: true,
       refetchOnWindowFocus: false,
+      staleTime: 0, // Always refetch when switching views
+      gcTime: 0, // Don't cache
     },
   );
 
   // Use infiniteWithView with TanStack infinite query
-  // Using 150 rows per page - optimal for desktop grids (Airtable's internal range)
-  // Reduces network requests by ~3x compared to 50, better for scale
+  // Always refetch when switching views to get fresh data
   const {
     data,
     isLoading: rowsLoading,
@@ -55,10 +56,8 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
       refetchOnMount: true,
       refetchOnWindowFocus: false,
-      // Production caching: 30s stale time, 5min garbage collection
-      // Enables fast back-scroll without excessive refetching
-      staleTime: 30_000, // 30 seconds - data is considered fresh
-      gcTime: 5 * 60_000, // 5 minutes - keep pages in cache
+      staleTime: 0, // Always refetch when switching views
+      gcTime: 0, // Don't cache - always get fresh data
     },
   );
 

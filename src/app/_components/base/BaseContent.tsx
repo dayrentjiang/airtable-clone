@@ -46,8 +46,8 @@ function BaseContentInner({
       enabled: !!activeTableId,
       refetchOnMount: true,
       refetchOnWindowFocus: false,
-      staleTime: 30_000, // 30s freshness
-      gcTime: 5 * 60_000, // 5min cache
+      staleTime: 0, // Always refetch
+      gcTime: 0, // Don't cache
     },
   );
 
@@ -121,7 +121,7 @@ function BaseContentInner({
             {/* Data grid */}
             <main className="flex-1 overflow-auto bg-gray-50" ref={dataGridRef}>
               {activeTableId && activeViewId ? (
-                <DataGrid tableId={activeTableId} viewId={activeViewId} />
+                <DataGrid key={activeViewId} tableId={activeTableId} viewId={activeViewId} />
               ) : activeTableId ? (
                 <div className="flex h-full items-center justify-center text-gray-500">
                   Loading view...
@@ -153,8 +153,8 @@ export function BaseContent({ baseId, tables, userInitial }: BaseContentProps) {
       enabled: !!activeTableId,
       refetchOnMount: true,
       refetchOnWindowFocus: false,
-      staleTime: 30_000, // 30s freshness
-      gcTime: 5 * 60_000, // 5min cache
+      staleTime: 0, // Always refetch
+      gcTime: 0, // Don't cache
     },
   );
 
