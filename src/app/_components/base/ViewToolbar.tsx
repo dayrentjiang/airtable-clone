@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import { api } from "~/trpc/react";
+
 function HamburgerIcon() {
   return (
     <svg
@@ -180,6 +183,23 @@ function SearchIcon() {
   );
 }
 
+function DatabaseIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <ellipse cx="12" cy="5" rx="9" ry="3" />
+      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+    </svg>
+  );
+}
+
 interface ToolbarButtonProps {
   icon: React.ReactNode;
   label: string;
@@ -198,12 +218,41 @@ function ToolbarButton({ icon, label, onClick }: ToolbarButtonProps) {
   );
 }
 
-export function ViewToolbar() {
+interface ViewToolbarProps {
+  onToggleSideNav: () => void;
+  tableId: string;
+}
+
+export function ViewToolbar({ onToggleSideNav, tableId }: ViewToolbarProps) {
+  const [isCreating, setIsCreating] = useState(false);
+  const utils = api.useUtils();
+
+  const bulkCreate = api.row.bulkCreate.useMutation({
+    onSuccess: async (data) => {
+      alert(data.message);
+      // Invalidate queries to refresh the data
+      await utils.row.invalidate();
+      setIsCreating(false);
+    },
+    onError: (error) => {
+      alert(`Error: ${error.message}`);
+      setIsCreating(false);
+    },
+  });
+
+  const handleCreate100k = () => {
+    setIsCreating(true);
+    bulkCreate.mutate({ tableId, count: 100000 });
+  };
+
   return (
     <div className="flex h-11 items-center justify-between border-b border-gray-200 bg-white px-3">
       {/* Left: Hamburger + View dropdown */}
       <div className="flex items-center gap-1">
-        <button className="rounded p-1.5 text-gray-600 hover:bg-gray-100">
+        <button
+          onClick={onToggleSideNav}
+          className="rounded p-1.5 text-gray-600 hover:bg-gray-100"
+        >
           <HamburgerIcon />
         </button>
 
@@ -216,6 +265,11 @@ export function ViewToolbar() {
 
       {/* Right: Toolbar actions */}
       <div className="flex items-center gap-0.5">
+        <ToolbarButton
+          icon={<DatabaseIcon />}
+          label={isCreating ? "Creating..." : "Create 100k rows"}
+          onClick={handleCreate100k}
+        />
         <ToolbarButton icon={<EyeOffIcon />} label="Hide fields" />
         <ToolbarButton icon={<FilterIcon />} label="Filter" />
         <ToolbarButton icon={<GroupIcon />} label="Group" />

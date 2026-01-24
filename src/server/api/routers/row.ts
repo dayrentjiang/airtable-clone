@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { Prisma } from "../../../../generated/prisma";
+import { faker } from "@faker-js/faker";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
   type ViewConfig,
@@ -14,6 +15,7 @@ import {
   buildSortClause,
   buildSearchCondition,
 } from "~/server/lib/query-builder";
+import { generateRowId } from "~/server/lib/id-generator";
 
 /**
  * ROW ROUTER
@@ -27,7 +29,7 @@ export const rowRouter = createTRPCRouter({
     .input(
       z.object({
         tableId: z.string(),
-        limit: z.number().min(1).max(100).default(50),
+        limit: z.number().min(1).max(150).default(50),
         cursor: z.string().nullish(),
       }),
     )
@@ -72,12 +74,12 @@ export const rowRouter = createTRPCRouter({
         filters: z.array(filterSchema).optional(),
         sorts: z.array(sortSchema).optional(),
         search: z.string().optional(), // Global search across all columns
-        limit: z.number().min(1).max(100).default(50),
-        offset: z.number().min(0).default(0),
+        limit: z.number().min(1).max(150).default(50),
+        cursor: z.string().nullish(), // Cursor-based pagination
       }),
     )
     .query(async ({ ctx, input }) => {
-      const { tableId, viewId, filters, sorts, search, limit, offset } = input;
+      const { tableId, viewId, filters, sorts, search, limit, cursor } = input;
 
       // Verify table ownership
       const table = await ctx.db.table.findFirst({
@@ -150,14 +152,20 @@ export const rowRouter = createTRPCRouter({
       // Build ORDER BY
       const orderBy = buildSortClause(activeSorts, columnTypes);
 
-      // Get total count for pagination
-      const countQuery = Prisma.sql`SELECT COUNT(*) as count FROM "Row" WHERE ${whereClause}`;
-      const countResult =
-        await ctx.db.$queryRaw<[{ count: bigint }]>(countQuery);
-      const totalCount = Number(countResult[0]?.count ?? 0);
+      // Add cursor condition if provided
+      if (cursor) {
+        // Get the cursor row's order value for pagination
+        const cursorRow = await ctx.db.row.findUnique({
+          where: { id: cursor },
+          select: { order: true },
+        });
+        if (cursorRow) {
+          whereClause = Prisma.sql`${whereClause} AND "order" > ${cursorRow.order}`;
+        }
+      }
 
-      // Get rows with pagination
-      const rowsQuery = Prisma.sql`SELECT * FROM "Row" WHERE ${whereClause} ORDER BY ${orderBy} LIMIT ${limit} OFFSET ${offset}`;
+      // Get rows with cursor-based pagination (fetch limit + 1 to check if there's more)
+      const rowsQuery = Prisma.sql`SELECT * FROM "Row" WHERE ${whereClause} ORDER BY ${orderBy} LIMIT ${limit + 1}`;
 
       const rows = await ctx.db.$queryRaw<
         Array<{
@@ -170,25 +178,33 @@ export const rowRouter = createTRPCRouter({
         }>
       >(rowsQuery);
 
+      // Check if there's a next page
+      let nextCursor: string | undefined = undefined;
+      if (rows.length > limit) {
+        const nextItem = rows.pop();
+        nextCursor = nextItem?.id;
+      }
+
       return {
         items: rows,
-        totalCount,
-        hasMore: offset + rows.length < totalCount,
+        nextCursor,
       };
     }),
 
   /**
    * CREATE A NEW ROW
+   * Supports client-generated IDs for optimistic updates
    */
   create: protectedProcedure
     .input(
       z.object({
+        id: z.string().optional(), // Optional: client can provide ID for optimistic updates
         tableId: z.string(),
         data: cellDataSchema.optional().default({}),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { tableId, data } = input;
+      const { id, tableId, data } = input;
 
       const table = await ctx.db.table.findFirst({
         where: { id: tableId },
@@ -207,8 +223,69 @@ export const rowRouter = createTRPCRouter({
 
       const newOrder = (lastRow?.order ?? -1) + 1;
 
-      return ctx.db.row.create({
-        data: { tableId, data, order: newOrder },
+      // Generate ID if not provided (backward compatibility)
+      const rowId = id ?? generateRowId();
+
+      // Use upsert to handle duplicate IDs gracefully (e.g., network retries)
+      return ctx.db.row.upsert({
+        where: { id: rowId },
+        update: {
+          // If row already exists (rare), update it
+          data,
+          order: newOrder,
+        },
+        create: {
+          // If row doesn't exist, create it
+          id: rowId,
+          tableId,
+          data,
+          order: newOrder,
+        },
+      });
+    }),
+
+  /**
+   * UPDATE SINGLE CELL (optimized for cell editing)
+   */
+  updateCell: protectedProcedure
+    .input(
+      z.object({
+        rowId: z.string(),
+        columnId: z.string(),
+        value: z.union([z.string(), z.number(), z.null()]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { rowId, columnId, value } = input;
+
+      const row = await ctx.db.row.findFirst({
+        where: { id: rowId },
+        include: {
+          table: { include: { base: { include: { workspace: true } } } },
+        },
+      });
+
+      if (!row || row.table.base.workspace.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Row not found" });
+      }
+
+      // Parse existing data
+      const existingData: CellData =
+        typeof row.data === "object" &&
+        row.data !== null &&
+        !Array.isArray(row.data)
+          ? (row.data as CellData)
+          : {};
+
+      // Update single cell
+      const updatedData: CellData = {
+        ...existingData,
+        [columnId]: value,
+      };
+
+      return ctx.db.row.update({
+        where: { id: rowId },
+        data: { data: updatedData },
       });
     }),
 
@@ -273,5 +350,167 @@ export const rowRouter = createTRPCRouter({
       }
 
       return ctx.db.row.delete({ where: { id } });
+    }),
+
+  /**
+   * BULK CREATE ROWS (optimized for large datasets)
+   * Uses batch inserts and generates fake data with Faker.js
+   */
+  bulkCreate: protectedProcedure
+    .input(
+      z.object({
+        tableId: z.string(),
+        count: z.number().min(1).max(100000),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { tableId, count } = input;
+
+      console.log(`[BULK CREATE] Starting: ${count} rows for table ${tableId}`);
+
+      // Verify table ownership and get columns
+      const table = await ctx.db.table.findFirst({
+        where: { id: tableId },
+        include: {
+          base: { include: { workspace: true } },
+          columns: { orderBy: { order: "asc" } },
+        },
+      });
+
+      if (!table || table.base.workspace.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Table not found" });
+      }
+
+      // Get the last order to continue from
+      const lastRow = await ctx.db.row.findFirst({
+        where: { tableId },
+        orderBy: { order: "desc" },
+        select: { order: true },
+      });
+
+      const startOrder = (lastRow?.order ?? -1) + 1;
+
+      // Helper function to generate fake data based on column type
+      const generateFakeValue = (
+        columnType: string,
+        columnName: string,
+      ): string | number => {
+        if (columnType === "NUMBER") {
+          // Generate numbers based on column name hints
+          if (columnName.toLowerCase().includes("age")) {
+            return faker.number.int({ min: 18, max: 80 });
+          } else if (
+            columnName.toLowerCase().includes("price") ||
+            columnName.toLowerCase().includes("cost")
+          ) {
+            return faker.number.float({
+              min: 10,
+              max: 10000,
+              fractionDigits: 2,
+            });
+          } else if (
+            columnName.toLowerCase().includes("quantity") ||
+            columnName.toLowerCase().includes("count")
+          ) {
+            return faker.number.int({ min: 1, max: 1000 });
+          }
+          return faker.number.int({ min: 1, max: 100000 });
+        } else {
+          // TEXT columns - generate based on column name hints
+          const lowerName = columnName.toLowerCase();
+          if (lowerName.includes("name") || lowerName === "name") {
+            return faker.person.fullName();
+          } else if (lowerName.includes("email")) {
+            return faker.internet.email();
+          } else if (lowerName.includes("phone")) {
+            return faker.phone.number();
+          } else if (lowerName.includes("address")) {
+            return faker.location.streetAddress();
+          } else if (lowerName.includes("city")) {
+            return faker.location.city();
+          } else if (lowerName.includes("country")) {
+            return faker.location.country();
+          } else if (lowerName.includes("company")) {
+            return faker.company.name();
+          } else if (lowerName.includes("job") || lowerName.includes("title")) {
+            return faker.person.jobTitle();
+          } else if (
+            lowerName.includes("description") ||
+            lowerName.includes("notes")
+          ) {
+            return faker.lorem.sentence();
+          }
+          // Default: random words
+          return faker.lorem.words(3);
+        }
+      };
+
+      // Use 1000 rows per batch for stable performance
+      const BATCH_SIZE = 1000;
+      const batches = Math.ceil(count / BATCH_SIZE);
+
+      let totalInserted = 0;
+
+      try {
+        for (let batchIndex = 0; batchIndex < batches; batchIndex++) {
+          const batchStart = batchIndex * BATCH_SIZE;
+          const batchEnd = Math.min(batchStart + BATCH_SIZE, count);
+          const batchSize = batchEnd - batchStart;
+
+          console.log(
+            `[BULK CREATE] Batch ${batchIndex + 1}/${batches}: inserting ${batchSize} rows`,
+          );
+
+          // Generate rows for this batch with fake data
+          const rows = Array.from({ length: batchSize }, (_, i) => {
+            const rowIndex = batchStart + i;
+
+            // Generate fake data for each column
+            const rowData: Record<string, string | number> = {};
+            table.columns.forEach((column) => {
+              rowData[column.id] = generateFakeValue(column.type, column.name);
+            });
+
+            return {
+              id: generateRowId(),
+              tableId,
+              data: rowData as Prisma.InputJsonValue,
+              order: startOrder + rowIndex,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+          });
+
+          // Bulk insert using Prisma's createMany (optimized)
+          await ctx.db.row.createMany({
+            data: rows,
+            skipDuplicates: true,
+          });
+
+          totalInserted += batchSize;
+          console.log(
+            `[BULK CREATE] Progress: ${totalInserted}/${count} rows (${Math.round((totalInserted / count) * 100)}%)`,
+          );
+        }
+
+        console.log(
+          `[BULK CREATE] Completed: ${totalInserted} rows inserted with fake data`,
+        );
+
+        return {
+          success: true,
+          count: totalInserted,
+          message: `Successfully created ${totalInserted.toLocaleString()} rows with realistic data`,
+        };
+      } catch (error) {
+        console.error(
+          `[BULK CREATE] Error after ${totalInserted} rows:`,
+          error,
+        );
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed after inserting ${totalInserted} rows: ${error instanceof Error ? error.message : "Unknown error"}`,
+        });
+      }
     }),
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { api } from "~/trpc/react";
 
 // Template card icons
@@ -166,8 +167,25 @@ function groupBasesByTime(bases: Base[]) {
 export function HomeContent() {
   const router = useRouter();
 
+  // Ensure user has at least one workspace and base (for new users)
+  const ensureDefaultMutation = api.workspace.ensureDefault.useMutation();
+
   // Fetch all bases for current user
-  const { data: bases, isLoading } = api.base.getAll.useQuery();
+  const { data: bases, isLoading, refetch } = api.base.getAll.useQuery();
+
+  // Check and create default workspace/base on mount
+  useEffect(() => {
+    if (!isLoading && bases?.length === 0 && !ensureDefaultMutation.isPending) {
+      ensureDefaultMutation.mutate(undefined, {
+        onSuccess: (result) => {
+          if (result.created) {
+            // Refresh the bases list
+            void refetch();
+          }
+        },
+      });
+    }
+  }, [isLoading, bases?.length]);
 
   // Group bases by time
   const grouped = bases ? groupBasesByTime(bases) : { today: [], pastWeek: [], older: [] };
@@ -175,6 +193,9 @@ export function HomeContent() {
   const handleBaseClick = (baseId: string) => {
     router.push(`/${baseId}`);
   };
+
+  // Show loading while initial load or auto-creation is in progress
+  const isInitializing = isLoading || (bases?.length === 0 && ensureDefaultMutation.isPending);
 
   return (
     <div className="p-8">
@@ -223,67 +244,67 @@ export function HomeContent() {
           </div>
         </div>
 
-        {/* Loading state */}
-        {isLoading && (
-          <div className="mt-6 text-sm text-gray-500">Loading bases...</div>
-        )}
-
-        {/* Empty state */}
-        {!isLoading && bases?.length === 0 && (
+        {/* Loading state - show while initializing or creating defaults */}
+        {isInitializing && (
           <div className="mt-6 text-sm text-gray-500">
-            No bases yet. Create a workspace and add your first base!
+            {ensureDefaultMutation.isPending ? "Setting up your workspace..." : "Loading bases..."}
           </div>
         )}
 
-        {/* Today section */}
-        {grouped.today.length > 0 && (
-          <div className="mt-6">
-            <h3 className="text-sm font-medium text-gray-500">Today</h3>
-            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {grouped.today.map((base) => (
-                <BaseCard
-                  key={base.id}
-                  name={base.name}
-                  updatedAt={base.updatedAt}
-                  onClick={() => handleBaseClick(base.id)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Only show content when not initializing */}
+        {!isInitializing && (
+          <>
+            {/* Today section */}
+            {grouped.today.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-medium text-gray-500">Today</h3>
+                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {grouped.today.map((base) => (
+                    <BaseCard
+                      key={base.id}
+                      name={base.name}
+                      updatedAt={base.updatedAt}
+                      onClick={() => handleBaseClick(base.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
-        {/* Past 7 days section */}
-        {grouped.pastWeek.length > 0 && (
-          <div className="mt-8">
-            <h3 className="text-sm font-medium text-gray-500">Past 7 days</h3>
-            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {grouped.pastWeek.map((base) => (
-                <BaseCard
-                  key={base.id}
-                  name={base.name}
-                  updatedAt={base.updatedAt}
-                  onClick={() => handleBaseClick(base.id)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+            {/* Past 7 days section */}
+            {grouped.pastWeek.length > 0 && (
+              <div className="mt-8">
+                <h3 className="text-sm font-medium text-gray-500">Past 7 days</h3>
+                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {grouped.pastWeek.map((base) => (
+                    <BaseCard
+                      key={base.id}
+                      name={base.name}
+                      updatedAt={base.updatedAt}
+                      onClick={() => handleBaseClick(base.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
-        {/* Older section */}
-        {grouped.older.length > 0 && (
-          <div className="mt-8">
-            <h3 className="text-sm font-medium text-gray-500">Older</h3>
-            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {grouped.older.map((base) => (
-                <BaseCard
-                  key={base.id}
-                  name={base.name}
-                  updatedAt={base.updatedAt}
-                  onClick={() => handleBaseClick(base.id)}
-                />
-              ))}
-            </div>
-          </div>
+            {/* Older section */}
+            {grouped.older.length > 0 && (
+              <div className="mt-8">
+                <h3 className="text-sm font-medium text-gray-500">Older</h3>
+                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {grouped.older.map((base) => (
+                    <BaseCard
+                      key={base.id}
+                      name={base.name}
+                      updatedAt={base.updatedAt}
+                      onClick={() => handleBaseClick(base.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </section>
     </div>

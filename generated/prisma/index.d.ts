@@ -14079,7 +14079,7 @@ export namespace Prisma {
   }
 
   export type RowCreateInput = {
-    id?: string
+    id: string
     data?: JsonNullValueInput | InputJsonValue
     order?: number
     createdAt?: Date | string
@@ -14088,7 +14088,7 @@ export namespace Prisma {
   }
 
   export type RowUncheckedCreateInput = {
-    id?: string
+    id: string
     data?: JsonNullValueInput | InputJsonValue
     order?: number
     createdAt?: Date | string
@@ -14115,7 +14115,7 @@ export namespace Prisma {
   }
 
   export type RowCreateManyInput = {
-    id?: string
+    id: string
     data?: JsonNullValueInput | InputJsonValue
     order?: number
     createdAt?: Date | string
@@ -16190,7 +16190,7 @@ export namespace Prisma {
   }
 
   export type RowCreateWithoutTableInput = {
-    id?: string
+    id: string
     data?: JsonNullValueInput | InputJsonValue
     order?: number
     createdAt?: Date | string
@@ -16198,7 +16198,7 @@ export namespace Prisma {
   }
 
   export type RowUncheckedCreateWithoutTableInput = {
-    id?: string
+    id: string
     data?: JsonNullValueInput | InputJsonValue
     order?: number
     createdAt?: Date | string
@@ -16892,7 +16892,7 @@ export namespace Prisma {
   }
 
   export type RowCreateManyTableInput = {
-    id?: string
+    id: string
     data?: JsonNullValueInput | InputJsonValue
     order?: number
     createdAt?: Date | string

@@ -92,7 +92,7 @@ model Column {
 
 // Row = A record in the table, with data stored as JSONB
 model Row {
-    id        String   @id @default(cuid())
+    id        String   @id // Removed @default(cuid()) to allow client-generated IDs
     data      Json     @default("{}") // JSONB: { "columnId1": "value", "columnId2": 123 }
     order     Int      @default(0)    // Display order (top to bottom)
     createdAt DateTime @default(now())
