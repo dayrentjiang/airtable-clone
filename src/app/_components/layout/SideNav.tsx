@@ -5,7 +5,14 @@ import { useState } from "react";
 // Icons
 function HomeIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
       <polyline points="9 22 9 12 15 12 15 22" />
     </svg>
@@ -14,7 +21,14 @@ function HomeIcon() {
 
 function StarIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
     </svg>
   );
@@ -22,7 +36,14 @@ function StarIcon() {
 
 function SharedIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
       <circle cx="9" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
@@ -33,7 +54,14 @@ function SharedIcon() {
 
 function WorkspaceIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <rect x="3" y="3" width="7" height="7" />
       <rect x="14" y="3" width="7" height="7" />
       <rect x="14" y="14" width="7" height="7" />
@@ -42,39 +70,16 @@ function WorkspaceIcon() {
   );
 }
 
-function TemplatesIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-      <line x1="3" y1="9" x2="21" y2="9" />
-      <line x1="9" y1="21" x2="9" y2="9" />
-    </svg>
-  );
-}
-
-function MarketplaceIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="9" cy="21" r="1" />
-      <circle cx="20" cy="21" r="1" />
-      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-    </svg>
-  );
-}
-
-function ImportIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1="12" y1="3" x2="12" y2="15" />
-    </svg>
-  );
-}
-
 function PlusIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <line x1="12" y1="5" x2="12" y2="19" />
       <line x1="5" y1="12" x2="19" y2="12" />
     </svg>
@@ -121,7 +126,7 @@ function NavItem({
   return (
     <div>
       <div
-        className={`group flex items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer ${
+        className={`group flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm ${
           active ? "bg-gray-200 font-medium" : "hover:bg-gray-100"
         }`}
         onClick={onToggle}
@@ -139,13 +144,13 @@ function NavItem({
               e.stopPropagation();
               onAdd();
             }}
-            className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-gray-200 rounded"
+            className="rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-gray-200"
           >
             <PlusIcon />
           </button>
         )}
         {expandable && !onAdd && (
-          <span className="opacity-0 group-hover:opacity-100 text-gray-400">
+          <span className="text-gray-400 opacity-0 group-hover:opacity-100">
             <ChevronIcon expanded={false} />
           </span>
         )}
@@ -174,7 +179,7 @@ export function SideNav() {
           expanded={starredExpanded}
           onToggle={() => setStarredExpanded(!starredExpanded)}
         >
-          <div className="py-1 pl-2 text-sm text-gray-600 hover:bg-gray-100 rounded cursor-pointer">
+          <div className="cursor-pointer rounded py-1 pl-2 text-sm text-gray-600 hover:bg-gray-100">
             My First Workspace
           </div>
         </NavItem>
@@ -196,23 +201,11 @@ export function SideNav() {
             No workspaces yet
           </div>
         </NavItem>
-
-        {/* Divider */}
-        <hr className="my-4 border-gray-200" />
-
-        {/* Templates and apps */}
-        <NavItem icon={<TemplatesIcon />} label="Templates and apps" />
-
-        {/* Marketplace */}
-        <NavItem icon={<MarketplaceIcon />} label="Marketplace" />
-
-        {/* Import */}
-        <NavItem icon={<ImportIcon />} label="Import" />
       </div>
 
       {/* Create button */}
       <div className="p-3">
-        <button className="flex w-full items-center justify-center gap-2 rounded-md bg-yellow-400 px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-yellow-500">
+        <button className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-yellow-500">
           <PlusIcon />
           Create
         </button>
