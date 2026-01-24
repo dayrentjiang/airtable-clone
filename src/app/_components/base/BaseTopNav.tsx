@@ -1,6 +1,7 @@
 "use client";
 
-import { Grid2X2, ChevronDown, History, ExternalLink } from "lucide-react";
+import Image from "next/image";
+import { ChevronDown, History, ExternalLink } from "lucide-react";
 
 interface BaseTopNavProps {
   baseName: string;
@@ -10,7 +11,13 @@ interface BaseTopNavProps {
 function BaseIcon() {
   return (
     <div className="flex h-8 w-8 items-center justify-center rounded bg-teal-600">
-      <Grid2X2 size={16} className="text-white" />
+      <Image
+        src="/images/airtable_black.webp"
+        alt="Airtable"
+        width={20}
+        height={20}
+        className="h-5 w-5"
+      />
     </div>
   );
 }
