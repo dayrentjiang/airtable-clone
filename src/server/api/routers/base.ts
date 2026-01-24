@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { generateRowId } from "~/server/lib/id-generator";
 
 /***ctx created in Created in src/server/api/trpc.ts
  * ctx is an object that gets passed to every procedure.
@@ -80,12 +81,96 @@ export const baseRouter = createTRPCRouter({
         });
       }
 
-      return ctx.db.base.create({
+      // Create base with default table, columns, and sample rows
+      const base = await ctx.db.base.create({
         data: {
           name: input.name,
           workspaceId: input.workspaceId,
+          tables: {
+            create: {
+              name: "Table 1",
+              columns: {
+                create: [
+                  {
+                    name: "Name",
+                    type: "TEXT",
+                    order: 0,
+                  },
+                  {
+                    name: "Notes",
+                    type: "TEXT",
+                    order: 1,
+                  },
+                  {
+                    name: "Status",
+                    type: "TEXT",
+                    order: 2,
+                  },
+                ],
+              },
+            },
+          },
+        },
+        include: {
+          tables: {
+            include: {
+              columns: true,
+            },
+          },
         },
       });
+
+      // Get the created table and columns
+      const table = base.tables[0];
+      const columns = table?.columns ?? [];
+
+      // Create column ID map for sample data
+      const nameCol = columns.find((c) => c.name === "Name");
+      const notesCol = columns.find((c) => c.name === "Notes");
+      const statusCol = columns.find((c) => c.name === "Status");
+
+      // Create 3 sample rows with helpful data
+      if (table && nameCol && notesCol && statusCol) {
+        const sampleRows = [
+          {
+            id: generateRowId(),
+            tableId: table.id,
+            order: 0,
+            data: {
+              [nameCol.id]: "Task 1",
+              [notesCol.id]: "Click any cell to edit its content",
+              [statusCol.id]: "Todo",
+            },
+          },
+          {
+            id: generateRowId(),
+            tableId: table.id,
+            order: 1,
+            data: {
+              [nameCol.id]: "Task 2",
+              [notesCol.id]: "Use the + button below to add more rows",
+              [statusCol.id]: "In Progress",
+            },
+          },
+          {
+            id: generateRowId(),
+            tableId: table.id,
+            order: 2,
+            data: {
+              [nameCol.id]: "Task 3",
+              [notesCol.id]: "Customize your columns from the toolbar",
+              [statusCol.id]: "Done",
+            },
+          },
+        ];
+
+        // Insert sample rows
+        await ctx.db.row.createMany({
+          data: sampleRows,
+        });
+      }
+
+      return base;
     }),
 
   // ============================================

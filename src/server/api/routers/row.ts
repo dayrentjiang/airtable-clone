@@ -14,6 +14,7 @@ import {
   buildSortClause,
   buildSearchCondition,
 } from "~/server/lib/query-builder";
+import { generateRowId } from "~/server/lib/id-generator";
 
 /**
  * ROW ROUTER
@@ -179,16 +180,18 @@ export const rowRouter = createTRPCRouter({
 
   /**
    * CREATE A NEW ROW
+   * Supports client-generated IDs for optimistic updates
    */
   create: protectedProcedure
     .input(
       z.object({
+        id: z.string().optional(), // Optional: client can provide ID for optimistic updates
         tableId: z.string(),
         data: cellDataSchema.optional().default({}),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { tableId, data } = input;
+      const { id, tableId, data } = input;
 
       const table = await ctx.db.table.findFirst({
         where: { id: tableId },
@@ -207,8 +210,24 @@ export const rowRouter = createTRPCRouter({
 
       const newOrder = (lastRow?.order ?? -1) + 1;
 
-      return ctx.db.row.create({
-        data: { tableId, data, order: newOrder },
+      // Generate ID if not provided (backward compatibility)
+      const rowId = id ?? generateRowId();
+
+      // Use upsert to handle duplicate IDs gracefully (e.g., network retries)
+      return ctx.db.row.upsert({
+        where: { id: rowId },
+        update: {
+          // If row already exists (rare), update it
+          data,
+          order: newOrder,
+        },
+        create: {
+          // If row doesn't exist, create it
+          id: rowId,
+          tableId,
+          data,
+          order: newOrder,
+        },
       });
     }),
 

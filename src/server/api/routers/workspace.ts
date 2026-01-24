@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { generateRowId } from "~/server/lib/id-generator";
 
 /**
  * WORKSPACE ROUTER
@@ -13,6 +14,126 @@ export const workspaceRouter = createTRPCRouter({
       where: { userId: ctx.session.user.id },
       orderBy: [{ starred: "desc" }, { createdAt: "desc" }],
     });
+  }),
+
+  // Ensure user has at least one workspace with one base (for new users)
+  ensureDefault: protectedProcedure.mutation(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+
+    // Check if user has any workspaces
+    const workspaceCount = await ctx.db.workspace.count({
+      where: { userId },
+    });
+
+    // If user already has workspaces, do nothing
+    if (workspaceCount > 0) {
+      return { created: false, message: "User already has workspaces" };
+    }
+
+    // Create default workspace with a complete base structure
+    // Includes: Base → Table → 3 Columns → 3 Sample Rows
+    const workspace = await ctx.db.workspace.create({
+      data: {
+        name: "My Workspace",
+        userId,
+        bases: {
+          create: {
+            name: "My First Base",
+            tables: {
+              create: {
+                name: "My First Table",
+                columns: {
+                  create: [
+                    {
+                      name: "Name",
+                      type: "TEXT",
+                      order: 0,
+                    },
+                    {
+                      name: "Status",
+                      type: "TEXT",
+                      order: 1,
+                    },
+                    {
+                      name: "Priority",
+                      type: "TEXT",
+                      order: 2,
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+      include: {
+        bases: {
+          include: {
+            tables: {
+              include: {
+                columns: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Get the created table and columns
+    const table = workspace.bases[0]?.tables[0];
+    const columns = table?.columns ?? [];
+
+    // Create column ID map for sample data
+    const nameCol = columns.find((c) => c.name === "Name");
+    const statusCol = columns.find((c) => c.name === "Status");
+    const priorityCol = columns.find((c) => c.name === "Priority");
+
+    // Create 3 sample rows with data
+    if (table && nameCol && statusCol && priorityCol) {
+      const sampleRows = [
+        {
+          id: generateRowId(),
+          tableId: table.id,
+          order: 0,
+          data: {
+            [nameCol.id]: "Welcome to Airtable Clone!",
+            [statusCol.id]: "Active",
+            [priorityCol.id]: "High",
+          },
+        },
+        {
+          id: generateRowId(),
+          tableId: table.id,
+          order: 1,
+          data: {
+            [nameCol.id]: "Click any cell to edit",
+            [statusCol.id]: "In Progress",
+            [priorityCol.id]: "Medium",
+          },
+        },
+        {
+          id: generateRowId(),
+          tableId: table.id,
+          order: 2,
+          data: {
+            [nameCol.id]: "Add more rows with the + button",
+            [statusCol.id]: "Done",
+            [priorityCol.id]: "Low",
+          },
+        },
+      ];
+
+      // Insert sample rows
+      await ctx.db.row.createMany({
+        data: sampleRows,
+      });
+    }
+
+    return {
+      created: true,
+      workspace,
+      message: "Created default workspace with base, table, columns, and sample rows",
+    };
   }),
 
   // Get single workspace by ID
