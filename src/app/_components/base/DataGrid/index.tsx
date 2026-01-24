@@ -28,7 +28,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     {
       refetchOnMount: true,
       refetchOnWindowFocus: false,
-    }
+    },
   );
 
   // Fetch view config - refetch on mount
@@ -37,7 +37,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     {
       refetchOnMount: true,
       refetchOnWindowFocus: false,
-    }
+    },
   );
 
   // Use infiniteWithView with TanStack infinite query - no caching, always refetch

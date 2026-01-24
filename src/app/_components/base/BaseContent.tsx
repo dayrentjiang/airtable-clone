@@ -21,7 +21,15 @@ interface BaseContentProps {
 }
 
 // Inner component that uses the selection context
-function BaseContentInner({ baseId, tables, userInitial, activeTableId, activeViewId, setActiveTableId, setActiveViewId }: BaseContentProps & {
+function BaseContentInner({
+  baseId,
+  tables,
+  userInitial,
+  activeTableId,
+  activeViewId,
+  setActiveTableId,
+  setActiveViewId,
+}: BaseContentProps & {
   activeTableId: string | null;
   activeViewId: string | null;
   setActiveTableId: (id: string | null) => void;
@@ -34,7 +42,7 @@ function BaseContentInner({ baseId, tables, userInitial, activeTableId, activeVi
   // Fetch views for the active table to auto-select the first one
   const { data: views } = api.view.getByTableId.useQuery(
     { tableId: activeTableId! },
-    { 
+    {
       enabled: !!activeTableId,
       refetchOnMount: true,
       refetchOnWindowFocus: false,
@@ -67,7 +75,10 @@ function BaseContentInner({ baseId, tables, userInitial, activeTableId, activeVi
   // Clear selection when clicking outside the data grid
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dataGridRef.current && !dataGridRef.current.contains(e.target as Node)) {
+      if (
+        dataGridRef.current &&
+        !dataGridRef.current.contains(e.target as Node)
+      ) {
         clearSelection();
       }
     };
@@ -138,7 +149,7 @@ export function BaseContent({ baseId, tables, userInitial }: BaseContentProps) {
   // Fetch views to get the total row/column count for SelectionProvider
   const { data: views } = api.view.getByTableId.useQuery(
     { tableId: activeTableId! },
-    { 
+    {
       enabled: !!activeTableId,
       refetchOnMount: true,
       refetchOnWindowFocus: false,

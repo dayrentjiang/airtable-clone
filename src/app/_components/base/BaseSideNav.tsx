@@ -33,16 +33,41 @@ const VIEW_TYPES: Array<{
   { type: "GRID", label: "Grid", Icon: Grid3X3, enabled: true },
   { type: "CALENDAR", label: "Calendar", Icon: Calendar, enabled: false },
   { type: "GALLERY", label: "Gallery", Icon: Image, enabled: false },
-  { type: "KANBAN", label: "Kanban", Icon: Columns3, enabled: false, color: "text-purple-500" },
+  {
+    type: "KANBAN",
+    label: "Kanban",
+    Icon: Columns3,
+    enabled: false,
+    color: "text-purple-500",
+  },
   { type: "FORM", label: "Form", Icon: FileText, enabled: false },
 ];
 
 // Extended view types (not in schema yet)
 const EXTENDED_VIEW_TYPES = [
-  { type: "TIMELINE", label: "Timeline", Icon: GanttChart, enabled: false, team: true, color: "text-red-500" },
+  {
+    type: "TIMELINE",
+    label: "Timeline",
+    Icon: GanttChart,
+    enabled: false,
+    team: true,
+    color: "text-red-500",
+  },
   { type: "LIST", label: "List", Icon: List, enabled: false },
-  { type: "GANTT", label: "Gantt", Icon: ClipboardList, enabled: false, team: true },
-  { type: "SECTION", label: "Section", Icon: LayoutGrid, enabled: false, team: true },
+  {
+    type: "GANTT",
+    label: "Gantt",
+    Icon: ClipboardList,
+    enabled: false,
+    team: true,
+  },
+  {
+    type: "SECTION",
+    label: "Section",
+    Icon: LayoutGrid,
+    enabled: false,
+    team: true,
+  },
 ];
 
 const ALL_VIEW_TYPES = [...VIEW_TYPES, ...EXTENDED_VIEW_TYPES];
@@ -60,9 +85,13 @@ export function BaseSideNav({
 }: BaseSideNavProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [pendingViewType, setPendingViewType] = useState<"GRID" | "CALENDAR" | "KANBAN" | "GALLERY" | "FORM" | null>(null);
+  const [pendingViewType, setPendingViewType] = useState<
+    "GRID" | "CALENDAR" | "KANBAN" | "GALLERY" | "FORM" | null
+  >(null);
   const [viewName, setViewName] = useState("");
-  const [editPermission, setEditPermission] = useState<"collaborative" | "personal" | "locked">("collaborative");
+  const [editPermission, setEditPermission] = useState<
+    "collaborative" | "personal" | "locked"
+  >("collaborative");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const utils = api.useUtils();
@@ -70,7 +99,10 @@ export function BaseSideNav({
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsDropdownOpen(false);
       }
     }
@@ -81,13 +113,13 @@ export function BaseSideNav({
   // Fetch views for the current table - refetch on mount
   const { data: views, isLoading } = api.view.getByTableId.useQuery(
     { tableId: tableId! },
-    { 
+    {
       enabled: !!tableId,
       refetchOnMount: true,
       refetchOnWindowFocus: false,
       gcTime: 0,
       staleTime: 0,
-    }
+    },
   );
 
   // Create view mutation
@@ -99,14 +131,17 @@ export function BaseSideNav({
     },
   });
 
-  const handleViewTypeClick = (type: "GRID" | "CALENDAR" | "KANBAN" | "GALLERY" | "FORM") => {
+  const handleViewTypeClick = (
+    type: "GRID" | "CALENDAR" | "KANBAN" | "GALLERY" | "FORM",
+  ) => {
     if (!tableId) return;
 
     // Generate a default name based on existing views
-    const existingCount = views?.filter(v => v.type === type).length ?? 0;
-    const defaultName = existingCount === 0
-      ? type.charAt(0) + type.slice(1).toLowerCase()
-      : `${type.charAt(0) + type.slice(1).toLowerCase()} ${existingCount + 1}`;
+    const existingCount = views?.filter((v) => v.type === type).length ?? 0;
+    const defaultName =
+      existingCount === 0
+        ? type.charAt(0) + type.slice(1).toLowerCase()
+        : `${type.charAt(0) + type.slice(1).toLowerCase()} ${existingCount + 1}`;
 
     setViewName(defaultName);
     setPendingViewType(type);
@@ -161,27 +196,39 @@ export function BaseSideNav({
 
           {/* Dropdown */}
           {isDropdownOpen && (
-            <div className="absolute left-full top-0 ml-1 z-50 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-              {ALL_VIEW_TYPES.map(({ type, label, Icon, enabled, team, color }) => (
-                <button
-                  key={type}
-                  onClick={() => enabled && handleViewTypeClick(type as "GRID" | "CALENDAR" | "KANBAN" | "GALLERY" | "FORM")}
-                  disabled={!enabled || createView.isPending}
-                  className={`flex w-full items-center gap-3 px-3 py-2 text-sm ${
-                    enabled
-                      ? "text-gray-700 hover:bg-gray-50 cursor-pointer"
-                      : "text-gray-400 cursor-not-allowed"
-                  }`}
-                >
-                  <Icon className={`h-4 w-4 ${color ?? ""}`} />
-                  <span>{label}</span>
-                  {team && (
-                    <span className="ml-auto rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-600">
-                      Team
-                    </span>
-                  )}
-                </button>
-              ))}
+            <div className="absolute top-0 left-full z-50 ml-1 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+              {ALL_VIEW_TYPES.map(
+                ({ type, label, Icon, enabled, team, color }) => (
+                  <button
+                    key={type}
+                    onClick={() =>
+                      enabled &&
+                      handleViewTypeClick(
+                        type as
+                          | "GRID"
+                          | "CALENDAR"
+                          | "KANBAN"
+                          | "GALLERY"
+                          | "FORM",
+                      )
+                    }
+                    disabled={!enabled || createView.isPending}
+                    className={`flex w-full items-center gap-3 px-3 py-2 text-sm ${
+                      enabled
+                        ? "cursor-pointer text-gray-700 hover:bg-gray-50"
+                        : "cursor-not-allowed text-gray-400"
+                    }`}
+                  >
+                    <Icon className={`h-4 w-4 ${color ?? ""}`} />
+                    <span>{label}</span>
+                    {team && (
+                      <span className="ml-auto rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-600">
+                        Team
+                      </span>
+                    )}
+                  </button>
+                ),
+              )}
             </div>
           )}
         </div>
@@ -229,13 +276,13 @@ export function BaseSideNav({
       {isModalOpen && (
         <>
           {/* Backdrop */}
-          <div 
+          <div
             className="fixed inset-0 z-40 bg-black/20"
             onClick={handleCancelModal}
           />
-          
+
           {/* Modal positioned next to sidebar */}
-          <div className="fixed left-60 top-0 z-50 flex h-full items-start justify-start pt-20 pl-8">
+          <div className="fixed top-0 left-60 z-50 flex h-full items-start justify-start pt-20 pl-8">
             <div className="w-100 rounded-lg border border-gray-200 bg-white p-5 shadow-xl">
               {/* View Name Input */}
               <div className="mb-5">
@@ -251,14 +298,16 @@ export function BaseSideNav({
                       handleCancelModal();
                     }
                   }}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="Enter view name"
                 />
               </div>
 
               {/* Who can edit section */}
               <div className="mb-5">
-                <div className="mb-3 text-sm font-semibold text-gray-900">Who can edit</div>
+                <div className="mb-3 text-sm font-semibold text-gray-900">
+                  Who can edit
+                </div>
                 <div className="space-y-0">
                   <label className="flex cursor-pointer items-start gap-3 py-2">
                     <input
@@ -266,7 +315,14 @@ export function BaseSideNav({
                       name="permission"
                       value="collaborative"
                       checked={editPermission === "collaborative"}
-                      onChange={(e) => setEditPermission(e.target.value as "collaborative" | "personal" | "locked")}
+                      onChange={(e) =>
+                        setEditPermission(
+                          e.target.value as
+                            | "collaborative"
+                            | "personal"
+                            | "locked",
+                        )
+                      }
                       className="mt-0.5 h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <Users className="mt-0.5 h-4 w-4 text-gray-600" />
@@ -281,7 +337,14 @@ export function BaseSideNav({
                       name="permission"
                       value="personal"
                       checked={editPermission === "personal"}
-                      onChange={(e) => setEditPermission(e.target.value as "collaborative" | "personal" | "locked")}
+                      onChange={(e) =>
+                        setEditPermission(
+                          e.target.value as
+                            | "collaborative"
+                            | "personal"
+                            | "locked",
+                        )
+                      }
                       className="mt-0.5 h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <User className="mt-0.5 h-4 w-4 text-gray-600" />
@@ -296,7 +359,14 @@ export function BaseSideNav({
                       name="permission"
                       value="locked"
                       checked={editPermission === "locked"}
-                      onChange={(e) => setEditPermission(e.target.value as "collaborative" | "personal" | "locked")}
+                      onChange={(e) =>
+                        setEditPermission(
+                          e.target.value as
+                            | "collaborative"
+                            | "personal"
+                            | "locked",
+                        )
+                      }
                       className="mt-0.5 h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <Lock className="mt-0.5 h-4 w-4 text-gray-600" />

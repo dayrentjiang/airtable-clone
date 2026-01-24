@@ -63,7 +63,7 @@ export function SelectionProvider({
         selectedCell?.columnIndex === columnIndex
       );
     },
-    [selectedCell]
+    [selectedCell],
   );
 
   const isEditing = useCallback(
@@ -73,14 +73,14 @@ export function SelectionProvider({
         editingCell?.columnIndex === columnIndex
       );
     },
-    [editingCell]
+    [editingCell],
   );
 
   const isRowSelected = useCallback(
     (rowIndex: number) => {
       return selectedCell?.rowIndex === rowIndex;
     },
-    [selectedCell]
+    [selectedCell],
   );
 
   const clearSelection = useCallback(() => {
@@ -152,7 +152,10 @@ export function SelectionProvider({
           return;
       }
 
-      if (newRow !== selectedCell.rowIndex || newCol !== selectedCell.columnIndex) {
+      if (
+        newRow !== selectedCell.rowIndex ||
+        newCol !== selectedCell.columnIndex
+      ) {
         setSelectedCell({ rowIndex: newRow, columnIndex: newCol });
       }
     };
