@@ -15,6 +15,7 @@ interface DataGridTableProps {
   paddingBottom: number;
   isFetchingNextPage: boolean;
   columnCount: number;
+  tableWidth: number;
 }
 
 export function DataGridTable({
@@ -25,12 +26,13 @@ export function DataGridTable({
   paddingBottom,
   isFetchingNextPage,
   columnCount,
+  tableWidth,
 }: DataGridTableProps) {
   const { rows: tableRows } = table.getRowModel();
   const { isRowSelected } = useSelection();
 
   return (
-    <table className="border-collapse" style={{ tableLayout: "fixed" }}>
+    <table className="border-collapse" style={{ tableLayout: "fixed", width: tableWidth }}>
       <DataGridHeader headerGroups={table.getHeaderGroups()} />
 
       <tbody className="bg-white">

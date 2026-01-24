@@ -25,6 +25,7 @@ export function EditableCell({
   const [value, setValue] = useState(String(initialValue ?? ""));
   const inputRef = useRef<HTMLInputElement>(null);
   const cellRef = useRef<HTMLDivElement>(null);
+  const hasSavedRef = useRef(false);
   const utils = api.useUtils();
 
   const {
@@ -42,10 +43,11 @@ export function EditableCell({
   const tableId = row.original.tableId;
   const rowId = row.original.id;
 
-  // Auto-focus input on edit mode
+  // Auto-focus input on edit mode and reset save flag
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
+      hasSavedRef.current = false;
     }
   }, [isEditing]);
 
@@ -118,6 +120,12 @@ export function EditableCell({
   });
 
   const handleSave = () => {
+    // Skip if already saved (e.g., from arrow key navigation)
+    if (hasSavedRef.current) {
+      stopEditing();
+      return;
+    }
+
     let finalValue: string | number | null = value;
 
     if (columnType === "NUMBER") {
@@ -139,12 +147,61 @@ export function EditableCell({
       updateCellMutation.mutate({ rowId, columnId, value: finalValue });
     }
 
+    hasSavedRef.current = true;
     stopEditing();
   };
 
   const handleCancel = () => {
     setValue(String(initialValue ?? ""));
     stopEditing();
+  };
+
+  const handleSaveAndNavigate = (direction: "up" | "down" | "left" | "right") => {
+    // Mark as saved to prevent double-save from blur
+    hasSavedRef.current = true;
+
+    // Save current value
+    let finalValue: string | number | null = value;
+
+    if (columnType === "NUMBER") {
+      const numValue = parseFloat(value);
+      if (value !== "" && !isNaN(numValue)) {
+        finalValue = numValue;
+      } else if (value === "") {
+        finalValue = null;
+      } else {
+        setValue(String(initialValue ?? ""));
+        selectCell(null);
+        return;
+      }
+    } else if (value === "") {
+      finalValue = null;
+    }
+
+    if (finalValue !== initialValue) {
+      updateCellMutation.mutate({ rowId, columnId, value: finalValue });
+    }
+
+    // Calculate new position and navigate
+    let newRow = rowIndex;
+    let newCol = columnIndex;
+
+    switch (direction) {
+      case "up":
+        newRow = Math.max(0, rowIndex - 1);
+        break;
+      case "down":
+        newRow = rowIndex + 1;
+        break;
+      case "left":
+        newCol = Math.max(1, columnIndex - 1);
+        break;
+      case "right":
+        newCol = columnIndex + 1;
+        break;
+    }
+
+    selectCell({ rowIndex: newRow, columnIndex: newCol });
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
@@ -156,12 +213,33 @@ export function EditableCell({
       handleCancel();
     } else if (e.key === "Tab") {
       handleSave();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      handleSaveAndNavigate("up");
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      handleSaveAndNavigate("down");
+    } else if (e.key === "ArrowLeft" && inputRef.current?.selectionStart === 0) {
+      e.preventDefault();
+      handleSaveAndNavigate("left");
+    } else if (e.key === "ArrowRight" && inputRef.current?.selectionStart === value.length) {
+      e.preventDefault();
+      handleSaveAndNavigate("right");
     }
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
-    selectCell({ rowIndex, columnIndex });
+    // Blur any active input first to trigger save
+    if (document.activeElement instanceof HTMLInputElement) {
+      document.activeElement.blur();
+      // Wait for blur event to complete and save to happen before selecting new cell
+      setTimeout(() => {
+        selectCell({ rowIndex, columnIndex });
+      }, 0);
+    } else {
+      selectCell({ rowIndex, columnIndex });
+    }
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {

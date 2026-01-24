@@ -88,6 +88,9 @@ export function DataGrid({ tableId }: DataGridProps) {
       ? totalSize - (virtualRows[virtualRows.length - 1]?.end ?? 0)
       : 0;
 
+  // Calculate table width: row number column (66) + data columns (180 each)
+  const tableWidth = 66 + (table?.columns?.length ?? 0) * 180;
+
   // Loading state
   if (tableLoading || rowsLoading) {
     return (
@@ -134,7 +137,7 @@ export function DataGrid({ tableId }: DataGridProps) {
         className="h-full overflow-auto"
         style={{ contain: "strict" }}
       >
-        <div className="flex">
+        <div className="flex pb-30">
           <DataGridTable
             table={tableInstance}
             tableId={tableId}
@@ -143,6 +146,7 @@ export function DataGrid({ tableId }: DataGridProps) {
             paddingBottom={paddingBottom}
             isFetchingNextPage={isFetchingNextPage}
             columnCount={columns.length}
+            tableWidth={tableWidth}
           />
           <AddColumnButton />
         </div>
