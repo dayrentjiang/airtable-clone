@@ -42,7 +42,7 @@ export function useTableColumns(columns: Column[] | undefined) {
     };
 
     // Data columns from table columns with EditableCell
-    const dataColumns: ColumnDef<RowData>[] = columns.map((col) => ({
+    const dataColumns: ColumnDef<RowData>[] = columns.map((col, index) => ({
       id: col.id,
       accessorFn: (row) => {
         const cellData = row.data as Record<string, string | number | null>;
@@ -50,7 +50,12 @@ export function useTableColumns(columns: Column[] | undefined) {
       },
       header: col.name,
       cell: (props) => (
-        <EditableCell {...props} columnType={col.type} columnId={col.id} />
+        <EditableCell
+          {...props}
+          columnType={col.type}
+          columnId={col.id}
+          columnIndex={index + 1} // +1 because row number column is at index 0
+        />
       ),
       meta: {
         type: col.type,

@@ -4,12 +4,14 @@ import { useState, useRef, useEffect } from "react";
 import { type CellContext } from "@tanstack/react-table";
 import { api } from "~/trpc/react";
 import { type RowData } from "./hooks/useTableColumns";
+import { useSelection } from "./hooks/useSelection";
 
 type ColumnType = "TEXT" | "NUMBER";
 
 interface EditableCellProps extends CellContext<RowData, unknown> {
   columnType: ColumnType;
   columnId: string;
+  columnIndex: number;
 }
 
 export function EditableCell({
@@ -17,14 +19,25 @@ export function EditableCell({
   getValue,
   columnType,
   columnId,
+  columnIndex,
 }: EditableCellProps) {
   const initialValue = getValue() as string | number | null;
-  const [isSelected, setIsSelected] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(String(initialValue ?? ""));
   const inputRef = useRef<HTMLInputElement>(null);
   const cellRef = useRef<HTMLDivElement>(null);
   const utils = api.useUtils();
+
+  const {
+    isSelected: checkIsSelected,
+    isEditing: checkIsEditing,
+    selectCell,
+    startEditing,
+    stopEditing,
+  } = useSelection();
+
+  const rowIndex = row.index;
+  const isSelected = checkIsSelected(rowIndex, columnIndex);
+  const isEditing = checkIsEditing(rowIndex, columnIndex);
 
   const tableId = row.original.tableId;
   const rowId = row.original.id;
@@ -41,21 +54,7 @@ export function EditableCell({
     setValue(String(initialValue ?? ""));
   }, [initialValue]);
 
-  // Handle click outside to deselect
-  useEffect(() => {
-    if (!isSelected) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (cellRef.current && !cellRef.current.contains(e.target as Node)) {
-        setIsSelected(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isSelected]);
-
-  // Handle keyboard input when selected (not editing)
+  // Handle keyboard input when selected (not editing) - for typing characters
   useEffect(() => {
     if (!isSelected || isEditing) return;
 
@@ -64,29 +63,19 @@ export function EditableCell({
       if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
         setValue(e.key);
-        setIsEditing(true);
+        startEditing({ rowIndex, columnIndex });
       }
       // Backspace/Delete clears and enters edit mode
       else if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();
         setValue("");
-        setIsEditing(true);
-      }
-      // Enter enters edit mode
-      else if (e.key === "Enter") {
-        e.preventDefault();
-        setIsEditing(true);
-      }
-      // Escape deselects
-      else if (e.key === "Escape") {
-        e.preventDefault();
-        setIsSelected(false);
+        startEditing({ rowIndex, columnIndex });
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isSelected, isEditing]);
+  }, [isSelected, isEditing, rowIndex, columnIndex, startEditing]);
 
   const updateCellMutation = api.row.updateCell.useMutation({
     onMutate: async (variables) => {
@@ -114,7 +103,7 @@ export function EditableCell({
 
       return { previousData };
     },
-    onError: (err, variables, context) => {
+    onError: (err, _variables, context) => {
       if (context?.previousData) {
         utils.row.infinite.setInfiniteData(
           { tableId, limit: 50 },
@@ -139,7 +128,7 @@ export function EditableCell({
         finalValue = null;
       } else {
         setValue(String(initialValue ?? ""));
-        setIsEditing(false);
+        stopEditing();
         return;
       }
     } else if (value === "") {
@@ -150,12 +139,12 @@ export function EditableCell({
       updateCellMutation.mutate({ rowId, columnId, value: finalValue });
     }
 
-    setIsEditing(false);
+    stopEditing();
   };
 
   const handleCancel = () => {
     setValue(String(initialValue ?? ""));
-    setIsEditing(false);
+    stopEditing();
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
@@ -172,13 +161,12 @@ export function EditableCell({
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
-    setIsSelected(true);
+    selectCell({ rowIndex, columnIndex });
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    setIsSelected(true);
-    setIsEditing(true);
+    startEditing({ rowIndex, columnIndex });
   };
 
   const handleBlur = () => {

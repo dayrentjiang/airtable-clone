@@ -5,6 +5,7 @@ import { type VirtualItem } from "@tanstack/react-virtual";
 import { DataGridHeader } from "./DataGridHeader";
 import { AddRowButton } from "./AddRowButton";
 import type { RowData } from "./hooks/useTableColumns";
+import { useSelection } from "./hooks/useSelection";
 
 interface DataGridTableProps {
   table: Table<RowData>;
@@ -26,6 +27,7 @@ export function DataGridTable({
   columnCount,
 }: DataGridTableProps) {
   const { rows: tableRows } = table.getRowModel();
+  const { isRowSelected } = useSelection();
 
   return (
     <table className="border-collapse" style={{ tableLayout: "fixed" }}>
@@ -47,13 +49,13 @@ export function DataGridTable({
           return (
             <tr
               key={row.id}
-              className="hover:bg-blue-50/30"
+              className={`hover:bg-gray-50 ${isRowSelected(row.index) ? "bg-gray-50" : ""}`}
               style={{ height: `${virtualRow.size}px` }}
             >
               {row.getVisibleCells().map((cell) => (
                 <td
                   key={cell.id}
-                  className="relative border-b border-r border-gray-200"
+                  className="relative border-r border-b border-gray-200"
                   style={{
                     width: cell.column.getSize(),
                     maxWidth: cell.column.getSize(),
@@ -78,7 +80,7 @@ export function DataGridTable({
           <tr>
             <td
               colSpan={columnCount}
-              className="border-b border-r border-gray-200 px-2 py-4 text-center text-sm text-gray-500"
+              className="border-r border-b border-gray-200 px-2 py-4 text-center text-sm text-gray-500"
             >
               Loading more...
             </td>

@@ -7,6 +7,7 @@ import { api } from "~/trpc/react";
 import { DataGridTable } from "./DataGridTable";
 import { AddColumnButton } from "./AddColumnButton";
 import { useTableColumns, type RowData } from "./hooks/useTableColumns";
+import { SelectionProvider } from "./hooks/useSelection";
 
 interface DataGridProps {
   tableId: string;
@@ -127,24 +128,26 @@ export function DataGrid({ tableId }: DataGridProps) {
   }
 
   return (
-    <div
-      ref={tableContainerRef}
-      className="h-full overflow-auto"
-      style={{ contain: "strict" }}
-    >
-      <div className="flex">
-        <DataGridTable
-          table={tableInstance}
-          tableId={tableId}
-          virtualRows={virtualRows}
-          paddingTop={paddingTop}
-          paddingBottom={paddingBottom}
-          isFetchingNextPage={isFetchingNextPage}
-          columnCount={columns.length}
-        />
-        <AddColumnButton />
+    <SelectionProvider totalRows={rows.length} totalColumns={columns.length}>
+      <div
+        ref={tableContainerRef}
+        className="h-full overflow-auto"
+        style={{ contain: "strict" }}
+      >
+        <div className="flex">
+          <DataGridTable
+            table={tableInstance}
+            tableId={tableId}
+            virtualRows={virtualRows}
+            paddingTop={paddingTop}
+            paddingBottom={paddingBottom}
+            isFetchingNextPage={isFetchingNextPage}
+            columnCount={columns.length}
+          />
+          <AddColumnButton />
+        </div>
       </div>
-    </div>
+    </SelectionProvider>
   );
 }
 
