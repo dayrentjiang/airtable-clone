@@ -96,7 +96,7 @@ export const workspaceRouter = createTRPCRouter({
           tableId: table.id,
           order: 0,
           data: {
-            [nameCol.id]: "Welcome to Airtable Clone!",
+            [nameCol.id]: "",
             [statusCol.id]: "Active",
             [priorityCol.id]: "High",
           },
@@ -106,7 +106,7 @@ export const workspaceRouter = createTRPCRouter({
           tableId: table.id,
           order: 1,
           data: {
-            [nameCol.id]: "Click any cell to edit",
+            [nameCol.id]: "",
             [statusCol.id]: "In Progress",
             [priorityCol.id]: "Medium",
           },
@@ -116,7 +116,7 @@ export const workspaceRouter = createTRPCRouter({
           tableId: table.id,
           order: 2,
           data: {
-            [nameCol.id]: "Add more rows with the + button",
+            [nameCol.id]: "",
             [statusCol.id]: "Done",
             [priorityCol.id]: "Low",
           },
@@ -148,7 +148,8 @@ export const workspaceRouter = createTRPCRouter({
     return {
       created: true,
       workspace,
-      message: "Created default workspace with base, table, columns, and sample rows",
+      message:
+        "Created default workspace with base, table, columns, and sample rows",
     };
   }),
 
@@ -162,7 +163,10 @@ export const workspaceRouter = createTRPCRouter({
       });
 
       if (!workspace) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Workspace not found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Workspace not found",
+        });
       }
 
       return workspace;
@@ -187,7 +191,7 @@ export const workspaceRouter = createTRPCRouter({
         id: z.string(),
         name: z.string().min(1).optional(),
         starred: z.boolean().optional(),
-      })
+      }),
     )
     .mutation(async ({ ctx, input }) => {
       const workspace = await ctx.db.workspace.findFirst({
@@ -195,7 +199,10 @@ export const workspaceRouter = createTRPCRouter({
       });
 
       if (!workspace) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Workspace not found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Workspace not found",
+        });
       }
 
       return ctx.db.workspace.update({
@@ -216,7 +223,10 @@ export const workspaceRouter = createTRPCRouter({
       });
 
       if (!workspace) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Workspace not found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Workspace not found",
+        });
       }
 
       return ctx.db.workspace.delete({ where: { id: input.id } });

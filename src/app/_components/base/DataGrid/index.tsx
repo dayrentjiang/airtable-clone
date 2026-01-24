@@ -186,7 +186,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
           columnCount={columns.length}
           tableWidth={tableWidth}
         />
-        <AddColumnButton />
+        <AddColumnButton tableId={tableId} />
       </div>
     </div>
   );

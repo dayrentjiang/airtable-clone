@@ -3,6 +3,7 @@
 import { Plus } from "lucide-react";
 import { api } from "~/trpc/react";
 import { generateRowId } from "~/lib/id-generator";
+import { useSelection } from "./hooks/useSelection";
 
 interface AddRowButtonProps {
   tableId: string;
@@ -11,6 +12,7 @@ interface AddRowButtonProps {
 
 export function AddRowButton({ tableId, viewId }: AddRowButtonProps) {
   const utils = api.useUtils();
+  const { selectCell } = useSelection();
 
   const createRow = api.row.create.useMutation({
     // Optimistic update: Add row to UI immediately
@@ -26,6 +28,8 @@ export function AddRowButton({ tableId, viewId }: AddRowButtonProps) {
           limit: 150,
         });
 
+        let newRowIndex = 0;
+
         // Optimistically update the infinite query data
         utils.row.infiniteWithView.setInfiniteData(
           { tableId, viewId, limit: 150 },
@@ -37,6 +41,8 @@ export function AddRowButton({ tableId, viewId }: AddRowButtonProps) {
               (acc, page) => acc + page.items.length,
               0,
             );
+
+            newRowIndex = totalItems; // Store for later selection
 
             const optimisticRow = {
               id: newRow.id!,
@@ -59,6 +65,10 @@ export function AddRowButton({ tableId, viewId }: AddRowButtonProps) {
             };
           },
         );
+
+        // Select the first cell of the new row (column index 1, skip row number column)
+        // Use the index we calculated during the update
+        selectCell({ rowIndex: newRowIndex, columnIndex: 1 });
 
         return { previousData };
       }

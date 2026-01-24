@@ -96,6 +96,16 @@ export function SelectionProvider({
       // Skip if we're in editing mode
       if (editingCell) return;
 
+      // Skip if user is typing in an input, textarea, or contenteditable element
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
       let newRow = selectedCell.rowIndex;
       let newCol = selectedCell.columnIndex;
 
