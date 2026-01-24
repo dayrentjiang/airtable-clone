@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { generateRowId } from "~/server/lib/id-generator";
 
 export const tableRouter = createTRPCRouter({
   getAllByBase: protectedProcedure
@@ -60,7 +61,7 @@ export const tableRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Base not found" });
       }
 
-      return ctx.db.table.create({
+      const table = await ctx.db.table.create({
         data: {
           name: input.name,
           baseId: input.baseId,
@@ -87,6 +88,18 @@ export const tableRouter = createTRPCRouter({
         },
         include: { columns: true, views: true },
       });
+
+      // Create a default empty row
+      await ctx.db.row.create({
+        data: {
+          id: generateRowId(),
+          tableId: table.id,
+          order: 0,
+          data: {},
+        },
+      });
+
+      return table;
     }),
 
   delete: protectedProcedure

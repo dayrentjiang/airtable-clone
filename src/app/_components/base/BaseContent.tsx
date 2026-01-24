@@ -9,21 +9,14 @@ import { IconSidebar } from "../layout/IconSidebar";
 import { BaseTopNav } from "./BaseTopNav";
 import { api } from "~/trpc/react";
 
-interface Table {
-  id: string;
-  name: string;
-}
-
 interface BaseContentProps {
   baseId: string;
-  tables: Table[];
   userInitial: string;
 }
 
 // Inner component that uses the selection context
 function BaseContentInner({
   baseId,
-  tables,
   userInitial,
   activeTableId,
   activeViewId,
@@ -38,6 +31,25 @@ function BaseContentInner({
   const [isSideNavOpen, setIsSideNavOpen] = useState(true);
   const dataGridRef = useRef<HTMLDivElement>(null);
   const { clearSelection } = useSelection();
+
+  // Get TRPC utils for cache invalidation
+  const utils = api.useUtils();
+
+  // Fetch tables for this base dynamically
+  const { data: tables = [] } = api.table.getAllByBase.useQuery(
+    { baseId },
+    {
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    },
+  );
+
+  // Auto-select first table if no table is selected
+  useEffect(() => {
+    if (tables.length > 0 && !activeTableId) {
+      setActiveTableId(tables[0]!.id);
+    }
+  }, [tables, activeTableId, setActiveTableId]);
 
   // Fetch views for the active table to auto-select the first one
   const { data: views } = api.view.getByTableId.useQuery(
@@ -63,9 +75,20 @@ function BaseContentInner({
     setActiveViewId(null);
   }, [activeTableId, setActiveViewId]);
 
-  const handleAddTable = () => {
-    // TODO: Implement add table modal
-    console.log("Add table clicked");
+  const createTableMutation = api.table.create.useMutation({
+    onSuccess: (newTable) => {
+      // Refetch tables to include the new one
+      void utils.table.getAllByBase.invalidate({ baseId });
+      // Select the newly created table
+      setActiveTableId(newTable.id);
+    },
+  });
+
+  const handleAddTable = (name: string) => {
+    createTableMutation.mutate({
+      baseId,
+      name,
+    });
   };
 
   const toggleSideNav = () => {
@@ -121,7 +144,11 @@ function BaseContentInner({
             {/* Data grid */}
             <main className="flex-1 overflow-auto bg-gray-50" ref={dataGridRef}>
               {activeTableId && activeViewId ? (
-                <DataGrid key={activeViewId} tableId={activeTableId} viewId={activeViewId} />
+                <DataGrid
+                  key={activeViewId}
+                  tableId={activeTableId}
+                  viewId={activeViewId}
+                />
               ) : activeTableId ? (
                 <div className="flex h-full items-center justify-center text-gray-500">
                   Loading view...
@@ -139,11 +166,9 @@ function BaseContentInner({
   );
 }
 
-export function BaseContent({ baseId, tables, userInitial }: BaseContentProps) {
+export function BaseContent({ baseId, userInitial }: BaseContentProps) {
   // Default to first table if available
-  const [activeTableId, setActiveTableId] = useState<string | null>(
-    tables[0]?.id ?? null,
-  );
+  const [activeTableId, setActiveTableId] = useState<string | null>(null);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
 
   // Fetch views to get the total row/column count for SelectionProvider
@@ -162,7 +187,6 @@ export function BaseContent({ baseId, tables, userInitial }: BaseContentProps) {
     <SelectionProvider totalRows={100} totalColumns={10}>
       <BaseContentInner
         baseId={baseId}
-        tables={tables}
         userInitial={userInitial}
         activeTableId={activeTableId}
         activeViewId={activeViewId}
