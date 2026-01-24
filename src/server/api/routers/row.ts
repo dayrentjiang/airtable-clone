@@ -28,7 +28,7 @@ export const rowRouter = createTRPCRouter({
     .input(
       z.object({
         tableId: z.string(),
-        limit: z.number().min(1).max(100).default(50),
+        limit: z.number().min(1).max(150).default(50),
         cursor: z.string().nullish(),
       }),
     )
@@ -73,7 +73,7 @@ export const rowRouter = createTRPCRouter({
         filters: z.array(filterSchema).optional(),
         sorts: z.array(sortSchema).optional(),
         search: z.string().optional(), // Global search across all columns
-        limit: z.number().min(1).max(100).default(50),
+        limit: z.number().min(1).max(150).default(50),
         cursor: z.string().nullish(), // Cursor-based pagination
       }),
     )

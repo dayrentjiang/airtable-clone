@@ -14,7 +14,6 @@ interface DataGridTableProps {
   virtualRows: VirtualItem[];
   paddingTop: number;
   paddingBottom: number;
-  isFetchingNextPage: boolean;
   columnCount: number;
   tableWidth: number;
 }
@@ -26,7 +25,6 @@ export function DataGridTable({
   virtualRows,
   paddingTop,
   paddingBottom,
-  isFetchingNextPage,
   columnCount,
   tableWidth,
 }: DataGridTableProps) {
@@ -82,17 +80,7 @@ export function DataGridTable({
           </tr>
         )}
 
-        {/* Loading more indicator */}
-        {isFetchingNextPage && (
-          <tr>
-            <td
-              colSpan={columnCount}
-              className="border-r border-b border-gray-200 px-2 py-4 text-center text-sm text-gray-500"
-            >
-              Loading more...
-            </td>
-          </tr>
-        )}
+        {/* Loading indicator removed - background fetching is silent for seamless UX */}
 
         {/* Add row button */}
         <tr>

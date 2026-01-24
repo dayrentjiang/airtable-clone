@@ -23,12 +23,12 @@ export function AddRowButton({ tableId, viewId }: AddRowButtonProps) {
         const previousData = utils.row.infiniteWithView.getInfiniteData({
           tableId,
           viewId,
-          limit: 50,
+          limit: 150,
         });
 
         // Optimistically update the infinite query data
         utils.row.infiniteWithView.setInfiniteData(
-          { tableId, viewId, limit: 50 },
+          { tableId, viewId, limit: 150 },
           (old) => {
             if (!old) return old;
 
@@ -69,7 +69,7 @@ export function AddRowButton({ tableId, viewId }: AddRowButtonProps) {
     onError: (_err, _newRow, context) => {
       if (viewId && context?.previousData) {
         utils.row.infiniteWithView.setInfiniteData(
-          { tableId, viewId, limit: 50 },
+          { tableId, viewId, limit: 150 },
           context.previousData,
         );
       }

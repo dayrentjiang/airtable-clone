@@ -40,7 +40,9 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     },
   );
 
-  // Use infiniteWithView with TanStack infinite query - no caching, always refetch
+  // Use infiniteWithView with TanStack infinite query
+  // Using 150 rows per page - optimal for desktop grids (Airtable's internal range)
+  // Reduces network requests by ~3x compared to 50, better for scale
   const {
     data,
     isLoading: rowsLoading,
@@ -48,17 +50,20 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     hasNextPage,
     fetchNextPage,
   } = api.row.infiniteWithView.useInfiniteQuery(
-    { tableId, viewId, limit: 50 },
+    { tableId, viewId, limit: 150 },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
       refetchOnMount: true,
       refetchOnWindowFocus: false,
-      gcTime: 0,
-      staleTime: 0,
+      // Production caching: 30s stale time, 5min garbage collection
+      // Enables fast back-scroll without excessive refetching
+      staleTime: 30_000,   // 30 seconds - data is considered fresh
+      gcTime: 5 * 60_000,  // 5 minutes - keep pages in cache
     },
   );
 
   // Flatten all pages into a single array of rows
+  // TODO: Implement sliding window to cap memory (keep only ~3-5 pages around viewport)
   const rows = useMemo(() => {
     return (data?.pages.flatMap((page) => page.items) ?? []) as RowData[];
   }, [data]);
@@ -77,28 +82,35 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
 
   const { rows: tableRows } = tableInstance.getRowModel();
 
-  // Virtual scrolling setup
+  // Virtual scrolling setup with optimized overscan for production
   const rowVirtualizer = useVirtualizer({
     count: tableRows.length,
     getScrollElement: () => tableContainerRef.current,
     estimateSize: () => 35,
-    overscan: 10,
+    overscan: 30, // 30 rows overscan - optimal for smooth fast scrolling
+    measureElement:
+      typeof window !== 'undefined' && navigator.userAgent.indexOf('Firefox') === -1
+        ? (element) => element.getBoundingClientRect().height
+        : undefined, // Measure actual heights for better accuracy (except Firefox due to performance)
   });
 
   const virtualRows = rowVirtualizer.getVirtualItems();
   const totalSize = rowVirtualizer.getTotalSize();
 
-  // Fetch more data when scrolling near the end
+  // Prefetch when user is 40 rows from end (with 150 rows/page = ~27% through page)
+  // This gives plenty of time for network requests while reducing total requests
   useEffect(() => {
     const lastItem = virtualRows[virtualRows.length - 1];
     if (!lastItem) return;
 
+    // Start fetching when 40 rows away from end
+    // e.g., at row 110 of 150, or row 260 of 300
     if (
-      lastItem.index >= tableRows.length - 20 &&
+      lastItem.index >= tableRows.length - 40 &&
       hasNextPage &&
       !isFetchingNextPage
     ) {
-      fetchNextPage();
+      void fetchNextPage();
     }
   }, [
     virtualRows,
@@ -171,7 +183,6 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
           virtualRows={virtualRows}
           paddingTop={paddingTop}
           paddingBottom={paddingBottom}
-          isFetchingNextPage={isFetchingNextPage}
           columnCount={columns.length}
           tableWidth={tableWidth}
         />

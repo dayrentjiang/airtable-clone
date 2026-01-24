@@ -110,15 +110,15 @@ export function BaseSideNav({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch views for the current table - refetch on mount
+  // Fetch views for the current table
   const { data: views, isLoading } = api.view.getByTableId.useQuery(
     { tableId: tableId! },
     {
       enabled: !!tableId,
       refetchOnMount: true,
       refetchOnWindowFocus: false,
-      gcTime: 0,
-      staleTime: 0,
+      staleTime: 30_000,   // 30s freshness
+      gcTime: 5 * 60_000,  // 5min cache
     },
   );
 
