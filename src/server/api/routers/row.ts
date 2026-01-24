@@ -124,7 +124,7 @@ export const rowRouter = createTRPCRouter({
       }
 
       // Add global search (searches across all text columns)
-      if (search && search.trim()) {
+      if (search?.trim()) {
         const textColumnIds = table.columns
           .filter((col) => col.type === "TEXT")
           .map((col) => col.id);

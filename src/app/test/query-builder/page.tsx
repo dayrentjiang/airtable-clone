@@ -285,15 +285,15 @@ export default function QueryBuilderTestPage() {
           <div className="font-mono text-sm">
             <div className="text-blue-400">SELECT</div>
             <div className="ml-4 text-white">
-              id, tableId, data, "order", createdAt, updatedAt
+              id, tableId, data, &quot;order&quot;, createdAt, updatedAt
             </div>
             <div className="text-blue-400">FROM</div>
-            <div className="ml-4 text-white">"Row"</div>
+            <div className="ml-4 text-white">&quot;Row&quot;</div>
             <div className="text-blue-400">WHERE</div>
             <div className="ml-4 text-white">
               tableId ={" "}
               <span className="text-yellow-400">
-                '{selectedTableId || "..."}'
+                &apos;{selectedTableId || "..."}&apos;
               </span>
             </div>
             {viewFilters.length > 0 && (
@@ -307,7 +307,7 @@ export default function QueryBuilderTestPage() {
                     {filter.operator === "is_empty" ||
                     filter.operator === "is_not_empty"
                       ? `-- ${filter.columnId} ${filter.operator}`
-                      : `-- ${filter.columnId} ${filter.operator} "${filter.value}"`}
+                      : `-- ${filter.columnId} ${filter.operator} &quot;${filter.value}&quot;`}
                   </div>
                 ))}
               </>
@@ -316,7 +316,7 @@ export default function QueryBuilderTestPage() {
               <>
                 <div className="ml-4 text-blue-400">AND</div>
                 <div className="ml-8 text-yellow-300">
-                  data::text ILIKE '%{searchTerm}%'
+                  data::text ILIKE &apos;%{searchTerm}%&apos;
                 </div>
               </>
             )}
@@ -325,15 +325,15 @@ export default function QueryBuilderTestPage() {
               <>
                 {viewSorts.map((sort, idx) => (
                   <div key={idx} className="ml-8 text-purple-300">
-                    (data-&gt;&gt;'{sort.columnId}'){" "}
+                    (data-&gt;&gt;&apos;{sort.columnId}&apos;){" "}
                     {sort.direction.toUpperCase()}
                     {idx < viewSorts.length - 1 ? "," : ""}
                   </div>
                 ))}
-                <div className="ml-8 text-white">"order" ASC</div>
+                <div className="ml-8 text-white">&quot;order&quot; ASC</div>
               </>
             ) : (
-              <div className="ml-8 text-white">"order" ASC</div>
+              <div className="ml-8 text-white">&quot;order&quot; ASC</div>
             )}
             <div className="text-gray-400">;</div>
           </div>
