@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { api } from "~/trpc/react";
 
 export default function BaseTestPage() {
@@ -40,7 +41,7 @@ export default function BaseTestPage() {
         {workspacesLoading && <p>Loading...</p>}
         {workspaces?.length === 0 && (
           <p>
-            No workspaces. <a href="/test/workspace">Create one</a>
+            No workspaces. <Link href="/test/workspace" className="text-blue-600 hover:underline">Create one</Link>
           </p>
         )}
 
@@ -135,8 +136,8 @@ export default function BaseTestPage() {
       )}
 
       <div style={{ marginTop: "30px" }}>
-        <a href="/test/workspace">Workspace Test</a> |{" "}
-        <a href="/test/table">Table Test</a>
+        <Link href="/test/workspace" className="text-blue-600 hover:underline">Workspace Test</Link> |{" "}
+        <Link href="/test/table" className="text-blue-600 hover:underline">Table Test</Link>
       </div>
     </div>
   );

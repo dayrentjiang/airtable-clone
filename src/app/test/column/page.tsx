@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { api } from "~/trpc/react";
 
 export default function ColumnTestPage() {
@@ -62,7 +63,7 @@ export default function ColumnTestPage() {
           {basesLoading && <p>Loading...</p>}
           {bases?.length === 0 && (
             <p>
-              No bases. <a href="/test/table">Create one</a>
+              No bases. <Link href="/test/table" className="text-blue-600 hover:underline">Create one</Link>
             </p>
           )}
 
@@ -95,7 +96,7 @@ export default function ColumnTestPage() {
               {tablesLoading && <p>Loading...</p>}
               {tables?.length === 0 && (
                 <p>
-                  No tables. <a href="/test/table">Create one</a>
+                  No tables. <Link href="/test/table" className="text-blue-600 hover:underline">Create one</Link>
                 </p>
               )}
 
@@ -257,7 +258,7 @@ export default function ColumnTestPage() {
       )}
 
       <div style={{ marginTop: "30px" }}>
-        <a href="/test/table">← Back to Table Test</a>
+        <Link href="/test/table" className="text-blue-600 hover:underline">← Back to Table Test</Link>
       </div>
     </div>
   );
