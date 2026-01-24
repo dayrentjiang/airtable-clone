@@ -4,7 +4,7 @@ export const runtime = "edge";
 
 export async function GET() {
   return NextResponse.json({
-    region: process.env.VERCEL_REGION || "local",
-    env: process.env.VERCEL_ENV || "development",
+    region: process.env.VERCEL_REGION ?? "local",
+    env: process.env.VERCEL_ENV ?? "development",
   });
 }
