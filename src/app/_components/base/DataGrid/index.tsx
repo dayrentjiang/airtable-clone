@@ -86,7 +86,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     count: tableRows.length,
     getScrollElement: () => tableContainerRef.current,
     estimateSize: () => 35,
-    overscan: 30, // 30 rows overscan - optimal for smooth fast scrolling
+    overscan: 50, // 50 rows overscan - optimal for smooth fast scrolling
     measureElement:
       typeof window !== "undefined" &&
       navigator.userAgent.indexOf("Firefox") === -1
@@ -103,10 +103,10 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     const lastItem = virtualRows[virtualRows.length - 1];
     if (!lastItem) return;
 
-    // Start fetching when 40 rows away from end
+    // Start fetching when 70 rows away from end
     // e.g., at row 110 of 150, or row 260 of 300
     if (
-      lastItem.index >= tableRows.length - 40 &&
+      lastItem.index >= tableRows.length - 70 &&
       hasNextPage &&
       !isFetchingNextPage
     ) {

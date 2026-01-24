@@ -127,7 +127,10 @@ function BaseContentInner({
           onTableSelect={setActiveTableId}
           onAddTable={handleAddTable}
         />
-        <ViewToolbar onToggleSideNav={toggleSideNav} />
+        <ViewToolbar
+          onToggleSideNav={toggleSideNav}
+          tableId={activeTableId ?? ""}
+        />
 
         {/* Content with side nav and main area */}
         <div className="flex flex-1 overflow-hidden">

@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { Prisma } from "../../../../generated/prisma";
+import { faker } from "@faker-js/faker";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
   type ViewConfig,
@@ -349,5 +350,167 @@ export const rowRouter = createTRPCRouter({
       }
 
       return ctx.db.row.delete({ where: { id } });
+    }),
+
+  /**
+   * BULK CREATE ROWS (optimized for large datasets)
+   * Uses batch inserts and generates fake data with Faker.js
+   */
+  bulkCreate: protectedProcedure
+    .input(
+      z.object({
+        tableId: z.string(),
+        count: z.number().min(1).max(100000),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { tableId, count } = input;
+
+      console.log(`[BULK CREATE] Starting: ${count} rows for table ${tableId}`);
+
+      // Verify table ownership and get columns
+      const table = await ctx.db.table.findFirst({
+        where: { id: tableId },
+        include: {
+          base: { include: { workspace: true } },
+          columns: { orderBy: { order: "asc" } },
+        },
+      });
+
+      if (!table || table.base.workspace.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Table not found" });
+      }
+
+      // Get the last order to continue from
+      const lastRow = await ctx.db.row.findFirst({
+        where: { tableId },
+        orderBy: { order: "desc" },
+        select: { order: true },
+      });
+
+      const startOrder = (lastRow?.order ?? -1) + 1;
+
+      // Helper function to generate fake data based on column type
+      const generateFakeValue = (
+        columnType: string,
+        columnName: string,
+      ): string | number => {
+        if (columnType === "NUMBER") {
+          // Generate numbers based on column name hints
+          if (columnName.toLowerCase().includes("age")) {
+            return faker.number.int({ min: 18, max: 80 });
+          } else if (
+            columnName.toLowerCase().includes("price") ||
+            columnName.toLowerCase().includes("cost")
+          ) {
+            return faker.number.float({
+              min: 10,
+              max: 10000,
+              fractionDigits: 2,
+            });
+          } else if (
+            columnName.toLowerCase().includes("quantity") ||
+            columnName.toLowerCase().includes("count")
+          ) {
+            return faker.number.int({ min: 1, max: 1000 });
+          }
+          return faker.number.int({ min: 1, max: 100000 });
+        } else {
+          // TEXT columns - generate based on column name hints
+          const lowerName = columnName.toLowerCase();
+          if (lowerName.includes("name") || lowerName === "name") {
+            return faker.person.fullName();
+          } else if (lowerName.includes("email")) {
+            return faker.internet.email();
+          } else if (lowerName.includes("phone")) {
+            return faker.phone.number();
+          } else if (lowerName.includes("address")) {
+            return faker.location.streetAddress();
+          } else if (lowerName.includes("city")) {
+            return faker.location.city();
+          } else if (lowerName.includes("country")) {
+            return faker.location.country();
+          } else if (lowerName.includes("company")) {
+            return faker.company.name();
+          } else if (lowerName.includes("job") || lowerName.includes("title")) {
+            return faker.person.jobTitle();
+          } else if (
+            lowerName.includes("description") ||
+            lowerName.includes("notes")
+          ) {
+            return faker.lorem.sentence();
+          }
+          // Default: random words
+          return faker.lorem.words(3);
+        }
+      };
+
+      // Use 1000 rows per batch for stable performance
+      const BATCH_SIZE = 1000;
+      const batches = Math.ceil(count / BATCH_SIZE);
+
+      let totalInserted = 0;
+
+      try {
+        for (let batchIndex = 0; batchIndex < batches; batchIndex++) {
+          const batchStart = batchIndex * BATCH_SIZE;
+          const batchEnd = Math.min(batchStart + BATCH_SIZE, count);
+          const batchSize = batchEnd - batchStart;
+
+          console.log(
+            `[BULK CREATE] Batch ${batchIndex + 1}/${batches}: inserting ${batchSize} rows`,
+          );
+
+          // Generate rows for this batch with fake data
+          const rows = Array.from({ length: batchSize }, (_, i) => {
+            const rowIndex = batchStart + i;
+
+            // Generate fake data for each column
+            const rowData: Record<string, string | number> = {};
+            table.columns.forEach((column) => {
+              rowData[column.id] = generateFakeValue(column.type, column.name);
+            });
+
+            return {
+              id: generateRowId(),
+              tableId,
+              data: rowData as Prisma.InputJsonValue,
+              order: startOrder + rowIndex,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+          });
+
+          // Bulk insert using Prisma's createMany (optimized)
+          await ctx.db.row.createMany({
+            data: rows,
+            skipDuplicates: true,
+          });
+
+          totalInserted += batchSize;
+          console.log(
+            `[BULK CREATE] Progress: ${totalInserted}/${count} rows (${Math.round((totalInserted / count) * 100)}%)`,
+          );
+        }
+
+        console.log(
+          `[BULK CREATE] Completed: ${totalInserted} rows inserted with fake data`,
+        );
+
+        return {
+          success: true,
+          count: totalInserted,
+          message: `Successfully created ${totalInserted.toLocaleString()} rows with realistic data`,
+        };
+      } catch (error) {
+        console.error(
+          `[BULK CREATE] Error after ${totalInserted} rows:`,
+          error,
+        );
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed after inserting ${totalInserted} rows: ${error instanceof Error ? error.message : "Unknown error"}`,
+        });
+      }
     }),
 });
