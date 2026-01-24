@@ -313,7 +313,7 @@ export function EditableCell({
     return (
       <>
         {/* Editing border - matches selection border exactly */}
-        <div className="pointer-events-none absolute -inset-1 z-20 rounded-sm border-4 border-blue-600"></div>
+        <div className="pointer-events-none absolute -inset-1 z-20 rounded-sm border-3 border-blue-600"></div>
         {/* Input */}
         <div className="absolute inset-0 z-10 overflow-hidden">
           <input
@@ -363,7 +363,7 @@ export function EditableCell({
     return (
       <>
         {/* Selection border */}
-        <div className="pointer-events-none absolute -inset-0.5 z-20 rounded-sm border-3 border-blue-600">
+        <div className="pointer-events-none absolute -inset-0.5 z-20 rounded-sm border-2 border-blue-600">
           <div className="absolute -right-1 -bottom-1 h-2 w-2 border border-blue-500 bg-white" />
         </div>
         {/* Content */}
