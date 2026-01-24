@@ -23,6 +23,8 @@ export function EditableCell({
 }: EditableCellProps) {
   const initialValue = getValue() as string | number | null;
   const [value, setValue] = useState(String(initialValue ?? ""));
+  const [displayValue, setDisplayValue] = useState<string | number | null>(initialValue);
+  const previousValueRef = useRef<string | number | null>(initialValue);
   const inputRef = useRef<HTMLInputElement>(null);
   const cellRef = useRef<HTMLDivElement>(null);
   const hasSavedRef = useRef(false);
@@ -51,10 +53,22 @@ export function EditableCell({
     }
   }, [isEditing]);
 
-  // Sync with external changes
+  // Only sync with server changes from OTHER users/sessions
+  // Don't overwrite our optimistic updates
   useEffect(() => {
-    setValue(String(initialValue ?? ""));
-  }, [initialValue]);
+    // Skip if we're currently editing
+    if (isEditing) return;
+    
+    // Only update if the value actually changed from an external source
+    // (not from our own optimistic update)
+    if (initialValue !== previousValueRef.current && 
+        initialValue !== displayValue) {
+      setValue(String(initialValue ?? ""));
+      setDisplayValue(initialValue);
+    }
+    
+    previousValueRef.current = initialValue;
+  }, [initialValue, isEditing, displayValue]);
 
   // Handle keyboard input when selected (not editing) - for typing characters
   useEffect(() => {
@@ -114,9 +128,6 @@ export function EditableCell({
       }
       console.error("Failed to update cell:", err);
     },
-    onSettled: () => {
-      void utils.row.infinite.invalidate({ tableId });
-    },
   });
 
   const handleSave = () => {
@@ -136,12 +147,16 @@ export function EditableCell({
         finalValue = null;
       } else {
         setValue(String(initialValue ?? ""));
+        setDisplayValue(initialValue);
         stopEditing();
         return;
       }
     } else if (value === "") {
       finalValue = null;
     }
+
+    // Update display value immediately to prevent flashing
+    setDisplayValue(finalValue);
 
     if (finalValue !== initialValue) {
       updateCellMutation.mutate({ rowId, columnId, value: finalValue });
@@ -153,6 +168,7 @@ export function EditableCell({
 
   const handleCancel = () => {
     setValue(String(initialValue ?? ""));
+    setDisplayValue(initialValue);
     stopEditing();
   };
 
@@ -171,12 +187,16 @@ export function EditableCell({
         finalValue = null;
       } else {
         setValue(String(initialValue ?? ""));
+        setDisplayValue(initialValue);
         selectCell(null);
         return;
       }
     } else if (value === "") {
       finalValue = null;
     }
+
+    // Update display value immediately to prevent flashing
+    setDisplayValue(finalValue);
 
     if (finalValue !== initialValue) {
       updateCellMutation.mutate({ rowId, columnId, value: finalValue });
@@ -213,19 +233,8 @@ export function EditableCell({
       handleCancel();
     } else if (e.key === "Tab") {
       handleSave();
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      handleSaveAndNavigate("up");
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      handleSaveAndNavigate("down");
-    } else if (e.key === "ArrowLeft" && inputRef.current?.selectionStart === 0) {
-      e.preventDefault();
-      handleSaveAndNavigate("left");
-    } else if (e.key === "ArrowRight" && inputRef.current?.selectionStart === value.length) {
-      e.preventDefault();
-      handleSaveAndNavigate("right");
     }
+    // Arrow keys now just move cursor within input, no navigation
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -251,10 +260,11 @@ export function EditableCell({
     handleSave();
   };
 
-  const displayValue =
-    initialValue === null || initialValue === undefined
+  // Format display value
+  const formattedDisplayValue =
+    displayValue === null || displayValue === undefined
       ? ""
-      : String(initialValue);
+      : String(displayValue);
 
   // Editing state
   if (isEditing) {
@@ -292,7 +302,7 @@ export function EditableCell({
         >
           <div className="h-full w-full overflow-hidden px-2 py-1.5">
             <span className="block truncate text-sm text-gray-900">
-              {displayValue || <span className="text-gray-400"></span>}
+              {formattedDisplayValue || <span className="text-gray-400"></span>}
             </span>
           </div>
         </div>
@@ -309,7 +319,7 @@ export function EditableCell({
       className="absolute inset-0 overflow-hidden px-2 py-1.5"
     >
       <span className="block truncate text-sm text-gray-900">
-        {displayValue || <span className="text-gray-400"></span>}
+        {formattedDisplayValue || <span className="text-gray-400"></span>}
       </span>
     </div>
   );
