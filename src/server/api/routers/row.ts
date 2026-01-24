@@ -1,23 +1,27 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { Prisma } from "../../../../generated/prisma";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  type ViewConfig,
+  type CellData,
+  cellDataSchema,
+  filterSchema,
+  sortSchema,
+} from "~/server/lib/types";
+import {
+  buildFilterCondition,
+  buildSortClause,
+  buildSearchCondition,
+} from "~/server/lib/query-builder";
 
 /**
  * ROW ROUTER
  */
 
-// Reusable schema for cell data (columnId -> value)
-const cellDataSchema = z.record(
-  z.string(),
-  z.union([z.string(), z.number(), z.null()]),
-);
-
-// Type that matches our Zod schema
-type CellData = Record<string, string | number | null>;
-
 export const rowRouter = createTRPCRouter({
   /**
-   * GET ROWS WITH CURSOR PAGINATION
+   * GET ROWS WITH CURSOR PAGINATION (no filters/sorts)
    */
   infinite: protectedProcedure
     .input(
@@ -53,6 +57,124 @@ export const rowRouter = createTRPCRouter({
       }
 
       return { items: rows, nextCursor };
+    }),
+
+  /**
+   * GET ROWS WITH VIEW CONFIG (filters, sorts, search)
+   * Uses raw SQL for JSONB queries - optimized for 100k rows
+   */
+  infiniteWithView: protectedProcedure
+    .input(
+      z.object({
+        tableId: z.string(),
+        viewId: z.string().optional(),
+        // Override view config (for live filtering without saving)
+        filters: z.array(filterSchema).optional(),
+        sorts: z.array(sortSchema).optional(),
+        search: z.string().optional(), // Global search across all columns
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { tableId, viewId, filters, sorts, search, limit, offset } = input;
+
+      // Verify table ownership
+      const table = await ctx.db.table.findFirst({
+        where: { id: tableId },
+        include: {
+          base: { include: { workspace: true } },
+          columns: true,
+        },
+      });
+
+      if (!table || table.base.workspace.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Table not found" });
+      }
+
+      // Build column type map for proper sorting/filtering
+      const columnTypes = new Map<string, "TEXT" | "NUMBER">();
+      table.columns.forEach((col) => columnTypes.set(col.id, col.type));
+
+      // Get view config if viewId provided
+      let viewConfig: ViewConfig | null = null;
+      if (viewId) {
+        const view = await ctx.db.view.findFirst({
+          where: { id: viewId, tableId },
+        });
+        if (view) {
+          viewConfig = view.config as ViewConfig;
+        }
+      }
+
+      // Use provided filters/sorts or fall back to view config
+      const activeFilters = filters ?? viewConfig?.filters ?? [];
+      const activeSorts = sorts ?? viewConfig?.sorts ?? [];
+
+      // Start building the query parts
+      const filterConditions: Prisma.Sql[] = [];
+
+      // Add filter conditions
+      for (const filter of activeFilters) {
+        const columnType = columnTypes.get(filter.columnId) ?? "TEXT";
+        const condition = buildFilterCondition(filter, columnType);
+        if (condition) {
+          filterConditions.push(condition);
+        }
+      }
+
+      // Add global search (searches across all text columns)
+      if (search?.trim()) {
+        const textColumnIds = table.columns
+          .filter((col) => col.type === "TEXT")
+          .map((col) => col.id);
+
+        const searchCondition = buildSearchCondition(search, textColumnIds);
+        if (searchCondition) {
+          filterConditions.push(searchCondition);
+        }
+      }
+
+      // Build complete WHERE clause
+      let whereClause: Prisma.Sql;
+      if (filterConditions.length === 0) {
+        whereClause = Prisma.sql`"tableId" = ${tableId}`;
+      } else {
+        // Build with all conditions
+        whereClause = Prisma.sql`"tableId" = ${tableId}`;
+        for (const condition of filterConditions) {
+          whereClause = Prisma.sql`${whereClause} AND ${condition}`;
+        }
+      }
+
+      // Build ORDER BY
+      const orderBy = buildSortClause(activeSorts, columnTypes);
+
+      // Get total count for pagination
+      const countQuery = Prisma.sql`SELECT COUNT(*) as count FROM "Row" WHERE ${whereClause}`;
+      const countResult =
+        await ctx.db.$queryRaw<[{ count: bigint }]>(countQuery);
+      const totalCount = Number(countResult[0]?.count ?? 0);
+
+      // Get rows with pagination
+      const rowsQuery = Prisma.sql`SELECT * FROM "Row" WHERE ${whereClause} ORDER BY ${orderBy} LIMIT ${limit} OFFSET ${offset}`;
+
+      const rows = await ctx.db.$queryRaw<
+        Array<{
+          id: string;
+          data: unknown;
+          order: number;
+          tableId: string;
+          createdAt: Date;
+          updatedAt: Date;
+        }>
+      >(rowsQuery);
+
+      return {
+        items: rows,
+        totalCount,
+        hasMore: offset + rows.length < totalCount,
+      };
     }),
 
   /**

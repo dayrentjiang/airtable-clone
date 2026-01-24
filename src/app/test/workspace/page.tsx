@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { api } from "~/trpc/react";
 import { LogoutButton } from "~/app/_components/ui/LogoutButton";
 
@@ -154,8 +155,8 @@ export default function WorkspaceTestPage() {
       </section>
 
       <div style={{ marginTop: "30px" }}>
-        <a href="/test/base">Base Test</a> |{" "}
-        <a href="/test/table">Table Test</a> | <a href="/test/row">Row Test</a>
+        <Link href="/test/base" className="text-blue-600 hover:underline">Base Test</Link> |{" "}
+        <Link href="/test/table" className="text-blue-600 hover:underline">Table Test</Link> | <Link href="/test/row" className="text-blue-600 hover:underline">Row Test</Link>
       </div>
     </div>
   );

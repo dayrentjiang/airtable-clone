@@ -1,26 +1,32 @@
 import { redirect } from "next/navigation";
 import { auth } from "~/server/auth";
-import { LoginForm } from "~/app/_components/login/LoginForm";
-import { PromoSection } from "~/app/_components/login/PromoSection";
+import { TopNav } from "~/app/_components/layout/TopNav";
+import { SideNav } from "~/app/_components/layout/SideNav";
+import { IconSidebar } from "~/app/_components/layout/IconSidebar";
+import { HomeContent } from "~/app/_components/home/HomeContent";
 
 export default async function Home() {
   const session = await auth();
 
-  // If user is logged in, redirect to dashboard or workspace
-  if (session) {
-    redirect("/workspace");
+  // If not authenticated, redirect to login
+  if (!session) {
+    redirect("/login");
   }
 
-  // Show login page if not authenticated
-  return (
-    <div className="flex min-h-screen bg-white">
-      {/* Left section - Login Form */}
-      <div className="flex flex-1 items-center justify-center px-6 py-12">
-        <LoginForm />
-      </div>
+  const userInitial = session.user?.name?.[0]?.toUpperCase() ?? "U";
 
-      {/* Right section - Promo */}
-      <PromoSection />
+  // Show home content when authenticated
+  return (
+    <div className="flex h-screen flex-col bg-gray-50">
+      <TopNav session={session} />
+
+      <div className="flex flex-1 overflow-hidden">
+        <SideNav />
+
+        <main className="flex-1 overflow-y-auto">
+          <HomeContent />
+        </main>
+      </div>
     </div>
   );
 }

@@ -165,6 +165,17 @@ exports.Prisma.RowScalarFieldEnum = {
   tableId: 'tableId'
 };
 
+exports.Prisma.ViewScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  type: 'type',
+  order: 'order',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  tableId: 'tableId',
+  config: 'config'
+};
+
 exports.Prisma.AccountScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -231,12 +242,21 @@ exports.ColumnType = exports.$Enums.ColumnType = {
   NUMBER: 'NUMBER'
 };
 
+exports.ViewType = exports.$Enums.ViewType = {
+  GRID: 'GRID',
+  CALENDAR: 'CALENDAR',
+  KANBAN: 'KANBAN',
+  GALLERY: 'GALLERY',
+  FORM: 'FORM'
+};
+
 exports.Prisma.ModelName = {
   Workspace: 'Workspace',
   Base: 'Base',
   Table: 'Table',
   Column: 'Column',
   Row: 'Row',
+  View: 'View',
   Account: 'Account',
   Session: 'Session',
   User: 'User',
