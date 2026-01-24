@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "~/server/auth";
 import { TopNav } from "~/app/_components/layout/TopNav";
 import { SideNav } from "~/app/_components/layout/SideNav";
+import { IconSidebar } from "~/app/_components/layout/IconSidebar";
 import { HomeContent } from "~/app/_components/home/HomeContent";
 
 export default async function Home() {
@@ -11,6 +12,8 @@ export default async function Home() {
   if (!session) {
     redirect("/login");
   }
+
+  const userInitial = session.user?.name?.[0]?.toUpperCase() ?? "U";
 
   // Show home content when authenticated
   return (
