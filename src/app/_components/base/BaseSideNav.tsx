@@ -117,8 +117,8 @@ export function BaseSideNav({
       enabled: !!tableId,
       refetchOnMount: true,
       refetchOnWindowFocus: false,
-      staleTime: 30_000,   // 30s freshness
-      gcTime: 5 * 60_000,  // 5min cache
+      staleTime: 30_000, // 30s freshness
+      gcTime: 5 * 60_000, // 5min cache
     },
   );
 

@@ -57,8 +57,8 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       refetchOnWindowFocus: false,
       // Production caching: 30s stale time, 5min garbage collection
       // Enables fast back-scroll without excessive refetching
-      staleTime: 30_000,   // 30 seconds - data is considered fresh
-      gcTime: 5 * 60_000,  // 5 minutes - keep pages in cache
+      staleTime: 30_000, // 30 seconds - data is considered fresh
+      gcTime: 5 * 60_000, // 5 minutes - keep pages in cache
     },
   );
 
@@ -89,7 +89,8 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     estimateSize: () => 35,
     overscan: 30, // 30 rows overscan - optimal for smooth fast scrolling
     measureElement:
-      typeof window !== 'undefined' && navigator.userAgent.indexOf('Firefox') === -1
+      typeof window !== "undefined" &&
+      navigator.userAgent.indexOf("Firefox") === -1
         ? (element) => element.getBoundingClientRect().height
         : undefined, // Measure actual heights for better accuracy (except Firefox due to performance)
   });

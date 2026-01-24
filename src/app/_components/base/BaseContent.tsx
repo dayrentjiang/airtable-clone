@@ -46,8 +46,8 @@ function BaseContentInner({
       enabled: !!activeTableId,
       refetchOnMount: true,
       refetchOnWindowFocus: false,
-      staleTime: 30_000,   // 30s freshness
-      gcTime: 5 * 60_000,  // 5min cache
+      staleTime: 30_000, // 30s freshness
+      gcTime: 5 * 60_000, // 5min cache
     },
   );
 
@@ -153,8 +153,8 @@ export function BaseContent({ baseId, tables, userInitial }: BaseContentProps) {
       enabled: !!activeTableId,
       refetchOnMount: true,
       refetchOnWindowFocus: false,
-      staleTime: 30_000,   // 30s freshness
-      gcTime: 5 * 60_000,  // 5min cache
+      staleTime: 30_000, // 30s freshness
+      gcTime: 5 * 60_000, // 5min cache
     },
   );
 
