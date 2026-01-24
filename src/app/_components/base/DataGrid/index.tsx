@@ -6,41 +6,67 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { api } from "~/trpc/react";
 import { DataGridTable } from "./DataGridTable";
 import { AddColumnButton } from "./AddColumnButton";
+import { AddRowButton } from "./AddRowButton";
 import { useTableColumns, type RowData } from "./hooks/useTableColumns";
 import { SelectionProvider } from "./hooks/useSelection";
+import type { ViewConfig } from "~/server/lib/types";
+
+// Re-export SelectionProvider for use in parent components
+export { SelectionProvider, useSelection } from "./hooks/useSelection";
 
 interface DataGridProps {
   tableId: string;
+  viewId: string; // Required - tables must have at least 1 view
 }
 
-export function DataGrid({ tableId }: DataGridProps) {
+export function DataGrid({ tableId, viewId }: DataGridProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
-  // Fetch table with columns
-  const { data: table, isLoading: tableLoading } = api.table.getById.useQuery({
-    id: tableId,
-  });
-
-  // Use infinite query for pagination
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading: rowsLoading,
-  } = api.row.infinite.useInfiniteQuery(
-    { tableId, limit: 50 },
-    { getNextPageParam: (lastPage) => lastPage.nextCursor },
+  // Fetch table with columns - refetch on mount
+  const { data: table, isLoading: tableLoading } = api.table.getById.useQuery(
+    { id: tableId },
+    {
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    }
   );
 
-  // Flatten all pages into single array
-  const rows = useMemo(
-    () => data?.pages.flatMap((page) => page.items) ?? [],
-    [data],
-  ) as RowData[];
+  // Fetch view config - refetch on mount
+  const { data: view } = api.view.getById.useQuery(
+    { id: viewId },
+    {
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    }
+  );
 
-  // Build column definitions
-  const columns = useTableColumns(table?.columns);
+  // Use infiniteWithView with TanStack infinite query - no caching, always refetch
+  const {
+    data,
+    isLoading: rowsLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = api.row.infiniteWithView.useInfiniteQuery(
+    { tableId, viewId, limit: 50 },
+    {
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+      gcTime: 0,
+      staleTime: 0,
+    },
+  );
+
+  // Flatten all pages into a single array of rows
+  const rows = useMemo(() => {
+    return (data?.pages.flatMap((page) => page.items) ?? []) as RowData[];
+  }, [data]);
+
+  // Build column definitions (filtered by view's hiddenFields)
+  const viewConfig = view?.config as ViewConfig | undefined;
+  const hiddenFields = viewConfig?.hiddenFields ?? [];
+  const columns = useTableColumns(table?.columns, hiddenFields);
 
   // Create table instance
   const tableInstance = useReactTable({
@@ -72,7 +98,7 @@ export function DataGrid({ tableId }: DataGridProps) {
       hasNextPage &&
       !isFetchingNextPage
     ) {
-      void fetchNextPage();
+      fetchNextPage();
     }
   }, [
     virtualRows,
@@ -88,8 +114,9 @@ export function DataGrid({ tableId }: DataGridProps) {
       ? totalSize - (virtualRows[virtualRows.length - 1]?.end ?? 0)
       : 0;
 
-  // Calculate table width: row number column (66) + data columns (180 each)
-  const tableWidth = 66 + (table?.columns?.length ?? 0) * 180;
+  // Calculate table width: row number column (66) + visible data columns (180 each)
+  // columns.length - 1 because columns includes the row number column
+  const tableWidth = 66 + (columns.length - 1) * 180;
 
   // Loading state
   if (tableLoading || rowsLoading) {
@@ -122,7 +149,7 @@ export function DataGrid({ tableId }: DataGridProps) {
         <div className="mt-4">
           <div className="inline-block">
             <div className="w-64">
-              <AddRowButton tableId={tableId} />
+              <AddRowButton tableId={tableId} viewId={viewId} />
             </div>
           </div>
         </div>
@@ -131,29 +158,25 @@ export function DataGrid({ tableId }: DataGridProps) {
   }
 
   return (
-    <SelectionProvider totalRows={rows.length} totalColumns={columns.length}>
-      <div
-        ref={tableContainerRef}
-        className="h-full overflow-auto"
-        style={{ contain: "strict" }}
-      >
-        <div className="flex pb-30">
-          <DataGridTable
-            table={tableInstance}
-            tableId={tableId}
-            virtualRows={virtualRows}
-            paddingTop={paddingTop}
-            paddingBottom={paddingBottom}
-            isFetchingNextPage={isFetchingNextPage}
-            columnCount={columns.length}
-            tableWidth={tableWidth}
-          />
-          <AddColumnButton />
-        </div>
+    <div
+      ref={tableContainerRef}
+      className="h-full overflow-auto"
+      style={{ contain: "strict" }}
+    >
+      <div className="flex pb-30">
+        <DataGridTable
+          table={tableInstance}
+          tableId={tableId}
+          viewId={viewId}
+          virtualRows={virtualRows}
+          paddingTop={paddingTop}
+          paddingBottom={paddingBottom}
+          isFetchingNextPage={isFetchingNextPage}
+          columnCount={columns.length}
+          tableWidth={tableWidth}
+        />
+        <AddColumnButton />
       </div>
-    </SelectionProvider>
+    </div>
   );
 }
-
-// Re-export AddRowButton for use in empty state
-import { AddRowButton } from "./AddRowButton";

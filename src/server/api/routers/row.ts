@@ -74,11 +74,11 @@ export const rowRouter = createTRPCRouter({
         sorts: z.array(sortSchema).optional(),
         search: z.string().optional(), // Global search across all columns
         limit: z.number().min(1).max(100).default(50),
-        offset: z.number().min(0).default(0),
+        cursor: z.string().nullish(), // Cursor-based pagination
       }),
     )
     .query(async ({ ctx, input }) => {
-      const { tableId, viewId, filters, sorts, search, limit, offset } = input;
+      const { tableId, viewId, filters, sorts, search, limit, cursor } = input;
 
       // Verify table ownership
       const table = await ctx.db.table.findFirst({
@@ -151,14 +151,20 @@ export const rowRouter = createTRPCRouter({
       // Build ORDER BY
       const orderBy = buildSortClause(activeSorts, columnTypes);
 
-      // Get total count for pagination
-      const countQuery = Prisma.sql`SELECT COUNT(*) as count FROM "Row" WHERE ${whereClause}`;
-      const countResult =
-        await ctx.db.$queryRaw<[{ count: bigint }]>(countQuery);
-      const totalCount = Number(countResult[0]?.count ?? 0);
+      // Add cursor condition if provided
+      if (cursor) {
+        // Get the cursor row's order value for pagination
+        const cursorRow = await ctx.db.row.findUnique({
+          where: { id: cursor },
+          select: { order: true },
+        });
+        if (cursorRow) {
+          whereClause = Prisma.sql`${whereClause} AND "order" > ${cursorRow.order}`;
+        }
+      }
 
-      // Get rows with pagination
-      const rowsQuery = Prisma.sql`SELECT * FROM "Row" WHERE ${whereClause} ORDER BY ${orderBy} LIMIT ${limit} OFFSET ${offset}`;
+      // Get rows with cursor-based pagination (fetch limit + 1 to check if there's more)
+      const rowsQuery = Prisma.sql`SELECT * FROM "Row" WHERE ${whereClause} ORDER BY ${orderBy} LIMIT ${limit + 1}`;
 
       const rows = await ctx.db.$queryRaw<
         Array<{
@@ -171,10 +177,16 @@ export const rowRouter = createTRPCRouter({
         }>
       >(rowsQuery);
 
+      // Check if there's a next page
+      let nextCursor: string | undefined = undefined;
+      if (rows.length > limit) {
+        const nextItem = rows.pop();
+        nextCursor = nextItem?.id;
+      }
+
       return {
         items: rows,
-        totalCount,
-        hasMore: offset + rows.length < totalCount,
+        nextCursor,
       };
     }),
 

@@ -6,70 +6,88 @@ import { generateRowId } from "~/lib/id-generator";
 
 interface AddRowButtonProps {
   tableId: string;
+  viewId?: string;
 }
 
-export function AddRowButton({ tableId }: AddRowButtonProps) {
+export function AddRowButton({ tableId, viewId }: AddRowButtonProps) {
   const utils = api.useUtils();
 
   const createRow = api.row.create.useMutation({
     // Optimistic update: Add row to UI immediately
     onMutate: async (newRow) => {
-      // Cancel any outgoing refetches (but don't cancel other mutations)
-      await utils.row.infinite.cancel({ tableId });
+      if (viewId) {
+        // Cancel any outgoing refetches
+        await utils.row.infiniteWithView.cancel({ tableId, viewId });
 
-      // Snapshot the previous value
-      const previousData = utils.row.infinite.getInfiniteData({ tableId });
-
-      // Optimistically update to the new value
-      utils.row.infinite.setInfiniteData({ tableId, limit: 50 }, (old) => {
-        if (!old) return old;
-
-        // Create optimistic row with the REAL ID (no temp ID needed!)
-        const optimisticRow = {
-          id: newRow.id!, // Use the client-generated ID
+        // Snapshot the previous value
+        const previousData = utils.row.infiniteWithView.getInfiniteData({
           tableId,
-          data: {} as Record<string, string | number | null>,
-          order: old.pages[0]?.items.length ?? 0,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
+          viewId,
+          limit: 50,
+        });
 
-        // Add to first page
-        return {
-          ...old,
-          pages: old.pages.map((page, i) =>
-            i === 0 ? { ...page, items: [...page.items, optimisticRow] } : page,
-          ),
-        };
-      });
+        // Optimistically update the infinite query data
+        utils.row.infiniteWithView.setInfiniteData(
+          { tableId, viewId, limit: 50 },
+          (old) => {
+            if (!old) return old;
 
-      // Return context with previous data for rollback
-      return { previousData };
+            // Calculate order based on total items across all pages
+            const totalItems = old.pages.reduce(
+              (acc, page) => acc + page.items.length,
+              0,
+            );
+
+            const optimisticRow = {
+              id: newRow.id!,
+              tableId,
+              data: {} as Record<string, string | number | null>,
+              order: totalItems,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+
+            // Add to the last page
+            const lastPageIndex = old.pages.length - 1;
+            return {
+              ...old,
+              pages: old.pages.map((page, i) =>
+                i === lastPageIndex
+                  ? { ...page, items: [...page.items, optimisticRow] }
+                  : page,
+              ),
+            };
+          },
+        );
+
+        return { previousData };
+      }
+      return {};
     },
 
-    // On error: rollback to previous state
-    onError: (err, newRow, context) => {
-      if (context?.previousData) {
-        utils.row.infinite.setInfiniteData(
-          { tableId, limit: 50 },
+    // On error: rollback to previous state and refetch
+    onError: (_err, _newRow, context) => {
+      if (viewId && context?.previousData) {
+        utils.row.infiniteWithView.setInfiniteData(
+          { tableId, viewId, limit: 50 },
           context.previousData,
         );
       }
+      // Only invalidate on error to get correct server state
+      if (viewId) {
+        void utils.row.infiniteWithView.invalidate({ tableId, viewId });
+      }
     },
 
-    // On success: No need to replace ID! Just refresh to get server timestamps
-    onSettled: () => {
-      // Refresh in background (will merge with existing data)
-      void utils.row.infinite.invalidate({ tableId });
-    },
+    // No onSettled invalidation needed - optimistic update uses client-generated ID
+    // which the server accepts, so the data is already correct
   });
 
   const handleAddRow = () => {
-    // Generate client ID upfront
     const clientId = generateRowId();
 
     createRow.mutate({
-      id: clientId, // Pass client-generated ID to backend
+      id: clientId,
       tableId,
       data: {},
     });

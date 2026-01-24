@@ -23,6 +23,7 @@ interface SelectionContextValue {
   isSelected: (rowIndex: number, columnIndex: number) => boolean;
   isEditing: (rowIndex: number, columnIndex: number) => boolean;
   isRowSelected: (rowIndex: number) => boolean;
+  clearSelection: () => void;
 }
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
@@ -81,6 +82,11 @@ export function SelectionProvider({
     },
     [selectedCell]
   );
+
+  const clearSelection = useCallback(() => {
+    setSelectedCell(null);
+    setEditingCell(null);
+  }, []);
 
   // Keyboard navigation
   useEffect(() => {
@@ -166,6 +172,7 @@ export function SelectionProvider({
         isSelected,
         isEditing,
         isRowSelected,
+        clearSelection,
       }}
     >
       {children}

@@ -10,6 +10,7 @@ import { useSelection } from "./hooks/useSelection";
 interface DataGridTableProps {
   table: Table<RowData>;
   tableId: string;
+  viewId: string;
   virtualRows: VirtualItem[];
   paddingTop: number;
   paddingBottom: number;
@@ -21,6 +22,7 @@ interface DataGridTableProps {
 export function DataGridTable({
   table,
   tableId,
+  viewId,
   virtualRows,
   paddingTop,
   paddingBottom,
@@ -95,7 +97,7 @@ export function DataGridTable({
         {/* Add row button */}
         <tr>
           <td colSpan={columnCount} className="border-r border-gray-200 p-0">
-            <AddRowButton tableId={tableId} />
+            <AddRowButton tableId={tableId} viewId={viewId} />
           </td>
         </tr>
       </tbody>

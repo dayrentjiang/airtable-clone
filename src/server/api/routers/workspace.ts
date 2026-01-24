@@ -88,7 +88,7 @@ export const workspaceRouter = createTRPCRouter({
     const statusCol = columns.find((c) => c.name === "Status");
     const priorityCol = columns.find((c) => c.name === "Priority");
 
-    // Create 3 sample rows with data
+    // Create 3 sample rows with data and default view
     if (table && nameCol && statusCol && priorityCol) {
       const sampleRows = [
         {
@@ -126,6 +126,22 @@ export const workspaceRouter = createTRPCRouter({
       // Insert sample rows
       await ctx.db.row.createMany({
         data: sampleRows,
+      });
+
+      // Create default Grid view with no filters
+      await ctx.db.view.create({
+        data: {
+          name: "Grid view",
+          type: "GRID",
+          order: 0,
+          tableId: table.id,
+          config: {
+            filters: [],
+            sorts: [],
+            hiddenFields: [],
+            fieldOrder: [],
+          },
+        },
       });
     }
 

@@ -22,9 +22,17 @@ interface Column {
 const DEFAULT_COLUMN_WIDTH = 180;
 const ROW_NUMBER_WIDTH = 66;
 
-export function useTableColumns(columns: Column[] | undefined) {
+export function useTableColumns(
+  columns: Column[] | undefined,
+  hiddenFields: string[] = []
+) {
   return useMemo<ColumnDef<RowData>[]>(() => {
     if (!columns) return [];
+
+    // Filter out hidden columns
+    const visibleColumns = columns.filter(
+      (col) => !hiddenFields.includes(col.id)
+    );
 
     // Row number column (first column)
     const rowNumberColumn: ColumnDef<RowData> = {
@@ -41,8 +49,8 @@ export function useTableColumns(columns: Column[] | undefined) {
       enableResizing: false,
     };
 
-    // Data columns from table columns with EditableCell
-    const dataColumns: ColumnDef<RowData>[] = columns.map((col, index) => ({
+    // Data columns from visible columns with EditableCell
+    const dataColumns: ColumnDef<RowData>[] = visibleColumns.map((col, index) => ({
       id: col.id,
       accessorFn: (row) => {
         const cellData = row.data;
@@ -64,5 +72,5 @@ export function useTableColumns(columns: Column[] | undefined) {
     }));
 
     return [rowNumberColumn, ...dataColumns];
-  }, [columns]);
+  }, [columns, hiddenFields]);
 }
