@@ -65,9 +65,10 @@ model Table {
   base   Base   @relation(fields: [baseId], references: [id], onDelete: Cascade)
   baseId String
 
-  // A table has columns and rows
+  // A table has columns, rows, and views
   columns Column[]
   rows    Row[]
+  views   View[]
 
   @@index([baseId]) // Fast lookup: "Get all tables in this base"
 }
@@ -112,7 +113,35 @@ enum ColumnType {
   NUMBER
 }
 
-//To Implement --> View Table
+// View types supported
+enum ViewType {
+  GRID
+  CALENDAR
+  KANBAN
+  GALLERY
+  FORM
+}
+
+// View = A saved configuration for displaying table data
+model View {
+  id        String   @id @default(cuid())
+  name      String
+  type      ViewType @default(GRID)
+  order     Int      @default(0) // Display order in sidebar
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Which table this view belongs to
+  table   Table  @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  tableId String
+
+  // View configuration stored as JSONB
+  // { filters: [], sorts: [], hiddenFields: [], fieldOrder: [], groupBy: null, colorConfig: null }
+  config Json @default("{}")
+
+  @@index([tableId]) // Fast lookup: "Get all views for this table"
+  @@index([tableId, order]) // Fast lookup: "Get views in display order"
+}
 
 // Necessary for Next auth
 model Account {

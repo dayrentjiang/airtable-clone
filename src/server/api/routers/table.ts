@@ -71,8 +71,21 @@ export const tableRouter = createTRPCRouter({
               { name: "Amount", type: "NUMBER", order: 2 },
             ],
           },
+          views: {
+            create: {
+              name: "Grid view",
+              type: "GRID",
+              order: 0,
+              config: {
+                filters: [],
+                sorts: [],
+                hiddenFields: [],
+                fieldOrder: [],
+              },
+            },
+          },
         },
-        include: { columns: true },
+        include: { columns: true, views: true },
       });
     }),
 
