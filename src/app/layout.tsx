@@ -8,7 +8,7 @@ import { TRPCReactProvider } from "~/trpc/react";
 export const metadata: Metadata = {
   title: "Airtable",
   description: "Airtable Clone",
-  icons: [{ rel: "icon", url: "/airtable_logo.webp" }],
+  icons: [{ rel: "icon", url: "/images/airtable_logo.webp" }],
 };
 
 const inter = Inter({
