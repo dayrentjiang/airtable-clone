@@ -210,7 +210,7 @@ function ToolbarButton({ icon, label, onClick }: ToolbarButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+      className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
     >
       {icon}
       <span>{label}</span>

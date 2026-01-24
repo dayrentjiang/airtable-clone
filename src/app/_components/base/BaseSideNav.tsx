@@ -181,14 +181,14 @@ export function BaseSideNav({
   }, [isModalOpen]);
 
   return (
-    <aside className="flex w-60 flex-col border-r border-gray-200 bg-gray-50/50">
+    <aside className="flex w-76 flex-col border-r border-gray-200 bg-gray-50/50">
       {/* Top section */}
       <div className="flex-1 p-3">
         {/* Create new */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            className="flex w-full items-center gap-2 rounded px-2 py-2 text-xs text-gray-700 hover:bg-gray-100"
           >
             <Plus className="h-4 w-4" />
             <span>Create new...</span>
@@ -235,8 +235,8 @@ export function BaseSideNav({
 
         {/* Find a view */}
         <div className="mt-2 flex items-center justify-between">
-          <button className="flex items-center gap-2 rounded px-2.5 py-2 text-sm text-gray-700 hover:bg-gray-100">
-            <Search className="h-4 w-4" />
+          <button className="flex items-center gap-2 rounded px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-100">
+            <Search className="h-3 w-3" />
             <span>Find a view</span>
           </button>
           <button className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
@@ -247,7 +247,7 @@ export function BaseSideNav({
         {/* Views list */}
         <div className="mt-3 space-y-1">
           {isLoading ? (
-            <div className="px-2.5 py-2 text-sm text-gray-500">Loading...</div>
+            <div className="px-2.5 py-2 text-xs text-gray-500">Loading...</div>
           ) : views && views.length > 0 ? (
             views.map((view) => {
               const isSelected = view.id === selectedViewId;
@@ -255,7 +255,7 @@ export function BaseSideNav({
                 <button
                   key={view.id}
                   onClick={() => onViewSelect(view.id)}
-                  className={`flex w-full items-center gap-2 rounded px-2.5 py-2 text-sm ${
+                  className={`flex w-full items-center gap-2 rounded px-2.5 py-2 text-xs ${
                     isSelected
                       ? "bg-white font-medium text-gray-900 shadow-sm ring-1 ring-gray-200"
                       : "text-gray-700 hover:bg-gray-100"
