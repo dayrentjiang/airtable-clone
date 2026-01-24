@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
+import { EditableCell } from "../EditableCell";
 
 export interface RowData {
   id: string;
@@ -17,6 +18,10 @@ interface Column {
   order: number;
 }
 
+// Default column width matching Airtable style
+const DEFAULT_COLUMN_WIDTH = 180;
+const ROW_NUMBER_WIDTH = 66;
+
 export function useTableColumns(columns: Column[] | undefined) {
   return useMemo<ColumnDef<RowData>[]>(() => {
     if (!columns) return [];
@@ -31,12 +36,12 @@ export function useTableColumns(columns: Column[] | undefined) {
           {row.original.order + 1}
         </div>
       ),
-      size: 50,
+      size: ROW_NUMBER_WIDTH,
       enableSorting: false,
       enableResizing: false,
     };
 
-    // Data columns from table columns
+    // Data columns from table columns with EditableCell
     const dataColumns: ColumnDef<RowData>[] = columns.map((col) => ({
       id: col.id,
       accessorFn: (row) => {
@@ -44,15 +49,13 @@ export function useTableColumns(columns: Column[] | undefined) {
         return cellData[col.id];
       },
       header: col.name,
-      cell: ({ getValue }) => {
-        const value = getValue();
-        if (value === null || value === undefined) return "";
-        return String(value);
-      },
+      cell: (props) => (
+        <EditableCell {...props} columnType={col.type} columnId={col.id} />
+      ),
       meta: {
         type: col.type,
       },
-      size: 200,
+      size: DEFAULT_COLUMN_WIDTH,
     }));
 
     return [rowNumberColumn, ...dataColumns];

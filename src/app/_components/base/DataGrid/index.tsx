@@ -5,6 +5,7 @@ import { useReactTable, getCoreRowModel } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { api } from "~/trpc/react";
 import { DataGridTable } from "./DataGridTable";
+import { AddColumnButton } from "./AddColumnButton";
 import { useTableColumns, type RowData } from "./hooks/useTableColumns";
 
 interface DataGridProps {
@@ -72,9 +73,15 @@ export function DataGrid({ tableId }: DataGridProps) {
     ) {
       void fetchNextPage();
     }
-  }, [virtualRows, tableRows.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [
+    virtualRows,
+    tableRows.length,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  ]);
 
-  const paddingTop = virtualRows.length > 0 ? virtualRows[0]?.start ?? 0 : 0;
+  const paddingTop = virtualRows.length > 0 ? (virtualRows[0]?.start ?? 0) : 0;
   const paddingBottom =
     virtualRows.length > 0
       ? totalSize - (virtualRows[virtualRows.length - 1]?.end ?? 0)
@@ -125,15 +132,18 @@ export function DataGrid({ tableId }: DataGridProps) {
       className="h-full overflow-auto"
       style={{ contain: "strict" }}
     >
-      <DataGridTable
-        table={tableInstance}
-        tableId={tableId}
-        virtualRows={virtualRows}
-        paddingTop={paddingTop}
-        paddingBottom={paddingBottom}
-        isFetchingNextPage={isFetchingNextPage}
-        columnCount={columns.length}
-      />
+      <div className="flex">
+        <DataGridTable
+          table={tableInstance}
+          tableId={tableId}
+          virtualRows={virtualRows}
+          paddingTop={paddingTop}
+          paddingBottom={paddingBottom}
+          isFetchingNextPage={isFetchingNextPage}
+          columnCount={columns.length}
+        />
+        <AddColumnButton />
+      </div>
     </div>
   );
 }

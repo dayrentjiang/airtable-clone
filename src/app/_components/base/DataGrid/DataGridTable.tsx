@@ -28,9 +28,9 @@ export function DataGridTable({
   const { rows: tableRows } = table.getRowModel();
 
   return (
-    <table className="w-full border-collapse">
+    <table className="border-collapse" style={{ tableLayout: "fixed" }}>
       <DataGridHeader headerGroups={table.getHeaderGroups()} />
-      
+
       <tbody className="bg-white">
         {/* Top padding for virtualization */}
         {paddingTop > 0 && (
@@ -47,14 +47,17 @@ export function DataGridTable({
           return (
             <tr
               key={row.id}
-              className="hover:bg-blue-50"
+              className="hover:bg-blue-50/30"
               style={{ height: `${virtualRow.size}px` }}
             >
               {row.getVisibleCells().map((cell) => (
                 <td
                   key={cell.id}
-                  className="border-b border-r border-gray-200 px-2 py-2 text-sm text-gray-900"
-                  style={{ width: cell.column.getSize() }}
+                  className="relative border-b border-r border-gray-200"
+                  style={{
+                    width: cell.column.getSize(),
+                    maxWidth: cell.column.getSize(),
+                  }}
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>

@@ -232,6 +232,51 @@ export const rowRouter = createTRPCRouter({
     }),
 
   /**
+   * UPDATE SINGLE CELL (optimized for cell editing)
+   */
+  updateCell: protectedProcedure
+    .input(
+      z.object({
+        rowId: z.string(),
+        columnId: z.string(),
+        value: z.union([z.string(), z.number(), z.null()]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { rowId, columnId, value } = input;
+
+      const row = await ctx.db.row.findFirst({
+        where: { id: rowId },
+        include: {
+          table: { include: { base: { include: { workspace: true } } } },
+        },
+      });
+
+      if (!row || row.table.base.workspace.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Row not found" });
+      }
+
+      // Parse existing data
+      const existingData: CellData =
+        typeof row.data === "object" &&
+        row.data !== null &&
+        !Array.isArray(row.data)
+          ? (row.data as CellData)
+          : {};
+
+      // Update single cell
+      const updatedData: CellData = {
+        ...existingData,
+        [columnId]: value,
+      };
+
+      return ctx.db.row.update({
+        where: { id: rowId },
+        data: { data: updatedData },
+      });
+    }),
+
+  /**
    * UPDATE ROW DATA (for cell editing)
    */
   update: protectedProcedure

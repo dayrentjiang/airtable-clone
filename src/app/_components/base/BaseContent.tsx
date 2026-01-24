@@ -47,6 +47,7 @@ export function BaseContent({ baseId, tables, userInitial }: BaseContentProps) {
           onTableSelect={setActiveTableId}
           onAddTable={handleAddTable}
         />
+        <ViewToolbar />
 
         {/* Content with side nav and main area */}
         <div className="flex flex-1 overflow-hidden">
@@ -55,9 +56,6 @@ export function BaseContent({ baseId, tables, userInitial }: BaseContentProps) {
 
           {/* Main content area */}
           <div className="flex flex-1 flex-col overflow-hidden">
-            {/* View toolbar */}
-            <ViewToolbar />
-
             {/* Data grid */}
             <main className="flex-1 overflow-auto bg-gray-50">
               {activeTableId ? (

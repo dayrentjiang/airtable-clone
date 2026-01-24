@@ -15,8 +15,11 @@ export function DataGridHeader({ headerGroups }: DataGridHeaderProps) {
           {headerGroup.headers.map((header) => (
             <th
               key={header.id}
-              className="border-b border-r border-gray-300 bg-gray-50 px-2 py-2 text-left text-xs font-semibold text-gray-700"
-              style={{ width: header.getSize() }}
+              className="overflow-hidden truncate border-b border-r border-gray-300 bg-gray-50 px-2 py-2 text-left text-xs font-semibold text-gray-700"
+              style={{
+                width: header.getSize(),
+                maxWidth: header.getSize(),
+              }}
             >
               {header.isPlaceholder
                 ? null
