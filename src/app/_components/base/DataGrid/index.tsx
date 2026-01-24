@@ -8,7 +8,6 @@ import { DataGridTable } from "./DataGridTable";
 import { AddColumnButton } from "./AddColumnButton";
 import { AddRowButton } from "./AddRowButton";
 import { useTableColumns, type RowData } from "./hooks/useTableColumns";
-import { SelectionProvider } from "./hooks/useSelection";
 import type { ViewConfig } from "~/server/lib/types";
 
 // Re-export SelectionProvider for use in parent components
@@ -89,7 +88,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     overscan: 50, // 50 rows overscan - optimal for smooth fast scrolling
     measureElement:
       typeof window !== "undefined" &&
-      navigator.userAgent.indexOf("Firefox") === -1
+      !navigator.userAgent.includes("Firefox")
         ? (element) => element.getBoundingClientRect().height
         : undefined, // Measure actual heights for better accuracy (except Firefox due to performance)
   });
