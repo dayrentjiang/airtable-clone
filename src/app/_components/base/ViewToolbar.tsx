@@ -198,12 +198,19 @@ function ToolbarButton({ icon, label, onClick }: ToolbarButtonProps) {
   );
 }
 
-export function ViewToolbar() {
+interface ViewToolbarProps {
+  onToggleSideNav: () => void;
+}
+
+export function ViewToolbar({ onToggleSideNav }: ViewToolbarProps) {
   return (
     <div className="flex h-11 items-center justify-between border-b border-gray-200 bg-white px-3">
       {/* Left: Hamburger + View dropdown */}
       <div className="flex items-center gap-1">
-        <button className="rounded p-1.5 text-gray-600 hover:bg-gray-100">
+        <button
+          onClick={onToggleSideNav}
+          className="rounded p-1.5 text-gray-600 hover:bg-gray-100"
+        >
           <HamburgerIcon />
         </button>
 

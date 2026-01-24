@@ -23,7 +23,9 @@ export function EditableCell({
 }: EditableCellProps) {
   const initialValue = getValue() as string | number | null;
   const [value, setValue] = useState(String(initialValue ?? ""));
-  const [displayValue, setDisplayValue] = useState<string | number | null>(initialValue);
+  const [displayValue, setDisplayValue] = useState<string | number | null>(
+    initialValue,
+  );
   const previousValueRef = useRef<string | number | null>(initialValue);
   const inputRef = useRef<HTMLInputElement>(null);
   const cellRef = useRef<HTMLDivElement>(null);
@@ -58,15 +60,17 @@ export function EditableCell({
   useEffect(() => {
     // Skip if we're currently editing
     if (isEditing) return;
-    
+
     // Only update if the value actually changed from an external source
     // (not from our own optimistic update)
-    if (initialValue !== previousValueRef.current && 
-        initialValue !== displayValue) {
+    if (
+      initialValue !== previousValueRef.current &&
+      initialValue !== displayValue
+    ) {
       setValue(String(initialValue ?? ""));
       setDisplayValue(initialValue);
     }
-    
+
     previousValueRef.current = initialValue;
   }, [initialValue, isEditing, displayValue]);
 
@@ -172,7 +176,9 @@ export function EditableCell({
     stopEditing();
   };
 
-  const handleSaveAndNavigate = (direction: "up" | "down" | "left" | "right") => {
+  const handleSaveAndNavigate = (
+    direction: "up" | "down" | "left" | "right",
+  ) => {
     // Mark as saved to prevent double-save from blur
     hasSavedRef.current = true;
 
@@ -297,7 +303,7 @@ export function EditableCell({
         {/* Content */}
         <div
           ref={cellRef}
-          className="absolute inset-0 z-10 bg-white"
+          className="absolute inset-0 z-10 cursor-default bg-white"
           onDoubleClick={handleDoubleClick}
         >
           <div className="h-full w-full overflow-hidden px-2 py-1.5">
@@ -316,7 +322,7 @@ export function EditableCell({
       ref={cellRef}
       onMouseDown={handleMouseDown}
       onDoubleClick={handleDoubleClick}
-      className="absolute inset-0 overflow-hidden px-2 py-1.5"
+      className="absolute inset-0 cursor-default overflow-hidden px-2 py-1.5"
     >
       <span className="block truncate text-sm text-gray-900">
         {formattedDisplayValue || <span className="text-gray-400"></span>}

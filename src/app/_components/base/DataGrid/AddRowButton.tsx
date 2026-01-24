@@ -10,7 +10,7 @@ interface AddRowButtonProps {
 
 export function AddRowButton({ tableId }: AddRowButtonProps) {
   const utils = api.useUtils();
-  
+
   const createRow = api.row.create.useMutation({
     // Optimistic update: Add row to UI immediately
     onMutate: async (newRow) => {
@@ -21,32 +21,27 @@ export function AddRowButton({ tableId }: AddRowButtonProps) {
       const previousData = utils.row.infinite.getInfiniteData({ tableId });
 
       // Optimistically update to the new value
-      utils.row.infinite.setInfiniteData(
-        { tableId, limit: 50 },
-        (old) => {
-          if (!old) return old;
+      utils.row.infinite.setInfiniteData({ tableId, limit: 50 }, (old) => {
+        if (!old) return old;
 
-          // Create optimistic row with the REAL ID (no temp ID needed!)
-          const optimisticRow = {
-            id: newRow.id!, // Use the client-generated ID
-            tableId,
-            data: {} as Record<string, string | number | null>,
-            order: old.pages[0]?.items.length ?? 0,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
+        // Create optimistic row with the REAL ID (no temp ID needed!)
+        const optimisticRow = {
+          id: newRow.id!, // Use the client-generated ID
+          tableId,
+          data: {} as Record<string, string | number | null>,
+          order: old.pages[0]?.items.length ?? 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
 
-          // Add to first page
-          return {
-            ...old,
-            pages: old.pages.map((page, i) =>
-              i === 0
-                ? { ...page, items: [...page.items, optimisticRow] }
-                : page
-            ),
-          };
-        }
-      );
+        // Add to first page
+        return {
+          ...old,
+          pages: old.pages.map((page, i) =>
+            i === 0 ? { ...page, items: [...page.items, optimisticRow] } : page,
+          ),
+        };
+      });
 
       // Return context with previous data for rollback
       return { previousData };
@@ -57,7 +52,7 @@ export function AddRowButton({ tableId }: AddRowButtonProps) {
       if (context?.previousData) {
         utils.row.infinite.setInfiniteData(
           { tableId, limit: 50 },
-          context.previousData
+          context.previousData,
         );
       }
     },
@@ -72,7 +67,7 @@ export function AddRowButton({ tableId }: AddRowButtonProps) {
   const handleAddRow = () => {
     // Generate client ID upfront
     const clientId = generateRowId();
-    
+
     createRow.mutate({
       id: clientId, // Pass client-generated ID to backend
       tableId,
@@ -83,10 +78,14 @@ export function AddRowButton({ tableId }: AddRowButtonProps) {
   return (
     <button
       onClick={handleAddRow}
-      className="flex w-full items-center gap-2 border-b border-r border-gray-200 px-2 py-2 text-left text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+      className="flex w-full items-center border-b border-gray-200 py-2 text-left text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-50"
     >
-      <Plus className="h-4 w-4" />
-      Add row
+      <div
+        className="flex items-center justify-center"
+        style={{ width: "66px" }}
+      >
+        <Plus className="h-4 w-4" />
+      </div>
     </button>
   );
 }

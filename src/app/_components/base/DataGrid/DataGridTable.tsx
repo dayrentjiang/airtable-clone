@@ -32,7 +32,10 @@ export function DataGridTable({
   const { isRowSelected } = useSelection();
 
   return (
-    <table className="border-collapse" style={{ tableLayout: "fixed", width: tableWidth }}>
+    <table
+      className="border-collapse"
+      style={{ tableLayout: "fixed", width: tableWidth }}
+    >
       <DataGridHeader headerGroups={table.getHeaderGroups()} />
 
       <tbody className="bg-white">
@@ -91,7 +94,7 @@ export function DataGridTable({
 
         {/* Add row button */}
         <tr>
-          <td colSpan={columnCount} className="p-0">
+          <td colSpan={columnCount} className="border-r border-gray-200 p-0">
             <AddRowButton tableId={tableId} />
           </td>
         </tr>

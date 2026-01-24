@@ -24,10 +24,15 @@ export function BaseContent({ baseId, tables, userInitial }: BaseContentProps) {
   const [activeTableId, setActiveTableId] = useState<string | null>(
     tables[0]?.id ?? null,
   );
+  const [isSideNavOpen, setIsSideNavOpen] = useState(true);
 
   const handleAddTable = () => {
     // TODO: Implement add table modal
     console.log("Add table clicked");
+  };
+
+  const toggleSideNav = () => {
+    setIsSideNavOpen((prev) => !prev);
   };
 
   return (
@@ -47,12 +52,11 @@ export function BaseContent({ baseId, tables, userInitial }: BaseContentProps) {
           onTableSelect={setActiveTableId}
           onAddTable={handleAddTable}
         />
-        <ViewToolbar />
+        <ViewToolbar onToggleSideNav={toggleSideNav} />
 
         {/* Content with side nav and main area */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Side nav */}
-          <BaseSideNav userInitial={userInitial} />
+          {isSideNavOpen && <BaseSideNav userInitial={userInitial} />}
 
           {/* Main content area */}
           <div className="flex flex-1 flex-col overflow-hidden">
