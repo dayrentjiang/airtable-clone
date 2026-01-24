@@ -7,7 +7,14 @@ import { api } from "~/trpc/react";
 // Template card icons
 function ResourceIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
       <circle cx="9" cy="7" r="4" />
       <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -18,7 +25,14 @@ function ResourceIcon() {
 
 function BugIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <rect x="3" y="3" width="18" height="18" rx="2" />
       <path d="M9 12l2 2 4-4" />
     </svg>
@@ -27,7 +41,14 @@ function BugIcon() {
 
 function SprintIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <rect x="3" y="3" width="7" height="7" />
       <rect x="14" y="3" width="7" height="7" />
       <rect x="14" y="14" width="7" height="7" />
@@ -38,7 +59,14 @@ function SprintIcon() {
 
 function ListIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <line x1="8" y1="6" x2="21" y2="6" />
       <line x1="8" y1="12" x2="21" y2="12" />
       <line x1="8" y1="18" x2="21" y2="18" />
@@ -51,7 +79,14 @@ function ListIcon() {
 
 function GridIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <rect x="3" y="3" width="7" height="7" />
       <rect x="14" y="3" width="7" height="7" />
       <rect x="14" y="14" width="7" height="7" />
@@ -62,7 +97,14 @@ function GridIcon() {
 
 function ChevronDownIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <polyline points="6 9 12 15 18 9" />
     </svg>
   );
@@ -99,12 +141,13 @@ function BaseCard({
   updatedAt: Date;
   onClick: () => void;
 }) {
-  const initials = name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || "UN";
+  const initials =
+    name
+      .split(" ")
+      .map((w) => w[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "UN";
 
   return (
     <div
@@ -188,43 +231,22 @@ export function HomeContent() {
   }, [isLoading, bases?.length]);
 
   // Group bases by time
-  const grouped = bases ? groupBasesByTime(bases) : { today: [], pastWeek: [], older: [] };
+  const grouped = bases
+    ? groupBasesByTime(bases)
+    : { today: [], pastWeek: [], older: [] };
 
   const handleBaseClick = (baseId: string) => {
     router.push(`/${baseId}`);
   };
 
   // Show loading while initial load or auto-creation is in progress
-  const isInitializing = isLoading || (bases?.length === 0 && ensureDefaultMutation.isPending);
+  const isInitializing =
+    isLoading || (bases?.length === 0 && ensureDefaultMutation.isPending);
 
   return (
     <div className="p-8">
       {/* Title */}
       <h1 className="text-2xl font-bold text-gray-900">Home</h1>
-
-      {/* Start building section */}
-      <section className="mt-8">
-        <h2 className="text-lg font-semibold text-gray-900">Start building</h2>
-        <p className="mt-1 text-sm text-gray-500">Create apps instantly with AI</p>
-
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <TemplateCard
-            icon={<ResourceIcon />}
-            title="Resource Planner"
-            description="Allocate engineers to projects and balance team workloads."
-          />
-          <TemplateCard
-            icon={<BugIcon />}
-            title="Bug Tracker"
-            description="Log, prioritize, and resolve bugs across projects."
-          />
-          <TemplateCard
-            icon={<SprintIcon />}
-            title="Sprint Tracker"
-            description="Plan and manage agile sprints with tasks and progress tracking."
-          />
-        </div>
-      </section>
 
       {/* Opened anytime section */}
       <section className="mt-10">
@@ -247,7 +269,9 @@ export function HomeContent() {
         {/* Loading state - show while initializing or creating defaults */}
         {isInitializing && (
           <div className="mt-6 text-sm text-gray-500">
-            {ensureDefaultMutation.isPending ? "Setting up your workspace..." : "Loading bases..."}
+            {ensureDefaultMutation.isPending
+              ? "Setting up your workspace..."
+              : "Loading bases..."}
           </div>
         )}
 
@@ -274,7 +298,9 @@ export function HomeContent() {
             {/* Past 7 days section */}
             {grouped.pastWeek.length > 0 && (
               <div className="mt-8">
-                <h3 className="text-sm font-medium text-gray-500">Past 7 days</h3>
+                <h3 className="text-sm font-medium text-gray-500">
+                  Past 7 days
+                </h3>
                 <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {grouped.pastWeek.map((base) => (
                     <BaseCard
