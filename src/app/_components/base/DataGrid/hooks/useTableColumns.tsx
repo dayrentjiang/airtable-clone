@@ -45,7 +45,7 @@ export function useTableColumns(columns: Column[] | undefined) {
     const dataColumns: ColumnDef<RowData>[] = columns.map((col, index) => ({
       id: col.id,
       accessorFn: (row) => {
-        const cellData = row.data as Record<string, string | number | null>;
+        const cellData = row.data;
         return cellData[col.id];
       },
       header: col.name,

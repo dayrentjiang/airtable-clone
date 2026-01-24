@@ -30,7 +30,7 @@ export function AddRowButton({ tableId }: AddRowButtonProps) {
           const optimisticRow = {
             id: newRow.id!, // Use the client-generated ID
             tableId,
-            data: {},
+            data: {} as Record<string, string | number | null>,
             order: old.pages[0]?.items.length ?? 0,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -41,7 +41,7 @@ export function AddRowButton({ tableId }: AddRowButtonProps) {
             ...old,
             pages: old.pages.map((page, i) =>
               i === 0
-                ? { ...page, items: [...page.items, optimisticRow as any] }
+                ? { ...page, items: [...page.items, optimisticRow] }
                 : page
             ),
           };
