@@ -36,7 +36,10 @@ export function DataGridTable({
       className="border-collapse"
       style={{ tableLayout: "fixed", width: tableWidth }}
     >
-      <DataGridHeader headerGroups={table.getHeaderGroups()} tableId={tableId} />
+      <DataGridHeader
+        headerGroups={table.getHeaderGroups()}
+        tableId={tableId}
+      />
 
       <tbody className="bg-white">
         {/* Top padding for virtualization */}

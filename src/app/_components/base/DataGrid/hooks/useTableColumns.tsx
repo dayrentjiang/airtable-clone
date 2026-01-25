@@ -27,7 +27,7 @@ const ROW_NUMBER_WIDTH = 66;
 export function useTableColumns(
   columns: Column[] | undefined,
   hiddenFields: string[] = [],
-  searchTerm: string = "",
+  searchTerm = "",
   filters: Filter[] = [],
   sorts: Sort[] = [],
 ) {

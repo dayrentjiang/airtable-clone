@@ -13,6 +13,26 @@ interface CellContextMenuProps {
   onClose: () => void;
 }
 
+// Type definitions for the infinite query data structure
+interface Row {
+  id: string;
+  data: unknown;
+  order: number;
+  tableId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface QueryPage {
+  items: Row[];
+  nextCursor?: string;
+}
+
+interface InfiniteQueryData {
+  pages: QueryPage[];
+  pageParams: unknown[];
+}
+
 export function CellContextMenu({
   cellRef: targetCell,
   rowId,
@@ -38,9 +58,9 @@ export function CellContextMenu({
       await utils.row.infiniteWithView.cancel();
 
       // Optimistically update ALL cached queries for this table using query client
-      queryClient.setQueriesData(
+      queryClient.setQueriesData<InfiniteQueryData>(
         { queryKey: [["row", "infiniteWithView"]], exact: false },
-        (old: any) => {
+        (old) => {
           if (!old?.pages) return old;
 
           // Only update queries that match this tableId
@@ -53,10 +73,10 @@ export function CellContextMenu({
           // Filter out all deleted rows
           return {
             ...old,
-            pages: old.pages.map((page: any) => ({
+            pages: old.pages.map((page) => ({
               ...page,
               items: page.items.filter(
-                (row: any) => !rowIdsToDelete.includes(row.id),
+                (row) => !rowIdsToDelete.includes(row.id),
               ),
             })),
           };

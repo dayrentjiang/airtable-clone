@@ -24,7 +24,12 @@ interface DataGridProps {
 
 export function DataGrid({ tableId, viewId }: DataGridProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
-  const { contextMenuState, columnContextMenuState, hideContextMenu, hideColumnContextMenu } = useContextMenu();
+  const {
+    contextMenuState,
+    columnContextMenuState,
+    hideContextMenu,
+    hideColumnContextMenu,
+  } = useContextMenu();
 
   // Track if we've restored scroll position for this view
   const hasRestoredScrollRef = useRef(false);
@@ -73,12 +78,11 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       // Other operators need a value to be complete
       return f.value !== undefined && f.value !== null && f.value !== "";
     });
-  }, [filters]);
+  }, [filters, NO_VALUE_OPERATORS]);
 
   const {
     data,
     isLoading: rowsLoading,
-    isFetching,
     isPlaceholderData,
     isFetchingNextPage,
     hasNextPage,
@@ -353,7 +357,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       </div>
 
       {/* Global context menu for rows - rendered once at DataGrid level */}
-      {contextMenuState && contextMenuState.cellRef && (
+      {contextMenuState?.cellRef && (
         <CellContextMenu
           cellRef={contextMenuState.cellRef}
           rowId={contextMenuState.rowId}
@@ -364,7 +368,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       )}
 
       {/* Global context menu for columns - rendered once at DataGrid level */}
-      {columnContextMenuState && columnContextMenuState.headerRef && (
+      {columnContextMenuState?.headerRef && (
         <ColumnHeaderContextMenu
           headerRef={columnContextMenuState.headerRef}
           columnId={columnContextMenuState.columnId}

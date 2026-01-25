@@ -57,7 +57,9 @@ export function DataGridHeader({ headerGroups, tableId }: DataGridHeaderProps) {
                     toggleColumnSelection(columnIndex, e.shiftKey);
                   }
                 }}
-                onContextMenu={(e) => handleContextMenu(e, columnId, columnIndex)}
+                onContextMenu={(e) =>
+                  handleContextMenu(e, columnId, columnIndex)
+                }
                 className={`truncate overflow-hidden border-r border-b border-gray-300 px-2 py-2 text-left text-xs font-semibold text-gray-700 ${
                   isSelected
                     ? "cursor-pointer bg-blue-100"
@@ -71,14 +73,14 @@ export function DataGridHeader({ headerGroups, tableId }: DataGridHeaderProps) {
                 }}
               >
                 {/* Row number column (index 0) should always be empty */}
-                {columnIndex === 0 ? null : (
-                  header.isPlaceholder
+                {columnIndex === 0
+                  ? null
+                  : header.isPlaceholder
                     ? null
                     : flexRender(
                         header.column.columnDef.header,
                         header.getContext(),
-                      )
-                )}
+                      )}
               </th>
             );
           })}
