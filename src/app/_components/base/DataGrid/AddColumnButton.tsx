@@ -143,23 +143,26 @@ export function AddColumnButton({ tableId }: AddColumnButtonProps) {
   return (
     <div className="shrink-0">
       {/* Header cell with + button - matches th padding */}
-      <div className="sticky top-0 z-10 flex w-23 items-center justify-center border-r border-b border-gray-300 bg-gray-50 px-2 py-2">
-        <div className="relative" ref={menuRef}>
-          <button
-            type="button"
-            className="flex items-center justify-center text-gray-400 hover:text-gray-600"
-            onClick={() => {
-              setIsMenuOpen(!isMenuOpen);
-              // Clear selection when opening the menu
-              clearSelection();
-            }}
-          >
+      <div
+        ref={menuRef}
+        className="sticky top-0 z-10 flex w-23 cursor-pointer items-center justify-center border-r border-b border-gray-300 bg-gray-50 px-2 py-2 hover:bg-gray-100"
+        onClick={() => {
+          setIsMenuOpen(!isMenuOpen);
+          // Clear selection when opening the menu
+          clearSelection();
+        }}
+      >
+        <div className="relative">
+          <div className="flex items-center justify-center text-gray-400">
             <Plus className="h-4 w-4" />
-          </button>
+          </div>
 
           {/* Type selection dropdown */}
           {isMenuOpen && (
-            <div className="absolute top-full left-0 z-50 mt-1 w-40 rounded-lg border border-gray-200 bg-white shadow-lg">
+            <div
+              className="absolute top-full left-0 z-50 mt-1 w-40 rounded-lg border border-gray-200 bg-white shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="py-1">
                 <button
                   onClick={() => handleSelectType("TEXT")}
@@ -184,6 +187,7 @@ export function AddColumnButton({ tableId }: AddColumnButtonProps) {
             <div
               ref={namingRef}
               className="absolute top-full left-0 z-50 mt-1 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-gray-900">
