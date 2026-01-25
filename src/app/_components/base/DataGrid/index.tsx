@@ -17,6 +17,9 @@ import { useContextMenu } from "./hooks/useContextMenu";
 export { SelectionProvider, useSelection } from "./hooks/useSelection";
 export { ContextMenuProvider } from "./hooks/useContextMenu";
 
+// Operators that don't require a value
+const NO_VALUE_OPERATORS = ["is_empty", "is_not_empty"];
+
 interface DataGridProps {
   tableId: string;
   viewId: string; // Required - tables must have at least 1 view
@@ -68,7 +71,6 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
 
   // Filter out incomplete filters (no value when needed)
   // This prevents query from running when user clicks "Add condition"
-  const NO_VALUE_OPERATORS = ["is_empty", "is_not_empty"];
   const completeFilters = useMemo(() => {
     return filters.filter((f) => {
       // Operators like "is empty" don't need a value
@@ -78,7 +80,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       // Other operators need a value to be complete
       return f.value !== undefined && f.value !== null && f.value !== "";
     });
-  }, [filters, NO_VALUE_OPERATORS]);
+  }, [filters]);
 
   const {
     data,
