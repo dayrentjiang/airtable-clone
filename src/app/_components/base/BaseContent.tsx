@@ -4,7 +4,12 @@ import { useState, useEffect, useRef } from "react";
 import { TableBar } from "./TableBar";
 import { ViewToolbar } from "./ViewToolbar";
 import { BaseSideNav } from "./BaseSideNav";
-import { DataGrid, SelectionProvider, useSelection } from "./DataGrid";
+import {
+  DataGrid,
+  SelectionProvider,
+  ContextMenuProvider,
+  useSelection,
+} from "./DataGrid";
 import { IconSidebar } from "../layout/IconSidebar";
 import { BaseTopNav } from "./BaseTopNav";
 import { ViewConfigProvider, useViewConfig } from "./hooks/useViewConfig";
@@ -303,14 +308,16 @@ export function BaseContent({ baseId, userInitial }: BaseContentProps) {
 
   return (
     <SelectionProvider totalRows={100} totalColumns={10}>
-      <BaseContentInner
-        baseId={baseId}
-        userInitial={userInitial}
-        activeTableId={activeTableId}
-        activeViewId={activeViewId}
-        setActiveTableId={setActiveTableId}
-        setActiveViewId={setActiveViewId}
-      />
+      <ContextMenuProvider>
+        <BaseContentInner
+          baseId={baseId}
+          userInitial={userInitial}
+          activeTableId={activeTableId}
+          activeViewId={activeViewId}
+          setActiveTableId={setActiveTableId}
+          setActiveViewId={setActiveViewId}
+        />
+      </ContextMenuProvider>
     </SelectionProvider>
   );
 }

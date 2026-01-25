@@ -112,7 +112,7 @@ export function getCellHighlightClass(
 ): string {
   // Search takes priority (yellow)
   if (matchesSearch(cellValue, searchTerm)) {
-    return "bg-yellow-200";
+    return "bg-yellow-100";
   }
 
   // Check if any complete filter matches this cell (green)
@@ -135,13 +135,13 @@ export function getCellHighlightClass(
   });
 
   if (hasFilterMatch) {
-    return "bg-green-200";
+    return "bg-green-100";
   }
 
   // Check if this column is being sorted (orange)
   const isSorted = sorts.some((sort) => sort.columnId === columnId);
   if (isSorted) {
-    return "bg-orange-100";
+    return "bg-orange-50";
   }
 
   return "";

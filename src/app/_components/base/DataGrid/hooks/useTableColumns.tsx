@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
 import { EditableCell } from "../EditableCell";
+import { RowNumberCell } from "../RowNumberCell";
 import type { Filter, Sort } from "~/server/lib/types";
 
 export interface RowData {
@@ -44,9 +45,12 @@ export function useTableColumns(
       accessorFn: () => "",
       header: "",
       cell: ({ row }) => (
-        <div className="flex h-full w-full items-center justify-center text-xs text-gray-500">
-          {row.original.order + 1}
-        </div>
+        <RowNumberCell
+          rowIndex={row.index}
+          rowNumber={row.index + 1} // Use row index for automatic renumbering
+          rowId={row.original.id}
+          tableId={row.original.tableId}
+        />
       ),
       size: ROW_NUMBER_WIDTH,
       enableSorting: false,

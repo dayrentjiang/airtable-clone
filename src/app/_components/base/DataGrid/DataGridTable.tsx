@@ -29,14 +29,14 @@ export function DataGridTable({
   tableWidth,
 }: DataGridTableProps) {
   const { rows: tableRows } = table.getRowModel();
-  const { isRowSelected } = useSelection();
+  const { isRowSelected, isColumnSelected } = useSelection();
 
   return (
     <table
       className="border-collapse"
       style={{ tableLayout: "fixed", width: tableWidth }}
     >
-      <DataGridHeader headerGroups={table.getHeaderGroups()} />
+      <DataGridHeader headerGroups={table.getHeaderGroups()} tableId={tableId} />
 
       <tbody className="bg-white">
         {/* Top padding for virtualization */}
@@ -51,24 +51,32 @@ export function DataGridTable({
           const row = tableRows[virtualRow.index];
           if (!row) return null;
 
+          const rowSelected = isRowSelected(row.index);
+
           return (
             <tr
               key={row.id}
-              className={`hover:bg-gray-50 ${isRowSelected(row.index) ? "bg-gray-50" : ""}`}
+              className={`relative ${rowSelected ? "bg-blue-50" : "hover:bg-gray-50"}`}
               style={{ height: `${virtualRow.size}px` }}
             >
-              {row.getVisibleCells().map((cell) => (
-                <td
-                  key={cell.id}
-                  className="relative border-r border-b border-gray-200"
-                  style={{
-                    width: cell.column.getSize(),
-                    maxWidth: cell.column.getSize(),
-                  }}
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
+              {row.getVisibleCells().map((cell, cellIndex) => {
+                const columnSelected = isColumnSelected(cellIndex);
+
+                return (
+                  <td
+                    key={cell.id}
+                    className={`relative border-r border-b border-gray-200 ${
+                      columnSelected ? "bg-blue-50" : ""
+                    }`}
+                    style={{
+                      width: cell.column.getSize(),
+                      maxWidth: cell.column.getSize(),
+                    }}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                );
+              })}
             </tr>
           );
         })}

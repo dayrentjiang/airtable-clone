@@ -9,9 +9,13 @@ import { AddColumnButton } from "./AddColumnButton";
 import { AddRowButton } from "./AddRowButton";
 import { useTableColumns, type RowData } from "./hooks/useTableColumns";
 import { useViewConfig } from "../hooks/useViewConfig";
+import { CellContextMenu } from "./CellContextMenu";
+import { ColumnHeaderContextMenu } from "./ColumnHeaderContextMenu";
+import { useContextMenu } from "./hooks/useContextMenu";
 
-// Re-export SelectionProvider for use in parent components
+// Re-export SelectionProvider and ContextMenuProvider for use in parent components
 export { SelectionProvider, useSelection } from "./hooks/useSelection";
+export { ContextMenuProvider } from "./hooks/useContextMenu";
 
 interface DataGridProps {
   tableId: string;
@@ -20,6 +24,7 @@ interface DataGridProps {
 
 export function DataGrid({ tableId, viewId }: DataGridProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const { contextMenuState, columnContextMenuState, hideContextMenu, hideColumnContextMenu } = useContextMenu();
 
   // Track if we've restored scroll position for this view
   const hasRestoredScrollRef = useRef(false);
@@ -346,6 +351,27 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
         />
         <AddColumnButton tableId={tableId} />
       </div>
+
+      {/* Global context menu for rows - rendered once at DataGrid level */}
+      {contextMenuState && contextMenuState.cellRef && (
+        <CellContextMenu
+          cellRef={contextMenuState.cellRef}
+          rowId={contextMenuState.rowId}
+          tableId={contextMenuState.tableId}
+          selectedRowIds={contextMenuState.selectedRowIds}
+          onClose={hideContextMenu}
+        />
+      )}
+
+      {/* Global context menu for columns - rendered once at DataGrid level */}
+      {columnContextMenuState && columnContextMenuState.headerRef && (
+        <ColumnHeaderContextMenu
+          headerRef={columnContextMenuState.headerRef}
+          columnId={columnContextMenuState.columnId}
+          tableId={columnContextMenuState.tableId}
+          onClose={hideColumnContextMenu}
+        />
+      )}
     </div>
   );
 }

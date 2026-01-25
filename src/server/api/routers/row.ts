@@ -353,6 +353,47 @@ export const rowRouter = createTRPCRouter({
     }),
 
   /**
+   * BULK DELETE ROWS
+   * Deletes multiple rows at once (for multi-select delete)
+   */
+  bulkDelete: protectedProcedure
+    .input(
+      z.object({
+        ids: z.array(z.string()).min(1).max(1000), // Allow up to 1000 rows at once
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { ids } = input;
+
+      // Verify all rows exist and belong to user before deleting
+      const rows = await ctx.db.row.findMany({
+        where: { id: { in: ids } },
+        include: {
+          table: { include: { base: { include: { workspace: true } } } },
+        },
+      });
+
+      // Check if all rows belong to the user
+      const unauthorizedRow = rows.find(
+        (row) => row.table.base.workspace.userId !== ctx.session.user.id,
+      );
+
+      if (unauthorizedRow || rows.length !== ids.length) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "One or more rows not found or unauthorized",
+        });
+      }
+
+      // Delete all rows in a single transaction
+      const result = await ctx.db.row.deleteMany({
+        where: { id: { in: ids } },
+      });
+
+      return { count: result.count };
+    }),
+
+  /**
    * BULK CREATE ROWS (optimized for large datasets)
    * Uses batch inserts and generates fake data with Faker.js
    */

@@ -5,6 +5,7 @@ import { type CellContext } from "@tanstack/react-table";
 import { api } from "~/trpc/react";
 import { type RowData } from "./hooks/useTableColumns";
 import { useSelection } from "./hooks/useSelection";
+import { useContextMenu } from "./hooks/useContextMenu";
 import { getCellHighlightClass } from "./utils/cellHighlight";
 import type { Filter, Sort } from "~/server/lib/types";
 
@@ -41,12 +42,15 @@ export function EditableCell({
   const hasSavedRef = useRef(false);
   const utils = api.useUtils();
 
+  const { showContextMenu } = useContextMenu();
+
   const {
     isSelected: checkIsSelected,
     isEditing: checkIsEditing,
     selectCell,
     startEditing,
     stopEditing,
+    selectedRowIds,
   } = useSelection();
 
   const rowIndex = row.index;
@@ -319,6 +323,20 @@ export function EditableCell({
     startEditing({ rowIndex, columnIndex });
   };
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (cellRef.current) {
+      // Pass selected row IDs for bulk operations
+      showContextMenu(
+        cellRef.current,
+        rowId,
+        tableId,
+        Array.from(selectedRowIds),
+      );
+    }
+  };
+
   const handleBlur = () => {
     handleSave();
   };
@@ -402,6 +420,7 @@ export function EditableCell({
           className={`absolute inset-0 cursor-default overflow-hidden px-2 py-1.5 ${highlightClass}`}
           onMouseDown={handleMouseDown}
           onDoubleClick={handleDoubleClick}
+          onContextMenu={handleContextMenu}
         >
           <span className="pointer-events-none block truncate text-sm text-gray-900">
             {formattedDisplayValue || <span className="text-gray-400"></span>}
@@ -417,6 +436,7 @@ export function EditableCell({
       ref={cellRef}
       onMouseDown={handleMouseDown}
       onDoubleClick={handleDoubleClick}
+      onContextMenu={handleContextMenu}
       className={`absolute inset-0 cursor-default overflow-hidden px-2 py-1.5 ${highlightClass}`}
     >
       <span className="pointer-events-none block truncate text-sm text-gray-900">
