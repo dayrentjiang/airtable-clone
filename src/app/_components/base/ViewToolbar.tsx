@@ -6,6 +6,7 @@ import { SearchInput } from "./toolbar/SearchInput";
 import { FilterPopover } from "./toolbar/FilterPopover";
 import { SortPopover } from "./toolbar/SortPopover";
 import { HideFieldsPopover } from "./toolbar/HideFieldsPopover";
+import { ToolbarPopoversProvider } from "./hooks/useToolbarPopovers";
 
 function HamburgerIcon() {
   return (
@@ -219,44 +220,46 @@ export function ViewToolbar({ onToggleSideNav, tableId }: ViewToolbarProps) {
   };
 
   return (
-    <div className="flex h-11 items-center justify-between border-b border-gray-200 bg-white px-3">
-      {/* Left: Hamburger + View dropdown */}
-      <div className="flex items-center gap-1">
-        <button
-          onClick={onToggleSideNav}
-          className="rounded p-1.5 text-gray-600 hover:bg-gray-100"
-        >
-          <HamburgerIcon />
-        </button>
+    <ToolbarPopoversProvider>
+      <div className="flex h-11 items-center justify-between border-b border-gray-200 bg-white px-3">
+        {/* Left: Hamburger + View dropdown */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onToggleSideNav}
+            className="rounded p-1.5 text-gray-600 hover:bg-gray-100"
+          >
+            <HamburgerIcon />
+          </button>
 
-        <button className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100">
-          <GridIcon />
-          <span>Grid view</span>
-          <ChevronDownIcon />
-        </button>
+          <button className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100">
+            <GridIcon />
+            <span>Grid view</span>
+            <ChevronDownIcon />
+          </button>
+        </div>
+
+        {/* Right: Toolbar actions */}
+        <div className="flex items-center gap-0.5">
+          <ToolbarButton
+            icon={<DatabaseIcon />}
+            label={isCreating ? "Creating..." : "Create 100k rows"}
+            onClick={handleCreate100k}
+          />
+          <HideFieldsPopover tableId={tableId} />
+          <FilterPopover tableId={tableId} />
+          <ToolbarButton icon={<GroupIcon />} label="Group" />
+          <SortPopover tableId={tableId} />
+          <ToolbarButton icon={<ColorIcon />} label="Color" />
+
+          <button className="rounded p-1.5 text-gray-600 hover:bg-gray-100">
+            <RowHeightIcon />
+          </button>
+
+          <ToolbarButton icon={<ShareIcon />} label="Share and sync" />
+
+          <SearchInput />
+        </div>
       </div>
-
-      {/* Right: Toolbar actions */}
-      <div className="flex items-center gap-0.5">
-        <ToolbarButton
-          icon={<DatabaseIcon />}
-          label={isCreating ? "Creating..." : "Create 100k rows"}
-          onClick={handleCreate100k}
-        />
-        <HideFieldsPopover tableId={tableId} />
-        <FilterPopover tableId={tableId} />
-        <ToolbarButton icon={<GroupIcon />} label="Group" />
-        <SortPopover tableId={tableId} />
-        <ToolbarButton icon={<ColorIcon />} label="Color" />
-
-        <button className="rounded p-1.5 text-gray-600 hover:bg-gray-100">
-          <RowHeightIcon />
-        </button>
-
-        <ToolbarButton icon={<ShareIcon />} label="Share and sync" />
-
-        <SearchInput />
-      </div>
-    </div>
+    </ToolbarPopoversProvider>
   );
 }

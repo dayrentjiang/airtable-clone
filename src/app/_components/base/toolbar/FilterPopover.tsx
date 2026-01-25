@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useViewConfig } from "../hooks/useViewConfig";
+import { useToolbarPopovers } from "../hooks/useToolbarPopovers";
 import { api } from "~/trpc/react";
 import type { Filter, FilterOperator } from "~/server/lib/types";
 
@@ -292,9 +293,12 @@ interface FilterPopoverProps {
 }
 
 export function FilterPopover({ tableId }: FilterPopoverProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Use shared popover state
+  const { isPopoverOpen, setOpenPopover } = useToolbarPopovers();
+  const isOpen = isPopoverOpen("filter");
 
   // Get filter state directly from context (no draft state - live updates!)
   const { filters, addFilter, updateFilter, removeFilter, saveConfig } =
@@ -319,7 +323,7 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
       ) {
         // Save config when closing popover
         void saveConfig({ filters });
-        setIsOpen(false);
+        setOpenPopover(null);
       }
     }
 
@@ -328,7 +332,7 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [isOpen, filters, saveConfig]);
+  }, [isOpen, filters, saveConfig, setOpenPopover]);
 
   // Add a new filter with default values
   const handleAddFilter = () => {
@@ -385,7 +389,7 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
       {/* Filter button */}
       <button
         ref={buttonRef}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setOpenPopover(isOpen ? null : "filter")}
         className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs ${
           hasActiveFilters
             ? "bg-green-100 text-green-700"

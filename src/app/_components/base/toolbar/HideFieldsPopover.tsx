@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useViewConfig } from "../hooks/useViewConfig";
+import { useToolbarPopovers } from "../hooks/useToolbarPopovers";
 import { api } from "~/trpc/react";
 
 /**
@@ -92,10 +93,13 @@ interface HideFieldsPopoverProps {
 }
 
 export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Use shared popover state
+  const { isPopoverOpen, setOpenPopover } = useToolbarPopovers();
+  const isOpen = isPopoverOpen("hideFields");
 
   // Get hidden fields state from context
   const { hiddenFields, toggleFieldVisibility, setHiddenFields, saveConfig } =
@@ -128,7 +132,7 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
       ) {
         // Save config when closing popover
         void saveConfig({ hiddenFields });
-        setIsOpen(false);
+        setOpenPopover(null);
       }
     }
 
@@ -137,7 +141,7 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [isOpen, hiddenFields, saveConfig]);
+  }, [isOpen, hiddenFields, saveConfig, setOpenPopover]);
 
   // Hide all fields
   const handleHideAll = () => {
@@ -165,7 +169,7 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
       {/* Hide fields button */}
       <button
         ref={buttonRef}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setOpenPopover(isOpen ? null : "hideFields")}
         className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-gray-100 ${
           hasHiddenFields ? "bg-blue-50 text-blue-700" : "text-gray-600"
         }`}
@@ -192,7 +196,7 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
               <button
                 onClick={() => {
                   void saveConfig({ hiddenFields });
-                  setIsOpen(false);
+                  setOpenPopover(null);
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >

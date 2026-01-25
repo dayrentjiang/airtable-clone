@@ -106,7 +106,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
       refetchOnMount: false, // Don't refetch on mount - use cached data
       refetchOnWindowFocus: false,
-      staleTime: 30000, // Cache for 30 seconds - smooth UX
+      staleTime: 0, // Always consider data stale - refetch when query key changes
       gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
       // Keep previous data while fetching new data (smooth transitions)
       placeholderData: (previousData) => previousData,

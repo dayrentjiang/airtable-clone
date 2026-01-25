@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useViewConfig } from "../hooks/useViewConfig";
+import { useToolbarPopovers } from "../hooks/useToolbarPopovers";
 import { api } from "~/trpc/react";
 import type { Sort } from "~/server/lib/types";
 
@@ -225,12 +226,15 @@ interface SortPopoverProps {
 }
 
 export function SortPopover({ tableId }: SortPopoverProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddSortPicker, setShowAddSortPicker] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const addSortPickerRef = useRef<HTMLDivElement>(null);
+
+  // Use shared popover state
+  const { isPopoverOpen, setOpenPopover } = useToolbarPopovers();
+  const isOpen = isPopoverOpen("sort");
 
   // Get sort state directly from context (live updates!)
   const { sorts, addSort, updateSort, removeSort, saveConfig } =
@@ -266,7 +270,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
       ) {
         // Save config when closing popover
         void saveConfig({ sorts });
-        setIsOpen(false);
+        setOpenPopover(null);
         setShowAddSortPicker(false);
       }
     }
@@ -276,7 +280,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [isOpen, sorts, saveConfig]);
+  }, [isOpen, sorts, saveConfig, setOpenPopover]);
 
   // Close add sort picker when clicking outside (but inside main popover)
   useEffect(() => {
@@ -339,7 +343,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
       {/* Sort button */}
       <button
         ref={buttonRef}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setOpenPopover(isOpen ? null : "sort")}
         className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs ${
           hasActiveSorts
             ? "bg-orange-100 text-orange-700"
