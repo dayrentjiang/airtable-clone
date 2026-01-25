@@ -77,33 +77,47 @@ export function TableBar({
   };
 
   return (
-    <div className="flex h-11 items-center justify-between border-b border-gray-200 bg-white px-3">
+    <div className="relative flex h-8 items-end border-b border-gray-300 bg-cyan-50">
       {/* Left: Table tabs */}
-      <div className="flex items-center gap-1">
+      <div className="flex h-full items-end">
         {/* Table tabs displayed side by side */}
-        {tables.map((table) => {
+        {tables.map((table, index) => {
           const isActive = table.id === activeTableId;
+          const nextIsActive = tables[index + 1]?.id === activeTableId;
+          const showDivider =
+            !isActive && !nextIsActive && index < tables.length - 1;
+
           return (
-            <button
-              key={table.id}
-              onClick={() => onTableSelect(table.id)}
-              className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-gray-100 text-gray-900"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              }`}
-            >
-              <span>{table.name}</span>
-            </button>
+            <div key={table.id} className="flex h-full items-end">
+              <button
+                onClick={() => onTableSelect(table.id)}
+                className={`flex items-center gap-1 px-3 text-[13px] font-medium transition-colors ${
+                  isActive
+                    ? "relative z-10 -mb-px h-full rounded-t border-l border-r border-gray-300 bg-white text-black"
+                    : "h-full text-gray-500 hover:bg-cyan-200/50"
+                }`}
+              >
+                <span>{table.name}</span>
+                {isActive && (
+                  <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
+                )}
+              </button>
+              {/* Vertical divider between tabs */}
+              {showDivider && (
+                <div className="my-auto h-4 w-px bg-gray-400/50" />
+              )}
+            </div>
           );
         })}
 
-        {/* Chevron separator */}
-        <ChevronDown className="h-4 w-4 -rotate-90 text-gray-300" />
+        {/* Chevron separator for more tables */}
+        <button className="flex h-full items-center px-1.5 text-gray-600 hover:text-gray-800">
+          <ChevronDown className="h-4 w-4" />
+        </button>
 
-        {/* Add or import with dropdown */}
+        {/* Add table button */}
         {isNamingTable ? (
-          <div className="flex items-center gap-2 rounded bg-gray-50 px-2.5 py-1.5">
+          <div className="flex h-full items-center gap-2 bg-white/50 px-2.5">
             <Table className="h-4 w-4 text-gray-600" />
             <input
               ref={inputRef}
@@ -113,17 +127,16 @@ export function TableBar({
               onKeyDown={handleKeyDown}
               onBlur={handleCreateTable}
               placeholder="Name your table"
-              className="w-40 border-none bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
+              className="w-32 border-none bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-400"
             />
           </div>
         ) : (
-          <div className="relative" ref={addMenuRef}>
+          <div className="relative flex h-full items-center" ref={addMenuRef}>
             <button
               onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
-              className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+              className="flex h-full items-center px-1.5 text-gray-600 hover:text-gray-800"
             >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Add or import</span>
+              <Plus className="h-4 w-4" />
             </button>
 
             {/* Dropdown menu */}
@@ -145,10 +158,12 @@ export function TableBar({
       </div>
 
       {/* Right: Tools */}
-      <button className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-100">
-        <span>Tools</span>
-        <ChevronDown className="h-4 w-4 text-gray-500" />
-      </button>
+      <div className="ml-auto flex h-full items-center">
+        <button className="flex h-full items-center gap-1 px-2 text-[13px] text-gray-600 hover:text-gray-800">
+          <span>Tools</span>
+          <ChevronDown className="h-3.5 w-3.5" />
+        </button>
+      </div>
     </div>
   );
 }
