@@ -70,14 +70,19 @@ interface ViewConfigContextValue {
   goToPrevMatch: () => void;
 
   // State tracking
-  isDirty: boolean;        // Has unsaved changes?
-  isSaving: boolean;       // Currently saving?
+  isConfigLoaded: boolean; // Has config loaded from DB?
+  isDirty: boolean; // Has unsaved changes?
+  isSaving: boolean; // Currently saving?
 
   // Actions
   // saveConfig accepts optional overrides to bypass closure issues
   // When called from a popover after setFilters(), pass the new filters directly
-  saveConfig: (overrides?: { filters?: Filter[]; sorts?: Sort[]; hiddenFields?: string[] }) => Promise<void>;
-  resetConfig: () => void;          // Discard changes, reload from saved
+  saveConfig: (overrides?: {
+    filters?: Filter[];
+    sorts?: Sort[];
+    hiddenFields?: string[];
+  }) => Promise<void>;
+  resetConfig: () => void; // Discard changes, reload from saved
 }
 
 // ============================================================================
@@ -95,7 +100,10 @@ interface ViewConfigProviderProps {
   children: ReactNode;
 }
 
-export function ViewConfigProvider({ viewId, children }: ViewConfigProviderProps) {
+export function ViewConfigProvider({
+  viewId,
+  children,
+}: ViewConfigProviderProps) {
   // ---------------------------------------------------------------------------
   // FETCH SAVED CONFIG FROM DATABASE
   // ---------------------------------------------------------------------------
@@ -104,10 +112,10 @@ export function ViewConfigProvider({ viewId, children }: ViewConfigProviderProps
     { id: viewId! },
     {
       enabled: !!viewId,
-      staleTime: 0,      // Always refetch when switching views
-      gcTime: 0,         // Don't cache
+      staleTime: 0, // Always refetch when switching views
+      gcTime: 0, // Don't cache
       refetchOnMount: true,
-    }
+    },
   );
 
   // Parse saved config (or use defaults)
@@ -171,7 +179,9 @@ export function ViewConfigProvider({ viewId, children }: ViewConfigProviderProps
       return true;
     }
     // Compare hidden fields
-    if (JSON.stringify(hiddenFields) !== JSON.stringify(savedConfig.hiddenFields)) {
+    if (
+      JSON.stringify(hiddenFields) !== JSON.stringify(savedConfig.hiddenFields)
+    ) {
       return true;
     }
     return false;
@@ -182,15 +192,15 @@ export function ViewConfigProvider({ viewId, children }: ViewConfigProviderProps
   // ---------------------------------------------------------------------------
 
   const addFilter = useCallback((filter: Filter) => {
-    setFilters(prev => [...prev, filter]);
+    setFilters((prev) => [...prev, filter]);
   }, []);
 
   const updateFilter = useCallback((index: number, filter: Filter) => {
-    setFilters(prev => prev.map((f, i) => i === index ? filter : f));
+    setFilters((prev) => prev.map((f, i) => (i === index ? filter : f)));
   }, []);
 
   const removeFilter = useCallback((index: number) => {
-    setFilters(prev => prev.filter((_, i) => i !== index));
+    setFilters((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -198,15 +208,15 @@ export function ViewConfigProvider({ viewId, children }: ViewConfigProviderProps
   // ---------------------------------------------------------------------------
 
   const addSort = useCallback((sort: Sort) => {
-    setSorts(prev => [...prev, sort]);
+    setSorts((prev) => [...prev, sort]);
   }, []);
 
   const updateSort = useCallback((index: number, sort: Sort) => {
-    setSorts(prev => prev.map((s, i) => i === index ? sort : s));
+    setSorts((prev) => prev.map((s, i) => (i === index ? sort : s)));
   }, []);
 
   const removeSort = useCallback((index: number) => {
-    setSorts(prev => prev.filter((_, i) => i !== index));
+    setSorts((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -214,10 +224,10 @@ export function ViewConfigProvider({ viewId, children }: ViewConfigProviderProps
   // ---------------------------------------------------------------------------
 
   const toggleFieldVisibility = useCallback((columnId: string) => {
-    setHiddenFields(prev => {
+    setHiddenFields((prev) => {
       if (prev.includes(columnId)) {
         // Currently hidden → show it (remove from hidden list)
-        return prev.filter(id => id !== columnId);
+        return prev.filter((id) => id !== columnId);
       } else {
         // Currently visible → hide it (add to hidden list)
         return [...prev, columnId];
@@ -231,12 +241,14 @@ export function ViewConfigProvider({ viewId, children }: ViewConfigProviderProps
 
   const goToNextMatch = useCallback(() => {
     if (searchMatchCount === 0) return;
-    setCurrentMatchIndex(prev => (prev + 1) % searchMatchCount);
+    setCurrentMatchIndex((prev) => (prev + 1) % searchMatchCount);
   }, [searchMatchCount]);
 
   const goToPrevMatch = useCallback(() => {
     if (searchMatchCount === 0) return;
-    setCurrentMatchIndex(prev => prev === 0 ? searchMatchCount - 1 : prev - 1);
+    setCurrentMatchIndex((prev) =>
+      prev === 0 ? searchMatchCount - 1 : prev - 1,
+    );
   }, [searchMatchCount]);
 
   // ---------------------------------------------------------------------------
@@ -257,19 +269,33 @@ export function ViewConfigProvider({ viewId, children }: ViewConfigProviderProps
   // saveConfig accepts optional overrides to bypass React's async state updates
   // Example: When FilterPopover calls setFilters(newFilters) then saveConfig({ filters: newFilters })
   // The override ensures we save the NEW values, not the stale closure values
-  const saveConfig = useCallback(async (overrides?: { filters?: Filter[]; sorts?: Sort[]; hiddenFields?: string[] }) => {
-    if (!viewId) return;
+  const saveConfig = useCallback(
+    async (overrides?: {
+      filters?: Filter[];
+      sorts?: Sort[];
+      hiddenFields?: string[];
+    }) => {
+      if (!viewId) return;
 
-    await updateConfigMutation.mutateAsync({
-      id: viewId,
-      config: {
-        filters: overrides?.filters ?? filters,
-        sorts: overrides?.sorts ?? sorts,
-        hiddenFields: overrides?.hiddenFields ?? hiddenFields,
-        fieldOrder: savedConfig.fieldOrder, // Preserve field order
-      },
-    });
-  }, [viewId, filters, sorts, hiddenFields, savedConfig.fieldOrder, updateConfigMutation]);
+      await updateConfigMutation.mutateAsync({
+        id: viewId,
+        config: {
+          filters: overrides?.filters ?? filters,
+          sorts: overrides?.sorts ?? sorts,
+          hiddenFields: overrides?.hiddenFields ?? hiddenFields,
+          fieldOrder: savedConfig.fieldOrder, // Preserve field order
+        },
+      });
+    },
+    [
+      viewId,
+      filters,
+      sorts,
+      hiddenFields,
+      savedConfig.fieldOrder,
+      updateConfigMutation,
+    ],
+  );
 
   // ---------------------------------------------------------------------------
   // RESET (Discard Changes)
@@ -286,55 +312,60 @@ export function ViewConfigProvider({ viewId, children }: ViewConfigProviderProps
   // CONTEXT VALUE
   // ---------------------------------------------------------------------------
 
-  const value = useMemo((): ViewConfigContextValue => ({
-    viewId,
-    search,
-    filters,
-    sorts,
-    hiddenFields,
-    setSearch,
-    setFilters,
-    addFilter,
-    updateFilter,
-    removeFilter,
-    setSorts,
-    addSort,
-    updateSort,
-    removeSort,
-    setHiddenFields,
-    toggleFieldVisibility,
-    searchMatchCount,
-    currentMatchIndex,
-    setSearchMatchCount,
-    goToNextMatch,
-    goToPrevMatch,
-    isDirty,
-    isSaving: updateConfigMutation.isPending,
-    saveConfig,
-    resetConfig,
-  }), [
-    viewId,
-    search,
-    filters,
-    sorts,
-    hiddenFields,
-    setSearch,
-    addFilter,
-    updateFilter,
-    removeFilter,
-    addSort,
-    updateSort,
-    removeSort,
-    toggleFieldVisibility,
-    searchMatchCount,
-    currentMatchIndex,
-    goToNextMatch,
-    goToPrevMatch,
-    isDirty,
-    updateConfigMutation.isPending,
-    saveConfig,
-    resetConfig,
-  ]);
+  const value = useMemo(
+    (): ViewConfigContextValue => ({
+      viewId,
+      search,
+      filters,
+      sorts,
+      hiddenFields,
+      setSearch,
+      setFilters,
+      addFilter,
+      updateFilter,
+      removeFilter,
+      setSorts,
+      addSort,
+      updateSort,
+      removeSort,
+      setHiddenFields,
+      toggleFieldVisibility,
+      searchMatchCount,
+      currentMatchIndex,
+      setSearchMatchCount,
+      goToNextMatch,
+      goToPrevMatch,
+      isConfigLoaded: !isLoading, // Config is loaded when view query finishes
+      isDirty,
+      isSaving: updateConfigMutation.isPending,
+      saveConfig,
+      resetConfig,
+    }),
+    [
+      viewId,
+      search,
+      filters,
+      sorts,
+      hiddenFields,
+      setSearch,
+      addFilter,
+      updateFilter,
+      removeFilter,
+      addSort,
+      updateSort,
+      removeSort,
+      toggleFieldVisibility,
+      searchMatchCount,
+      currentMatchIndex,
+      goToNextMatch,
+      goToPrevMatch,
+      isLoading,
+      isDirty,
+      updateConfigMutation.isPending,
+      saveConfig,
+      resetConfig,
+    ],
+  );
 
   return (
     <ViewConfigContext.Provider value={value}>

@@ -29,8 +29,14 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   // -------------------------------------------------------------------------
   // This is the "live" state that user is editing (search, filters, sorts)
   // Changes here immediately affect the query below
-  const { search, filters, sorts, hiddenFields, setSearchMatchCount } =
-    useViewConfig();
+  const {
+    search,
+    filters,
+    sorts,
+    hiddenFields,
+    setSearchMatchCount,
+    isConfigLoaded,
+  } = useViewConfig();
 
   // Fetch table with columns - refetch on mount
   const { data: table, isLoading: tableLoading } = api.table.getById.useQuery(
@@ -81,6 +87,9 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       sorts: sorts.length > 0 ? sorts : undefined, // Column sorts
     },
     {
+      // CRITICAL: Don't run query until config has loaded from DB
+      // This prevents fetching with empty filters before saved filters load
+      enabled: isConfigLoaded,
       getNextPageParam: (lastPage) => lastPage.nextCursor,
       refetchOnMount: false, // Don't refetch on mount - use cached data
       refetchOnWindowFocus: false,
@@ -257,7 +266,21 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   // Calculate table width: row number column (66) + visible data columns (180 each)
   const tableWidth = 66 + (columns.length - 1) * 180;
 
-  // Loading state
+  // -------------------------------------------------------------------------
+  // LOADING STATES
+  // -------------------------------------------------------------------------
+
+  // CRITICAL: Wait for view config to load before rendering
+  // This prevents showing unfiltered data before filters are applied
+  if (!isConfigLoaded) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-gray-500">Loading view configuration...</div>
+      </div>
+    );
+  }
+
+  // Loading state for table/rows
   if (tableLoading || rowsLoading) {
     return (
       <div className="flex h-full items-center justify-center">

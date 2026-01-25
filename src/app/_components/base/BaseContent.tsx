@@ -7,12 +7,73 @@ import { BaseSideNav } from "./BaseSideNav";
 import { DataGrid, SelectionProvider, useSelection } from "./DataGrid";
 import { IconSidebar } from "../layout/IconSidebar";
 import { BaseTopNav } from "./BaseTopNav";
-import { ViewConfigProvider } from "./hooks/useViewConfig";
+import { ViewConfigProvider, useViewConfig } from "./hooks/useViewConfig";
 import { api } from "~/trpc/react";
 
 interface BaseContentProps {
   baseId: string;
   userInitial: string;
+}
+
+// Component that waits for view config to load before rendering
+function ViewConfigContent({
+  onToggleSideNav,
+  tableId,
+  viewId,
+  isSideNavOpen,
+  dataGridRef,
+  activeViewId,
+  setActiveViewId,
+}: {
+  onToggleSideNav: () => void;
+  tableId: string;
+  viewId: string;
+  isSideNavOpen: boolean;
+  dataGridRef: React.RefObject<HTMLDivElement | null>;
+  activeViewId: string | null;
+  setActiveViewId: (id: string | null) => void;
+}) {
+  const { isConfigLoaded } = useViewConfig();
+
+  // Show minimal loading UI while config loads
+  if (!isConfigLoaded) {
+    return (
+      <>
+        {/* Empty toolbar to maintain layout */}
+        <div className="flex h-11 items-center border-b border-gray-200 bg-white" />
+        {/* Loading message */}
+        <div className="flex flex-1 items-center justify-center text-gray-500">
+          Loading view configuration...
+        </div>
+      </>
+    );
+  }
+
+  // Config loaded - render full UI
+  return (
+    <>
+      <ViewToolbar onToggleSideNav={onToggleSideNav} tableId={tableId} />
+
+      {/* Content with side nav and main area */}
+      <div className="flex flex-1 overflow-hidden">
+        {isSideNavOpen && (
+          <BaseSideNav
+            tableId={tableId}
+            selectedViewId={activeViewId}
+            onViewSelect={setActiveViewId}
+          />
+        )}
+
+        {/* Main content area */}
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {/* Data grid */}
+          <main className="flex-1 overflow-auto bg-gray-50" ref={dataGridRef}>
+            <DataGrid key={viewId} tableId={tableId} viewId={viewId} />
+          </main>
+        </div>
+      </div>
+    </>
+  );
 }
 
 // Inner component that uses the selection context
@@ -183,48 +244,29 @@ function BaseContentInner({
           onAddTable={handleAddTable}
         />
         {/* ViewConfigProvider wraps toolbar + grid so they share state */}
-        <ViewConfigProvider viewId={activeViewId}>
-          <ViewToolbar
-            onToggleSideNav={toggleSideNav}
-            tableId={activeTableId ?? ""}
-          />
-
-          {/* Content with side nav and main area */}
-          <div className="flex flex-1 overflow-hidden">
-            {isSideNavOpen && (
-              <BaseSideNav
-                tableId={activeTableId}
-                selectedViewId={activeViewId}
-                onViewSelect={setActiveViewId}
-              />
-            )}
-
-            {/* Main content area */}
-            <div className="flex flex-1 flex-col overflow-hidden">
-              {/* Data grid */}
-              <main
-                className="flex-1 overflow-auto bg-gray-50"
-                ref={dataGridRef}
-              >
-                {activeTableId && activeViewId ? (
-                  <DataGrid
-                    key={activeViewId}
-                    tableId={activeTableId}
-                    viewId={activeViewId}
-                  />
-                ) : activeTableId ? (
-                  <div className="flex h-full items-center justify-center text-gray-500">
-                    Loading view...
-                  </div>
-                ) : (
-                  <div className="flex h-full items-center justify-center text-gray-500">
-                    No table selected. Create a table to get started.
-                  </div>
-                )}
-              </main>
+        {activeTableId && activeViewId ? (
+          <ViewConfigProvider viewId={activeViewId}>
+            <ViewConfigContent
+              onToggleSideNav={toggleSideNav}
+              tableId={activeTableId}
+              viewId={activeViewId}
+              isSideNavOpen={isSideNavOpen}
+              dataGridRef={dataGridRef}
+              activeViewId={activeViewId}
+              setActiveViewId={setActiveViewId}
+            />
+          </ViewConfigProvider>
+        ) : (
+          <>
+            {/* Minimal UI while no table/view selected */}
+            <div className="flex h-11 items-center border-b border-gray-200 bg-white" />
+            <div className="flex flex-1 items-center justify-center text-gray-500">
+              {activeTableId
+                ? "Loading view..."
+                : "No table selected. Create a table to get started."}
             </div>
-          </div>
-        </ViewConfigProvider>
+          </>
+        )}
       </div>
     </div>
   );
