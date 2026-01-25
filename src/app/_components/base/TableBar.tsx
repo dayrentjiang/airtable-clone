@@ -96,10 +96,12 @@ export function TableBar({
                 className={`flex items-center gap-1 rounded-t-sm px-3 text-[13px] font-medium transition-colors ${
                   isActive
                     ? "relative z-10 -mb-px h-full border-x border-t border-gray-300 bg-white text-black"
-                    : "h-full cursor-pointer text-gray-600 hover:bg-black/10 hover:text-gray-900"
+                    : "h-full cursor-pointer text-gray-500 hover:bg-black/10 hover:text-gray-900"
                 }`}
               >
-                <span className="max-w-24 truncate sm:max-w-none">{table.name}</span>
+                <span className="max-w-24 truncate sm:max-w-none">
+                  {table.name}
+                </span>
                 {isActive && (
                   <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
                 )}
@@ -133,7 +135,10 @@ export function TableBar({
             />
           </div>
         ) : (
-          <div className="relative flex h-full shrink-0 items-center" ref={addMenuRef}>
+          <div
+            className="relative flex h-full shrink-0 items-center"
+            ref={addMenuRef}
+          >
             <button
               onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
               onMouseEnter={() => setIsAddButtonHovered(true)}
