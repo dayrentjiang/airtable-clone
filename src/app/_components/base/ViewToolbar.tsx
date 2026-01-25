@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { api } from "~/trpc/react";
+import { SearchInput } from "./toolbar/SearchInput";
+import { FilterPopover } from "./toolbar/FilterPopover";
+import { SortPopover } from "./toolbar/SortPopover";
+import { HideFieldsPopover } from "./toolbar/HideFieldsPopover";
+import { ToolbarPopoversProvider } from "./hooks/useToolbarPopovers";
 
 function HamburgerIcon() {
   return (
@@ -66,21 +71,6 @@ function EyeOffIcon() {
       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
       <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
       <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  );
-}
-
-function FilterIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
     </svg>
   );
 }
@@ -167,22 +157,6 @@ function ShareIcon() {
   );
 }
 
-function SearchIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </svg>
-  );
-}
-
 function DatabaseIcon() {
   return (
     <svg
@@ -246,46 +220,46 @@ export function ViewToolbar({ onToggleSideNav, tableId }: ViewToolbarProps) {
   };
 
   return (
-    <div className="flex h-11 items-center justify-between border-b border-gray-200 bg-white px-3">
-      {/* Left: Hamburger + View dropdown */}
-      <div className="flex items-center gap-1">
-        <button
-          onClick={onToggleSideNav}
-          className="rounded p-1.5 text-gray-600 hover:bg-gray-100"
-        >
-          <HamburgerIcon />
-        </button>
+    <ToolbarPopoversProvider>
+      <div className="flex h-11 items-center justify-between border-b border-gray-200 bg-white px-3">
+        {/* Left: Hamburger + View dropdown */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onToggleSideNav}
+            className="rounded p-1.5 text-gray-600 hover:bg-gray-100"
+          >
+            <HamburgerIcon />
+          </button>
 
-        <button className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100">
-          <GridIcon />
-          <span>Grid view</span>
-          <ChevronDownIcon />
-        </button>
+          <button className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100">
+            <GridIcon />
+            <span>Grid view</span>
+            <ChevronDownIcon />
+          </button>
+        </div>
+
+        {/* Right: Toolbar actions */}
+        <div className="flex items-center gap-0.5">
+          <ToolbarButton
+            icon={<DatabaseIcon />}
+            label={isCreating ? "Creating..." : "Create 100k rows"}
+            onClick={handleCreate100k}
+          />
+          <HideFieldsPopover tableId={tableId} />
+          <FilterPopover tableId={tableId} />
+          <ToolbarButton icon={<GroupIcon />} label="Group" />
+          <SortPopover tableId={tableId} />
+          <ToolbarButton icon={<ColorIcon />} label="Color" />
+
+          <button className="rounded p-1.5 text-gray-600 hover:bg-gray-100">
+            <RowHeightIcon />
+          </button>
+
+          <ToolbarButton icon={<ShareIcon />} label="Share and sync" />
+
+          <SearchInput />
+        </div>
       </div>
-
-      {/* Right: Toolbar actions */}
-      <div className="flex items-center gap-0.5">
-        <ToolbarButton
-          icon={<DatabaseIcon />}
-          label={isCreating ? "Creating..." : "Create 100k rows"}
-          onClick={handleCreate100k}
-        />
-        <ToolbarButton icon={<EyeOffIcon />} label="Hide fields" />
-        <ToolbarButton icon={<FilterIcon />} label="Filter" />
-        <ToolbarButton icon={<GroupIcon />} label="Group" />
-        <ToolbarButton icon={<SortIcon />} label="Sort" />
-        <ToolbarButton icon={<ColorIcon />} label="Color" />
-
-        <button className="rounded p-1.5 text-gray-600 hover:bg-gray-100">
-          <RowHeightIcon />
-        </button>
-
-        <ToolbarButton icon={<ShareIcon />} label="Share and sync" />
-
-        <button className="rounded p-1.5 text-gray-600 hover:bg-gray-100">
-          <SearchIcon />
-        </button>
-      </div>
-    </div>
+    </ToolbarPopoversProvider>
   );
 }

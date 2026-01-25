@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
 import { EditableCell } from "../EditableCell";
+import { RowNumberCell } from "../RowNumberCell";
+import type { Filter, Sort } from "~/server/lib/types";
 
 export interface RowData {
   id: string;
@@ -24,14 +26,17 @@ const ROW_NUMBER_WIDTH = 66;
 
 export function useTableColumns(
   columns: Column[] | undefined,
-  hiddenFields: string[] = []
+  hiddenFields: string[] = [],
+  searchTerm = "",
+  filters: Filter[] = [],
+  sorts: Sort[] = [],
 ) {
   return useMemo<ColumnDef<RowData>[]>(() => {
     if (!columns) return [];
 
     // Filter out hidden columns
     const visibleColumns = columns.filter(
-      (col) => !hiddenFields.includes(col.id)
+      (col) => !hiddenFields.includes(col.id),
     );
 
     // Row number column (first column)
@@ -40,9 +45,12 @@ export function useTableColumns(
       accessorFn: () => "",
       header: "",
       cell: ({ row }) => (
-        <div className="flex h-full w-full items-center justify-center text-xs text-gray-500">
-          {row.original.order + 1}
-        </div>
+        <RowNumberCell
+          rowIndex={row.index}
+          rowNumber={row.index + 1} // Use row index for automatic renumbering
+          rowId={row.original.id}
+          tableId={row.original.tableId}
+        />
       ),
       size: ROW_NUMBER_WIDTH,
       enableSorting: false,
@@ -50,27 +58,32 @@ export function useTableColumns(
     };
 
     // Data columns from visible columns with EditableCell
-    const dataColumns: ColumnDef<RowData>[] = visibleColumns.map((col, index) => ({
-      id: col.id,
-      accessorFn: (row) => {
-        const cellData = row.data;
-        return cellData[col.id];
-      },
-      header: col.name,
-      cell: (props) => (
-        <EditableCell
-          {...props}
-          columnType={col.type}
-          columnId={col.id}
-          columnIndex={index + 1} // +1 because row number column is at index 0
-        />
-      ),
-      meta: {
-        type: col.type,
-      },
-      size: DEFAULT_COLUMN_WIDTH,
-    }));
+    const dataColumns: ColumnDef<RowData>[] = visibleColumns.map(
+      (col, index) => ({
+        id: col.id,
+        accessorFn: (row) => {
+          const cellData = row.data;
+          return cellData[col.id];
+        },
+        header: col.name,
+        cell: (props) => (
+          <EditableCell
+            {...props}
+            columnType={col.type}
+            columnId={col.id}
+            columnIndex={index + 1} // +1 because row number column is at index 0
+            searchTerm={searchTerm} // Pass search term for yellow highlighting
+            filters={filters} // Pass filters for green highlighting
+            sorts={sorts} // Pass sorts for orange highlighting
+          />
+        ),
+        meta: {
+          type: col.type,
+        },
+        size: DEFAULT_COLUMN_WIDTH,
+      }),
+    );
 
     return [rowNumberColumn, ...dataColumns];
-  }, [columns, hiddenFields]);
+  }, [columns, hiddenFields, searchTerm, filters, sorts]);
 }

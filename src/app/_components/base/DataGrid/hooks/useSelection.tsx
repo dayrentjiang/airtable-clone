@@ -23,7 +23,17 @@ interface SelectionContextValue {
   isSelected: (rowIndex: number, columnIndex: number) => boolean;
   isEditing: (rowIndex: number, columnIndex: number) => boolean;
   isRowSelected: (rowIndex: number) => boolean;
+  isColumnSelected: (columnIndex: number) => boolean;
+  toggleRowSelection: (
+    rowIndex: number,
+    rowId: string,
+    isShiftKey?: boolean,
+  ) => void;
+  toggleColumnSelection: (columnIndex: number, isShiftKey?: boolean) => void;
   clearSelection: () => void;
+  selectedRows: Set<number>; // Row indices for UI highlighting
+  selectedRowIds: Set<string>; // Row IDs for operations like delete
+  selectedColumns: Set<number>;
 }
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
@@ -41,15 +51,30 @@ export function SelectionProvider({
 }: SelectionProviderProps) {
   const [selectedCell, setSelectedCell] = useState<CellPosition | null>(null);
   const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
+  const [selectedColumns, setSelectedColumns] = useState<Set<number>>(
+    new Set(),
+  );
 
   const selectCell = useCallback((position: CellPosition | null) => {
     setSelectedCell(position);
     setEditingCell(null);
+    // Clear row and column selections when selecting a cell
+    if (position !== null) {
+      setSelectedRows(new Set());
+      setSelectedRowIds(new Set());
+      setSelectedColumns(new Set());
+    }
   }, []);
 
   const startEditing = useCallback((position: CellPosition) => {
     setSelectedCell(position);
     setEditingCell(position);
+    // Clear row and column selections when starting to edit a cell
+    setSelectedRows(new Set());
+    setSelectedRowIds(new Set());
+    setSelectedColumns(new Set());
   }, []);
 
   const stopEditing = useCallback(() => {
@@ -78,14 +103,96 @@ export function SelectionProvider({
 
   const isRowSelected = useCallback(
     (rowIndex: number) => {
-      return selectedCell?.rowIndex === rowIndex;
+      return selectedRows.has(rowIndex);
     },
-    [selectedCell],
+    [selectedRows],
+  );
+
+  const isColumnSelected = useCallback(
+    (columnIndex: number) => {
+      return selectedColumns.has(columnIndex);
+    },
+    [selectedColumns],
+  );
+
+  const toggleRowSelection = useCallback(
+    (rowIndex: number, rowId: string, isShiftKey = false) => {
+      // Clear cell selection when selecting rows
+      setSelectedCell(null);
+      setEditingCell(null);
+
+      // Update row indices (for UI highlighting)
+      setSelectedRows((prev) => {
+        // Always toggle for rows (no shift needed for multi-select)
+        const newSet = new Set(prev);
+        if (newSet.has(rowIndex)) {
+          newSet.delete(rowIndex);
+        } else {
+          newSet.add(rowIndex);
+        }
+        return newSet;
+      });
+
+      // Update row IDs (for operations like delete)
+      setSelectedRowIds((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(rowId)) {
+          newSet.delete(rowId);
+        } else {
+          newSet.add(rowId);
+        }
+        return newSet;
+      });
+
+      // Clear column selection only when NOT holding Shift (to allow mixed selection)
+      if (!isShiftKey) {
+        setSelectedColumns(new Set());
+      }
+    },
+    [],
+  );
+
+  const toggleColumnSelection = useCallback(
+    (columnIndex: number, isShiftKey = false) => {
+      // Clear cell selection when selecting columns
+      setSelectedCell(null);
+      setEditingCell(null);
+
+      setSelectedColumns((prev) => {
+        if (isShiftKey) {
+          // Shift key: Add to selection (multi-select)
+          const newSet = new Set(prev);
+          if (newSet.has(columnIndex)) {
+            newSet.delete(columnIndex);
+          } else {
+            newSet.add(columnIndex);
+          }
+          return newSet;
+        } else {
+          // No shift: Single selection (replace)
+          if (prev.has(columnIndex) && prev.size === 1) {
+            // Clicking the only selected column deselects it
+            return new Set();
+          } else {
+            return new Set([columnIndex]);
+          }
+        }
+      });
+      // Clear row selection only when NOT holding Shift (to allow mixed selection)
+      if (!isShiftKey) {
+        setSelectedRows(new Set());
+        setSelectedRowIds(new Set());
+      }
+    },
+    [],
   );
 
   const clearSelection = useCallback(() => {
     setSelectedCell(null);
     setEditingCell(null);
+    setSelectedRows(new Set());
+    setSelectedRowIds(new Set());
+    setSelectedColumns(new Set());
   }, []);
 
   // Keyboard navigation
@@ -174,6 +281,41 @@ export function SelectionProvider({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [selectedCell, editingCell, totalRows, totalColumns]);
 
+  // Click outside handler - clear all selections when clicking outside the grid
+  useEffect(() => {
+    // Only add listener if there's any active selection
+    if (
+      !selectedCell &&
+      selectedRows.size === 0 &&
+      selectedColumns.size === 0
+    ) {
+      return;
+    }
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Check if click is inside a table cell or header
+      const isInsideCell = target.closest("td") !== null;
+      const isInsideHeader = target.closest("th") !== null;
+      const isInsideTable = isInsideCell || isInsideHeader;
+
+      // Don't clear if clicking inside the table or if editing
+      if (isInsideTable || editingCell) {
+        return;
+      }
+
+      // Clear all selections when clicking outside the table
+      setSelectedCell(null);
+      setSelectedRows(new Set());
+      setSelectedRowIds(new Set());
+      setSelectedColumns(new Set());
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [selectedCell, selectedRows, selectedColumns, editingCell]);
+
   return (
     <SelectionContext.Provider
       value={{
@@ -185,7 +327,13 @@ export function SelectionProvider({
         isSelected,
         isEditing,
         isRowSelected,
+        isColumnSelected,
+        toggleRowSelection,
+        toggleColumnSelection,
         clearSelection,
+        selectedRows,
+        selectedRowIds,
+        selectedColumns,
       }}
     >
       {children}

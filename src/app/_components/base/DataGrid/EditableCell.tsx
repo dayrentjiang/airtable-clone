@@ -5,6 +5,9 @@ import { type CellContext } from "@tanstack/react-table";
 import { api } from "~/trpc/react";
 import { type RowData } from "./hooks/useTableColumns";
 import { useSelection } from "./hooks/useSelection";
+import { useContextMenu } from "./hooks/useContextMenu";
+import { getCellHighlightClass } from "./utils/cellHighlight";
+import type { Filter, Sort } from "~/server/lib/types";
 
 type ColumnType = "TEXT" | "NUMBER";
 
@@ -12,6 +15,9 @@ interface EditableCellProps extends CellContext<RowData, unknown> {
   columnType: ColumnType;
   columnId: string;
   columnIndex: number;
+  searchTerm?: string; // For yellow highlighting (search matches)
+  filters?: Filter[]; // For green highlighting (filter matches)
+  sorts?: Sort[]; // For orange highlighting (sorted columns)
 }
 
 export function EditableCell({
@@ -20,6 +26,9 @@ export function EditableCell({
   columnType,
   columnId,
   columnIndex,
+  searchTerm,
+  filters,
+  sorts,
 }: EditableCellProps) {
   const initialValue = getValue() as string | number | null;
   const [value, setValue] = useState(String(initialValue ?? ""));
@@ -33,12 +42,15 @@ export function EditableCell({
   const hasSavedRef = useRef(false);
   const utils = api.useUtils();
 
+  const { showContextMenu } = useContextMenu();
+
   const {
     isSelected: checkIsSelected,
     isEditing: checkIsEditing,
     selectCell,
     startEditing,
     stopEditing,
+    selectedRowIds,
   } = useSelection();
 
   const rowIndex = row.index;
@@ -128,34 +140,47 @@ export function EditableCell({
 
   const updateCellMutation = api.row.updateCell.useMutation({
     onMutate: async (variables) => {
-      await utils.row.infinite.cancel({ tableId });
-      const previousData = utils.row.infinite.getInfiniteData({ tableId });
+      // Cancel any outgoing refetches to prevent optimistic updates from being overwritten
+      await utils.row.infiniteWithView.cancel();
 
-      utils.row.infinite.setInfiniteData({ tableId, limit: 50 }, (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page) => ({
-            ...page,
-            items: page.items.map((r) => {
-              if (r.id !== rowId) return r;
-              const currentData = r.data as Record<string, unknown> | null;
-              const updatedData = {
-                ...(currentData ?? {}),
-                [columnId]: variables.value,
-              };
-              return { ...r, data: updatedData as typeof r.data };
-            }),
-          })),
-        };
-      });
+      // Snapshot the previous value for rollback
+      const previousData = utils.row.infiniteWithView.getInfiniteData();
+
+      // Optimistically update the cell in the cache
+      utils.row.infiniteWithView.setInfiniteData(
+        { tableId, limit: 150 }, // Match the limit from DataGrid query
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              items: page.items.map((r) => {
+                if (r.id !== rowId) return r;
+                const currentData = r.data as Record<string, unknown> | null;
+                const updatedData = {
+                  ...(currentData ?? {}),
+                  [columnId]: variables.value,
+                };
+                return { ...r, data: updatedData as typeof r.data };
+              }),
+            })),
+          };
+        },
+      );
 
       return { previousData };
     },
+    onSuccess: () => {
+      // Invalidate and refetch to get server-filtered data
+      // This ensures rows that no longer match filters disappear
+      void utils.row.infiniteWithView.invalidate({ tableId });
+    },
     onError: (err, _variables, context) => {
+      // Rollback on error
       if (context?.previousData) {
-        utils.row.infinite.setInfiniteData(
-          { tableId, limit: 50 },
+        utils.row.infiniteWithView.setInfiniteData(
+          { tableId, limit: 150 },
           context.previousData,
         );
       }
@@ -298,6 +323,20 @@ export function EditableCell({
     startEditing({ rowIndex, columnIndex });
   };
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (cellRef.current) {
+      // Pass selected row IDs for bulk operations
+      showContextMenu(
+        cellRef.current,
+        rowId,
+        tableId,
+        Array.from(selectedRowIds),
+      );
+    }
+  };
+
   const handleBlur = () => {
     handleSave();
   };
@@ -307,6 +346,15 @@ export function EditableCell({
     displayValue === null || displayValue === undefined
       ? ""
       : String(displayValue);
+
+  // Get highlight class based on search (yellow), filter (green), and sort (orange)
+  const highlightClass = getCellHighlightClass(
+    displayValue,
+    columnId,
+    searchTerm ?? "",
+    filters ?? [],
+    sorts ?? [],
+  );
 
   // Editing state
   if (isEditing) {
@@ -369,9 +417,10 @@ export function EditableCell({
         {/* Content */}
         <div
           ref={cellRef}
-          className="absolute inset-0 cursor-default overflow-hidden px-2 py-1.5"
+          className={`absolute inset-0 cursor-default overflow-hidden px-2 py-1.5 ${highlightClass}`}
           onMouseDown={handleMouseDown}
           onDoubleClick={handleDoubleClick}
+          onContextMenu={handleContextMenu}
         >
           <span className="pointer-events-none block truncate text-sm text-gray-900">
             {formattedDisplayValue || <span className="text-gray-400"></span>}
@@ -387,7 +436,8 @@ export function EditableCell({
       ref={cellRef}
       onMouseDown={handleMouseDown}
       onDoubleClick={handleDoubleClick}
-      className="absolute inset-0 cursor-default overflow-hidden px-2 py-1.5"
+      onContextMenu={handleContextMenu}
+      className={`absolute inset-0 cursor-default overflow-hidden px-2 py-1.5 ${highlightClass}`}
     >
       <span className="pointer-events-none block truncate text-sm text-gray-900">
         {formattedDisplayValue || <span className="text-gray-400"></span>}
