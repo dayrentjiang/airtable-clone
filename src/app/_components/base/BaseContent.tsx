@@ -15,7 +15,8 @@ interface BaseContentProps {
   userInitial: string;
 }
 
-// Component that waits for view config to load before rendering
+// Component that waits for view config to load before rendering toolbar and grid
+// BaseSideNav should stay outside to remain visible during view switches
 function ViewConfigContent({
   onToggleSideNav,
   tableId,
@@ -41,20 +42,30 @@ function ViewConfigContent({
       <>
         {/* Empty toolbar to maintain layout */}
         <div className="flex h-11 items-center border-b border-gray-200 bg-white" />
-        {/* Loading message */}
-        <div className="flex flex-1 items-center justify-center text-gray-500">
-          Loading view configuration...
+        {/* Content area with side nav */}
+        <div className="flex flex-1 overflow-hidden">
+          {isSideNavOpen && (
+            <BaseSideNav
+              tableId={tableId}
+              selectedViewId={activeViewId}
+              onViewSelect={setActiveViewId}
+            />
+          )}
+          {/* Loading message */}
+          <div className="flex flex-1 items-center justify-center text-gray-500">
+            Loading view configuration...
+          </div>
         </div>
       </>
     );
   }
 
-  // Config loaded - render full UI
+  // Config loaded - render toolbar and grid
   return (
     <>
       <ViewToolbar onToggleSideNav={onToggleSideNav} tableId={tableId} />
 
-      {/* Content with side nav and main area */}
+      {/* Content area with side nav and grid */}
       <div className="flex flex-1 overflow-hidden">
         {isSideNavOpen && (
           <BaseSideNav
@@ -64,7 +75,7 @@ function ViewConfigContent({
           />
         )}
 
-        {/* Main content area */}
+        {/* Main content area - grid only */}
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Data grid */}
           <main className="flex-1 overflow-auto bg-gray-50" ref={dataGridRef}>
@@ -243,7 +254,8 @@ function BaseContentInner({
           onTableSelect={setActiveTableId}
           onAddTable={handleAddTable}
         />
-        {/* ViewConfigProvider wraps toolbar + grid so they share state */}
+
+        {/* ViewConfigProvider wraps toolbar + sidebar + grid */}
         {activeTableId && activeViewId ? (
           <ViewConfigProvider viewId={activeViewId}>
             <ViewConfigContent

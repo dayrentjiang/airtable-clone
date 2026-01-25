@@ -73,6 +73,8 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   const {
     data,
     isLoading: rowsLoading,
+    isFetching,
+    isPlaceholderData,
     isFetchingNextPage,
     hasNextPage,
     fetchNextPage,
@@ -107,16 +109,19 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   }, [data]);
 
   // Build column definitions (filtered by hiddenFields from context)
-  // Note: hiddenFields, search, filters, and sorts come from useViewConfig() above
-  // search is passed to highlight matching cells (yellow)
-  // completeFilters is passed to highlight filter matches (green)
-  // sorts is passed to highlight sorted columns (orange)
+  // IMPORTANT: When showing placeholder data (old results), use empty filters/search
+  // to avoid highlighting NEW criteria on OLD data
+  // Only apply highlighting once new data arrives
+  const highlightSearch = isPlaceholderData ? "" : search;
+  const highlightFilters = isPlaceholderData ? [] : completeFilters;
+  const highlightSorts = isPlaceholderData ? [] : sorts;
+
   const columns = useTableColumns(
     table?.columns,
     hiddenFields,
-    search,
-    completeFilters,
-    sorts,
+    highlightSearch,
+    highlightFilters,
+    highlightSorts,
   );
 
   // -------------------------------------------------------------------------
@@ -280,8 +285,11 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     );
   }
 
-  // Loading state for table/rows
-  if (tableLoading || rowsLoading) {
+  // Show loading ONLY on initial load (no data yet)
+  // When filtering/searching, keep showing current data with placeholderData
+  // rowsLoading = true only on first load (no cached data)
+  // isFetching = true when refetching (filters/search changed)
+  if (tableLoading || (rowsLoading && !data)) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-gray-500">Loading...</div>
