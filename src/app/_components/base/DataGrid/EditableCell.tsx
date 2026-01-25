@@ -134,34 +134,47 @@ export function EditableCell({
 
   const updateCellMutation = api.row.updateCell.useMutation({
     onMutate: async (variables) => {
-      await utils.row.infinite.cancel({ tableId });
-      const previousData = utils.row.infinite.getInfiniteData({ tableId });
+      // Cancel any outgoing refetches to prevent optimistic updates from being overwritten
+      await utils.row.infiniteWithView.cancel();
+      
+      // Snapshot the previous value for rollback
+      const previousData = utils.row.infiniteWithView.getInfiniteData();
 
-      utils.row.infinite.setInfiniteData({ tableId, limit: 50 }, (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page) => ({
-            ...page,
-            items: page.items.map((r) => {
-              if (r.id !== rowId) return r;
-              const currentData = r.data as Record<string, unknown> | null;
-              const updatedData = {
-                ...(currentData ?? {}),
-                [columnId]: variables.value,
-              };
-              return { ...r, data: updatedData as typeof r.data };
-            }),
-          })),
-        };
-      });
+      // Optimistically update the cell in the cache
+      utils.row.infiniteWithView.setInfiniteData(
+        { tableId, limit: 150 }, // Match the limit from DataGrid query
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              items: page.items.map((r) => {
+                if (r.id !== rowId) return r;
+                const currentData = r.data as Record<string, unknown> | null;
+                const updatedData = {
+                  ...(currentData ?? {}),
+                  [columnId]: variables.value,
+                };
+                return { ...r, data: updatedData as typeof r.data };
+              }),
+            })),
+          };
+        },
+      );
 
       return { previousData };
     },
+    onSuccess: () => {
+      // Invalidate and refetch to get server-filtered data
+      // This ensures rows that no longer match filters disappear
+      void utils.row.infiniteWithView.invalidate({ tableId });
+    },
     onError: (err, _variables, context) => {
+      // Rollback on error
       if (context?.previousData) {
-        utils.row.infinite.setInfiniteData(
-          { tableId, limit: 50 },
+        utils.row.infiniteWithView.setInfiniteData(
+          { tableId, limit: 150 },
           context.previousData,
         );
       }

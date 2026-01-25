@@ -345,8 +345,40 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
     });
   };
 
-  // Check if filters are active (for button styling)
-  const hasActiveFilters = filters.length > 0;
+  // Helper to check if a filter is complete
+  const NO_VALUE_OPERATORS: FilterOperator[] = ["is_empty", "is_not_empty"];
+  const completeFilters = filters.filter((f) => {
+    return (
+      NO_VALUE_OPERATORS.includes(f.operator) ||
+      (f.value !== undefined && f.value !== null && f.value !== "")
+    );
+  });
+
+  // Check if filters are active (only complete filters count)
+  const hasActiveFilters = completeFilters.length > 0;
+
+  // Generate filter summary for button text
+  // Example: "Filter by Name, Price > 100"
+  const getFilterSummary = () => {
+    if (completeFilters.length === 0) return "Filter";
+
+    // Get column names for complete filters
+    const filterNames = completeFilters
+      .map((f) => {
+        const col = columns.find((c) => c.id === f.columnId);
+        return col?.name;
+      })
+      .filter(Boolean);
+
+    if (filterNames.length === 0) return "Filter";
+
+    // Show up to 2 filter names, then "..."
+    if (filterNames.length <= 2) {
+      return `Filter by ${filterNames.join(", ")}`;
+    } else {
+      return `Filter by ${filterNames.slice(0, 2).join(", ")}, ...`;
+    }
+  };
 
   return (
     <div className="relative">
@@ -361,12 +393,7 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
         }`}
       >
         <FilterIcon />
-        <span>Filter</span>
-        {hasActiveFilters && (
-          <span className="rounded-full bg-green-600 px-1.5 text-[10px] font-medium text-white">
-            {filters.length}
-          </span>
-        )}
+        <span>{getFilterSummary()}</span>
       </button>
 
       {/* Popover */}

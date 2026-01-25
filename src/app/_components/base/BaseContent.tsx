@@ -45,12 +45,40 @@ function BaseContentInner({
     },
   );
 
-  // Auto-select first table if no table is selected
+  // -------------------------------------------------------------------------
+  // RESTORE LAST VISITED TABLE/VIEW FROM LOCALSTORAGE
+  // -------------------------------------------------------------------------
+  // This runs once when the component mounts and tables are loaded
   useEffect(() => {
-    if (tables.length > 0 && !activeTableId) {
-      setActiveTableId(tables[0]!.id);
+    if (tables.length === 0) return;
+    if (activeTableId) return; // Already initialized
+
+    // Try to restore from localStorage
+    const storageKey = `airtable-base-${baseId}-last-visited`;
+    const stored = localStorage.getItem(storageKey);
+
+    if (stored) {
+      try {
+        const { tableId, viewId } = JSON.parse(stored) as {
+          tableId: string;
+          viewId: string;
+        };
+
+        // Verify table still exists
+        const tableExists = tables.some((t) => t.id === tableId);
+        if (tableExists) {
+          setActiveTableId(tableId);
+          setActiveViewId(viewId); // Will be validated when views load
+          return;
+        }
+      } catch (e) {
+        // Invalid JSON, ignore
+      }
     }
-  }, [tables, activeTableId, setActiveTableId]);
+
+    // Fallback: Select first table
+    setActiveTableId(tables[0]!.id);
+  }, [tables, activeTableId, baseId, setActiveTableId, setActiveViewId]);
 
   // Fetch views for the active table to auto-select the first one
   const { data: views } = api.view.getByTableId.useQuery(
@@ -66,7 +94,17 @@ function BaseContentInner({
 
   // Auto-select first view when views load or table changes
   useEffect(() => {
-    if (views && views.length > 0 && !activeViewId) {
+    if (!views || views.length === 0) return;
+
+    // If we have an activeViewId, validate it still exists
+    if (activeViewId) {
+      const viewExists = views.some((v) => v.id === activeViewId);
+      if (!viewExists) {
+        // View was deleted, select first view
+        setActiveViewId(views[0]!.id);
+      }
+    } else {
+      // No active view, select first one
       setActiveViewId(views[0]!.id);
     }
   }, [views, activeViewId, setActiveViewId]);
@@ -75,6 +113,22 @@ function BaseContentInner({
   useEffect(() => {
     setActiveViewId(null);
   }, [activeTableId, setActiveViewId]);
+
+  // -------------------------------------------------------------------------
+  // SAVE LAST VISITED TABLE/VIEW TO LOCALSTORAGE
+  // -------------------------------------------------------------------------
+  // Save whenever user navigates to a different table or view
+  useEffect(() => {
+    if (!activeTableId || !activeViewId) return;
+
+    const storageKey = `airtable-base-${baseId}-last-visited`;
+    const data = {
+      tableId: activeTableId,
+      viewId: activeViewId,
+    };
+
+    localStorage.setItem(storageKey, JSON.stringify(data));
+  }, [baseId, activeTableId, activeViewId]);
 
   const createTableMutation = api.table.create.useMutation({
     onSuccess: (newTable) => {

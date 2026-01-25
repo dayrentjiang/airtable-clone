@@ -21,6 +21,9 @@ interface DataGridProps {
 export function DataGrid({ tableId, viewId }: DataGridProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
+  // Track if we've restored scroll position for this view
+  const hasRestoredScrollRef = useRef(false);
+
   // -------------------------------------------------------------------------
   // GET LIVE CONFIG FROM CONTEXT
   // -------------------------------------------------------------------------
@@ -164,14 +167,70 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   const virtualRows = rowVirtualizer.getVirtualItems();
   const totalSize = rowVirtualizer.getTotalSize();
 
-  // Prefetch when user is 40 rows from end (with 150 rows/page = ~27% through page)
-  // This gives plenty of time for network requests while reducing total requests
+  // -------------------------------------------------------------------------
+  // RESTORE SCROLL POSITION FROM LOCALSTORAGE
+  // -------------------------------------------------------------------------
+  // When switching views, restore the scroll position to where user was
+  useEffect(() => {
+    if (!rows.length || hasRestoredScrollRef.current) return;
+
+    const storageKey = `airtable-scroll-${viewId}`;
+    const savedScrollTop = localStorage.getItem(storageKey);
+
+    if (savedScrollTop && tableContainerRef.current) {
+      const scrollTop = parseInt(savedScrollTop, 10);
+
+      // Use setTimeout to ensure DOM is ready
+      setTimeout(() => {
+        if (tableContainerRef.current) {
+          tableContainerRef.current.scrollTop = scrollTop;
+          hasRestoredScrollRef.current = true;
+        }
+      }, 0);
+    } else {
+      hasRestoredScrollRef.current = true;
+    }
+  }, [viewId, rows.length]);
+
+  // -------------------------------------------------------------------------
+  // SAVE SCROLL POSITION TO LOCALSTORAGE
+  // -------------------------------------------------------------------------
+  // Save scroll position as user scrolls (debounced via scroll events)
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container) return;
+
+    let scrollTimeout: NodeJS.Timeout;
+
+    const handleScroll = () => {
+      // Debounce: only save after user stops scrolling for 150ms
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        const storageKey = `airtable-scroll-${viewId}`;
+        localStorage.setItem(storageKey, container.scrollTop.toString());
+      }, 150);
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, [viewId]);
+
+  // Reset restoration flag when view changes
+  useEffect(() => {
+    hasRestoredScrollRef.current = false;
+  }, [viewId]);
+
+  // -------------------------------------------------------------------------
+  // PREFETCH NEXT PAGE
+  // -------------------------------------------------------------------------
+  // Prefetch when user is 70 rows from end (with 150 rows/page)
   useEffect(() => {
     const lastItem = virtualRows[virtualRows.length - 1];
     if (!lastItem) return;
 
-    // Start fetching when 70 rows away from end
-    // e.g., at row 110 of 150, or row 260 of 300
     if (
       lastItem.index >= tableRows.length - 70 &&
       hasNextPage &&
@@ -194,7 +253,6 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       : 0;
 
   // Calculate table width: row number column (66) + visible data columns (180 each)
-  // columns.length - 1 because columns includes the row number column
   const tableWidth = 66 + (columns.length - 1) * 180;
 
   // Loading state
