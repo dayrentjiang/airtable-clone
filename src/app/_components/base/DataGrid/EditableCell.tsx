@@ -5,6 +5,8 @@ import { type CellContext } from "@tanstack/react-table";
 import { api } from "~/trpc/react";
 import { type RowData } from "./hooks/useTableColumns";
 import { useSelection } from "./hooks/useSelection";
+import { getCellHighlightClass } from "./utils/cellHighlight";
+import type { Filter } from "~/server/lib/types";
 
 type ColumnType = "TEXT" | "NUMBER";
 
@@ -12,7 +14,8 @@ interface EditableCellProps extends CellContext<RowData, unknown> {
   columnType: ColumnType;
   columnId: string;
   columnIndex: number;
-  searchTerm?: string;  // For highlighting matching cells
+  searchTerm?: string;  // For yellow highlighting (search matches)
+  filters?: Filter[];   // For green highlighting (filter matches)
 }
 
 export function EditableCell({
@@ -22,6 +25,7 @@ export function EditableCell({
   columnId,
   columnIndex,
   searchTerm,
+  filters,
 }: EditableCellProps) {
   const initialValue = getValue() as string | number | null;
   const [value, setValue] = useState(String(initialValue ?? ""));
@@ -310,11 +314,13 @@ export function EditableCell({
       ? ""
       : String(displayValue);
 
-  // Check if cell matches search term (case-insensitive)
-  const isSearchMatch =
-    searchTerm &&
-    searchTerm.trim() !== "" &&
-    formattedDisplayValue.toLowerCase().includes(searchTerm.toLowerCase());
+  // Get highlight class based on search (yellow) and filter (green) matches
+  const highlightClass = getCellHighlightClass(
+    displayValue,
+    columnId,
+    searchTerm ?? "",
+    filters ?? []
+  );
 
   // Editing state
   if (isEditing) {
@@ -377,9 +383,7 @@ export function EditableCell({
         {/* Content */}
         <div
           ref={cellRef}
-          className={`absolute inset-0 cursor-default overflow-hidden px-2 py-1.5 ${
-            isSearchMatch ? "bg-yellow-200" : ""
-          }`}
+          className={`absolute inset-0 cursor-default overflow-hidden px-2 py-1.5 ${highlightClass}`}
           onMouseDown={handleMouseDown}
           onDoubleClick={handleDoubleClick}
         >
@@ -397,9 +401,7 @@ export function EditableCell({
       ref={cellRef}
       onMouseDown={handleMouseDown}
       onDoubleClick={handleDoubleClick}
-      className={`absolute inset-0 cursor-default overflow-hidden px-2 py-1.5 ${
-        isSearchMatch ? "bg-yellow-200" : ""
-      }`}
+      className={`absolute inset-0 cursor-default overflow-hidden px-2 py-1.5 ${highlightClass}`}
     >
       <span className="pointer-events-none block truncate text-sm text-gray-900">
         {formattedDisplayValue || <span className="text-gray-400"></span>}

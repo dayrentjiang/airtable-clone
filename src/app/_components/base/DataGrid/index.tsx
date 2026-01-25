@@ -26,7 +26,8 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   // -------------------------------------------------------------------------
   // This is the "live" state that user is editing (search, filters, sorts)
   // Changes here immediately affect the query below
-  const { search, filters, sorts, hiddenFields, setSearchMatchCount } = useViewConfig();
+  const { search, filters, sorts, hiddenFields, setSearchMatchCount } =
+    useViewConfig();
 
   // Fetch table with columns - refetch on mount
   const { data: table, isLoading: tableLoading } = api.table.getById.useQuery(
@@ -45,6 +46,21 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   // - `filters` is passed → server builds WHERE clauses
   // - `sorts` is passed → server builds ORDER BY clauses
   // - All filtering/sorting happens in PostgreSQL, not in JavaScript
+
+  // Filter out incomplete filters (no value when needed)
+  // This prevents query from running when user clicks "Add condition"
+  const NO_VALUE_OPERATORS = ["is_empty", "is_not_empty"];
+  const completeFilters = useMemo(() => {
+    return filters.filter((f) => {
+      // Operators like "is empty" don't need a value
+      if (NO_VALUE_OPERATORS.includes(f.operator)) {
+        return true;
+      }
+      // Other operators need a value to be complete
+      return f.value !== undefined && f.value !== null && f.value !== "";
+    });
+  }, [filters]);
+
   const {
     data,
     isLoading: rowsLoading,
@@ -57,16 +73,18 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       viewId,
       limit: 150,
       // Pass live config to query - these override saved view config
-      search: search || undefined,        // Global text search
-      filters: filters.length > 0 ? filters : undefined,  // Column filters
-      sorts: sorts.length > 0 ? sorts : undefined,        // Column sorts
+      search: search || undefined, // Global text search
+      filters: completeFilters.length > 0 ? completeFilters : undefined, // Only complete filters
+      sorts: sorts.length > 0 ? sorts : undefined, // Column sorts
     },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
-      refetchOnMount: true,
+      refetchOnMount: false, // Don't refetch on mount - use cached data
       refetchOnWindowFocus: false,
-      staleTime: 0, // Always refetch when switching views
-      gcTime: 0, // Don't cache - always get fresh data
+      staleTime: 30000, // Cache for 30 seconds - smooth UX
+      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+      // Keep previous data while fetching new data (smooth transitions)
+      placeholderData: (previousData) => previousData,
     },
   );
 
@@ -77,9 +95,15 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   }, [data]);
 
   // Build column definitions (filtered by hiddenFields from context)
-  // Note: hiddenFields and search come from useViewConfig() above
-  // search is passed to highlight matching cells
-  const columns = useTableColumns(table?.columns, hiddenFields, search);
+  // Note: hiddenFields, search, and filters come from useViewConfig() above
+  // search is passed to highlight matching cells (yellow)
+  // completeFilters is passed to highlight filter matches (green)
+  const columns = useTableColumns(
+    table?.columns,
+    hiddenFields,
+    search,
+    completeFilters,
+  );
 
   // -------------------------------------------------------------------------
   // CALCULATE SEARCH MATCH COUNT
@@ -97,8 +121,8 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
 
     // Get visible column IDs (exclude hidden)
     const visibleColumnIds = table.columns
-      .filter(col => !hiddenFields.includes(col.id))
-      .map(col => col.id);
+      .filter((col) => !hiddenFields.includes(col.id))
+      .map((col) => col.id);
 
     // Count matches across all loaded rows and visible columns
     for (const row of rows) {
@@ -132,8 +156,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     estimateSize: () => 35,
     overscan: 50, // 50 rows overscan - optimal for smooth fast scrolling
     measureElement:
-      typeof window !== "undefined" &&
-      !navigator.userAgent.includes("Firefox")
+      typeof window !== "undefined" && !navigator.userAgent.includes("Firefox")
         ? (element) => element.getBoundingClientRect().height
         : undefined, // Measure actual heights for better accuracy (except Firefox due to performance)
   });

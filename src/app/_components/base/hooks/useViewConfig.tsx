@@ -74,7 +74,9 @@ interface ViewConfigContextValue {
   isSaving: boolean;       // Currently saving?
 
   // Actions
-  saveConfig: () => Promise<void>;  // Persist to DB
+  // saveConfig accepts optional overrides to bypass closure issues
+  // When called from a popover after setFilters(), pass the new filters directly
+  saveConfig: (overrides?: { filters?: Filter[]; sorts?: Sort[]; hiddenFields?: string[] }) => Promise<void>;
   resetConfig: () => void;          // Discard changes, reload from saved
 }
 
@@ -252,15 +254,18 @@ export function ViewConfigProvider({ viewId, children }: ViewConfigProviderProps
     },
   });
 
-  const saveConfig = useCallback(async () => {
+  // saveConfig accepts optional overrides to bypass React's async state updates
+  // Example: When FilterPopover calls setFilters(newFilters) then saveConfig({ filters: newFilters })
+  // The override ensures we save the NEW values, not the stale closure values
+  const saveConfig = useCallback(async (overrides?: { filters?: Filter[]; sorts?: Sort[]; hiddenFields?: string[] }) => {
     if (!viewId) return;
 
     await updateConfigMutation.mutateAsync({
       id: viewId,
       config: {
-        filters,
-        sorts,
-        hiddenFields,
+        filters: overrides?.filters ?? filters,
+        sorts: overrides?.sorts ?? sorts,
+        hiddenFields: overrides?.hiddenFields ?? hiddenFields,
         fieldOrder: savedConfig.fieldOrder, // Preserve field order
       },
     });
