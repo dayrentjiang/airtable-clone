@@ -202,7 +202,10 @@ function BaseContentInner({
             {/* Main content area */}
             <div className="flex flex-1 flex-col overflow-hidden">
               {/* Data grid */}
-              <main className="flex-1 overflow-auto bg-gray-50" ref={dataGridRef}>
+              <main
+                className="flex-1 overflow-auto bg-gray-50"
+                ref={dataGridRef}
+              >
                 {activeTableId && activeViewId ? (
                   <DataGrid
                     key={activeViewId}

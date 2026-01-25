@@ -5,6 +5,7 @@ import { api } from "~/trpc/react";
 import { SearchInput } from "./toolbar/SearchInput";
 import { FilterPopover } from "./toolbar/FilterPopover";
 import { SortPopover } from "./toolbar/SortPopover";
+import { HideFieldsPopover } from "./toolbar/HideFieldsPopover";
 
 function HamburgerIcon() {
   return (
@@ -242,7 +243,7 @@ export function ViewToolbar({ onToggleSideNav, tableId }: ViewToolbarProps) {
           label={isCreating ? "Creating..." : "Create 100k rows"}
           onClick={handleCreate100k}
         />
-        <ToolbarButton icon={<EyeOffIcon />} label="Hide fields" />
+        <HideFieldsPopover tableId={tableId} />
         <FilterPopover tableId={tableId} />
         <ToolbarButton icon={<GroupIcon />} label="Group" />
         <SortPopover tableId={tableId} />

@@ -28,14 +28,14 @@ export function useTableColumns(
   hiddenFields: string[] = [],
   searchTerm: string = "",
   filters: Filter[] = [],
-  sorts: Sort[] = []
+  sorts: Sort[] = [],
 ) {
   return useMemo<ColumnDef<RowData>[]>(() => {
     if (!columns) return [];
 
     // Filter out hidden columns
     const visibleColumns = columns.filter(
-      (col) => !hiddenFields.includes(col.id)
+      (col) => !hiddenFields.includes(col.id),
     );
 
     // Row number column (first column)
@@ -54,29 +54,31 @@ export function useTableColumns(
     };
 
     // Data columns from visible columns with EditableCell
-    const dataColumns: ColumnDef<RowData>[] = visibleColumns.map((col, index) => ({
-      id: col.id,
-      accessorFn: (row) => {
-        const cellData = row.data;
-        return cellData[col.id];
-      },
-      header: col.name,
-      cell: (props) => (
-        <EditableCell
-          {...props}
-          columnType={col.type}
-          columnId={col.id}
-          columnIndex={index + 1} // +1 because row number column is at index 0
-          searchTerm={searchTerm} // Pass search term for yellow highlighting
-          filters={filters} // Pass filters for green highlighting
-          sorts={sorts} // Pass sorts for orange highlighting
-        />
-      ),
-      meta: {
-        type: col.type,
-      },
-      size: DEFAULT_COLUMN_WIDTH,
-    }));
+    const dataColumns: ColumnDef<RowData>[] = visibleColumns.map(
+      (col, index) => ({
+        id: col.id,
+        accessorFn: (row) => {
+          const cellData = row.data;
+          return cellData[col.id];
+        },
+        header: col.name,
+        cell: (props) => (
+          <EditableCell
+            {...props}
+            columnType={col.type}
+            columnId={col.id}
+            columnIndex={index + 1} // +1 because row number column is at index 0
+            searchTerm={searchTerm} // Pass search term for yellow highlighting
+            filters={filters} // Pass filters for green highlighting
+            sorts={sorts} // Pass sorts for orange highlighting
+          />
+        ),
+        meta: {
+          type: col.type,
+        },
+        size: DEFAULT_COLUMN_WIDTH,
+      }),
+    );
 
     return [rowNumberColumn, ...dataColumns];
   }, [columns, hiddenFields, searchTerm, filters, sorts]);

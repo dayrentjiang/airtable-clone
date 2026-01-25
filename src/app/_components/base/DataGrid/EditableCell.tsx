@@ -14,9 +14,9 @@ interface EditableCellProps extends CellContext<RowData, unknown> {
   columnType: ColumnType;
   columnId: string;
   columnIndex: number;
-  searchTerm?: string;  // For yellow highlighting (search matches)
-  filters?: Filter[];   // For green highlighting (filter matches)
-  sorts?: Sort[];       // For orange highlighting (sorted columns)
+  searchTerm?: string; // For yellow highlighting (search matches)
+  filters?: Filter[]; // For green highlighting (filter matches)
+  sorts?: Sort[]; // For orange highlighting (sorted columns)
 }
 
 export function EditableCell({
@@ -138,7 +138,7 @@ export function EditableCell({
     onMutate: async (variables) => {
       // Cancel any outgoing refetches to prevent optimistic updates from being overwritten
       await utils.row.infiniteWithView.cancel();
-      
+
       // Snapshot the previous value for rollback
       const previousData = utils.row.infiniteWithView.getInfiniteData();
 
@@ -335,7 +335,7 @@ export function EditableCell({
     columnId,
     searchTerm ?? "",
     filters ?? [],
-    sorts ?? []
+    sorts ?? [],
   );
 
   // Editing state

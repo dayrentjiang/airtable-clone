@@ -135,7 +135,8 @@ function SortRow({
   // Find current column to determine type
   const currentColumn = columns.find((c) => c.id === sort.columnId);
   const columnType = currentColumn?.type ?? "TEXT";
-  const directions = columnType === "NUMBER" ? NUMBER_DIRECTIONS : TEXT_DIRECTIONS;
+  const directions =
+    columnType === "NUMBER" ? NUMBER_DIRECTIONS : TEXT_DIRECTIONS;
 
   const handleColumnChange = (columnId: string) => {
     const newColumn = columns.find((c) => c.id === columnId);
@@ -178,7 +179,7 @@ function SortRow({
             </option>
           ))}
         </select>
-        <div className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400">
+        <div className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-gray-400">
           <ChevronDownIcon />
         </div>
       </div>
@@ -187,7 +188,9 @@ function SortRow({
       <div className="relative">
         <select
           value={sort.direction}
-          onChange={(e) => handleDirectionChange(e.target.value as "asc" | "desc")}
+          onChange={(e) =>
+            handleDirectionChange(e.target.value as "asc" | "desc")
+          }
           className="h-7 w-20 appearance-none rounded border border-gray-300 bg-white px-2 pr-6 text-xs focus:border-blue-500 focus:outline-none"
         >
           {directions.map((dir) => (
@@ -196,7 +199,7 @@ function SortRow({
             </option>
           ))}
         </select>
-        <div className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400">
+        <div className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-gray-400">
           <ChevronDownIcon />
         </div>
       </div>
@@ -230,23 +233,26 @@ export function SortPopover({ tableId }: SortPopoverProps) {
   const addSortPickerRef = useRef<HTMLDivElement>(null);
 
   // Get sort state directly from context (live updates!)
-  const { sorts, addSort, updateSort, removeSort, saveConfig } = useViewConfig();
+  const { sorts, addSort, updateSort, removeSort, saveConfig } =
+    useViewConfig();
 
   // Fetch columns for this table
   const { data: table } = api.table.getById.useQuery(
     { id: tableId },
-    { enabled: !!tableId }
+    { enabled: !!tableId },
   );
 
   const columns: Column[] = table?.columns ?? [];
 
   // Get columns that haven't been picked yet for sorting
   const pickedColumnIds = new Set(sorts.map((s) => s.columnId));
-  const availableColumns = columns.filter((col) => !pickedColumnIds.has(col.id));
+  const availableColumns = columns.filter(
+    (col) => !pickedColumnIds.has(col.id),
+  );
 
   // Filter columns by search query
   const filteredAvailableColumns = availableColumns.filter((col) =>
-    col.name.toLowerCase().includes(searchQuery.toLowerCase())
+    col.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   // Close popover when clicking outside
@@ -267,7 +273,8 @@ export function SortPopover({ tableId }: SortPopoverProps) {
 
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [isOpen, sorts, saveConfig]);
 
@@ -285,7 +292,8 @@ export function SortPopover({ tableId }: SortPopoverProps) {
 
     if (showAddSortPicker) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [showAddSortPicker]);
 
@@ -346,7 +354,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
       {isOpen && (
         <div
           ref={popoverRef}
-          className="absolute left-0 top-full z-50 mt-1 min-w-80 rounded-lg border border-gray-200 bg-white shadow-lg"
+          className="absolute top-full left-0 z-50 mt-1 min-w-80 rounded-lg border border-gray-200 bg-white shadow-lg"
         >
           {/* Header */}
           <div className="border-b border-gray-100 px-4 py-3 text-xs text-gray-500">
@@ -368,7 +376,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
                     className="w-full rounded border border-gray-300 px-3 py-1.5 pl-8 text-xs placeholder-gray-400 focus:border-blue-500 focus:outline-none"
                   />
                   <svg
-                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+                    className="absolute top-1/2 left-2.5 -translate-y-1/2 text-gray-400"
                     width="14"
                     height="14"
                     viewBox="0 0 24 24"
@@ -431,7 +439,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
                   {showAddSortPicker && (
                     <div
                       ref={addSortPickerRef}
-                      className="absolute left-0 top-full z-50 mt-1 w-80 rounded-lg border border-gray-200 bg-white shadow-lg"
+                      className="absolute top-full left-0 z-50 mt-1 w-80 rounded-lg border border-gray-200 bg-white shadow-lg"
                     >
                       {/* Search input */}
                       <div className="sticky top-0 bg-white px-4 py-2">
@@ -444,7 +452,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
                             className="w-full rounded border border-gray-300 px-3 py-1.5 pl-8 text-xs placeholder-gray-400 focus:border-blue-500 focus:outline-none"
                           />
                           <svg
-                            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+                            className="absolute top-1/2 left-2.5 -translate-y-1/2 text-gray-400"
                             width="14"
                             height="14"
                             viewBox="0 0 24 24"
