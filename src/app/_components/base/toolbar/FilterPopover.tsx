@@ -228,7 +228,7 @@ function FilterRow({
         <select
           value={filter.columnId}
           onChange={(e) => handleColumnChange(e.target.value)}
-          className="h-7 w-28 appearance-none rounded border border-gray-300 bg-white px-2 pr-6 text-xs focus:border-blue-500 focus:outline-none"
+          className="h-7 w-28 cursor-pointer appearance-none rounded border border-gray-300 bg-white px-2 pr-6 text-xs focus:border-blue-500 focus:outline-none"
         >
           {columns.map((col) => (
             <option key={col.id} value={col.id}>
@@ -248,7 +248,7 @@ function FilterRow({
           onChange={(e) =>
             handleOperatorChange(e.target.value as FilterOperator)
           }
-          className="h-7 w-32 appearance-none rounded border border-gray-300 bg-white px-2 pr-6 text-xs focus:border-blue-500 focus:outline-none"
+          className="h-7 w-32 cursor-pointer appearance-none rounded border border-gray-300 bg-white px-2 pr-6 text-xs focus:border-blue-500 focus:outline-none"
         >
           {operators.map((op) => (
             <option key={op.value} value={op.value}>
@@ -275,7 +275,7 @@ function FilterRow({
       {/* Delete button */}
       <button
         onClick={() => onRemove(index)}
-        className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+        className="cursor-pointer rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
         title="Remove filter"
       >
         <TrashIcon />
@@ -390,7 +390,7 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
       <button
         ref={buttonRef}
         onClick={() => setOpenPopover(isOpen ? null : "filter")}
-        className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-xs md:px-2 ${
+        className={`flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-1 text-xs md:px-2 ${
           hasActiveFilters
             ? "bg-green-100 text-black"
             : "text-gray-600 hover:bg-gray-100"
@@ -438,7 +438,7 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
               <button
                 onClick={handleAddFilter}
                 disabled={columns.length === 0}
-                className="flex items-center gap-1.5 text-xs text-gray-700 hover:cursor-pointer hover:text-gray-900 disabled:text-gray-400"
+                className="flex cursor-pointer items-center gap-1.5 text-xs text-gray-700 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-400"
               >
                 <PlusIcon />
                 <span>Add condition</span>

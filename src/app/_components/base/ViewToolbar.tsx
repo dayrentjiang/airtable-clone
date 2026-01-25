@@ -28,7 +28,7 @@ function ToolbarButton({ icon, label, onClick }: ToolbarButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-1.5 rounded px-1.5 py-1 text-xs text-gray-600 hover:bg-gray-100 md:px-2"
+      className="flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-1 text-xs text-gray-600 hover:bg-gray-100 md:px-2"
     >
       {icon}
       <span className="hidden md:inline">{label}</span>
@@ -70,12 +70,12 @@ export function ViewToolbar({ onToggleSideNav, tableId }: ViewToolbarProps) {
         <div className="flex items-center gap-1">
           <button
             onClick={onToggleSideNav}
-            className="rounded p-1.5 text-gray-600 hover:bg-gray-100"
+            className="cursor-pointer rounded p-1.5 text-gray-600 hover:bg-gray-100"
           >
             <Menu size={16} />
           </button>
 
-          <button className="flex items-center gap-1.5 rounded px-1.5 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100 md:px-2.5">
+          <button className="flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100 md:px-2.5">
             <LayoutGrid size={16} />
             <span className="hidden md:inline">Grid view</span>
             <ChevronDown size={14} />
@@ -95,11 +95,14 @@ export function ViewToolbar({ onToggleSideNav, tableId }: ViewToolbarProps) {
           <SortPopover tableId={tableId} />
           <ToolbarButton icon={<Baseline size={16} />} label="Color" />
 
-          <button className="rounded p-1.5 text-gray-600 hover:bg-gray-100">
+          <button className="cursor-pointer rounded p-1.5 text-gray-600 hover:bg-gray-100">
             <GripHorizontal size={16} />
           </button>
 
-          <ToolbarButton icon={<SquareArrowOutUpRight size={16} />} label="Share and sync" />
+          <ToolbarButton
+            icon={<SquareArrowOutUpRight size={16} />}
+            label="Share and sync"
+          />
 
           <SearchInput />
         </div>

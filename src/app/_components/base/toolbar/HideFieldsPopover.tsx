@@ -170,7 +170,7 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
       <button
         ref={buttonRef}
         onClick={() => setOpenPopover(isOpen ? null : "hideFields")}
-        className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-xs hover:bg-gray-100 md:px-2 ${
+        className={`flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-1 text-xs hover:bg-gray-100 md:px-2 ${
           hasHiddenFields ? "bg-blue-50 text-black" : "text-gray-600"
         }`}
       >
@@ -200,7 +200,7 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
                   void saveConfig({ hiddenFields });
                   setOpenPopover(null);
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="cursor-pointer text-gray-400 hover:text-gray-600"
               >
                 <svg
                   width="16"
@@ -241,7 +241,7 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
                 <button
                   key={col.id}
                   onClick={() => toggleFieldVisibility(col.id)}
-                  className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
                 >
                   {/* Eye icon toggle */}
                   <div
@@ -310,7 +310,7 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
               <button
                 onClick={handleHideAll}
                 disabled={hiddenFields.length === columns.length}
-                className="text-gray-600 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-400"
+                className="cursor-pointer text-gray-600 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-400"
               >
                 Hide all
               </button>
@@ -320,7 +320,7 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
               <button
                 onClick={handleShowAll}
                 disabled={hiddenFields.length === 0}
-                className="text-gray-600 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-400"
+                className="cursor-pointer text-gray-600 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-400"
               >
                 Show all
               </button>

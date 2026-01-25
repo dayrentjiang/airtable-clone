@@ -172,7 +172,7 @@ function SortRow({
         <select
           value={sort.columnId}
           onChange={(e) => handleColumnChange(e.target.value)}
-          className="h-7 w-32 appearance-none rounded border border-gray-300 bg-white px-2 pr-6 text-xs focus:border-blue-500 focus:outline-none"
+          className="h-7 w-32 cursor-pointer appearance-none rounded border border-gray-300 bg-white px-2 pr-6 text-xs focus:border-blue-500 focus:outline-none"
         >
           {columns.map((col) => (
             <option key={col.id} value={col.id}>
@@ -192,7 +192,7 @@ function SortRow({
           onChange={(e) =>
             handleDirectionChange(e.target.value as "asc" | "desc")
           }
-          className="h-7 w-20 appearance-none rounded border border-gray-300 bg-white px-2 pr-6 text-xs focus:border-blue-500 focus:outline-none"
+          className="h-7 w-20 cursor-pointer appearance-none rounded border border-gray-300 bg-white px-2 pr-6 text-xs focus:border-blue-500 focus:outline-none"
         >
           {directions.map((dir) => (
             <option key={dir.value} value={dir.value}>
@@ -208,7 +208,7 @@ function SortRow({
       {/* Delete button */}
       <button
         onClick={() => onRemove(index)}
-        className="ml-1 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600"
+        className="ml-1 cursor-pointer rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600"
         title="Remove sort"
       >
         <TrashIcon />
@@ -344,7 +344,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
       <button
         ref={buttonRef}
         onClick={() => setOpenPopover(isOpen ? null : "sort")}
-        className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-xs md:px-2 ${
+        className={`flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-1 text-xs md:px-2 ${
           hasActiveSorts
             ? "bg-orange-100 text-black"
             : "text-gray-600 hover:bg-gray-100"
@@ -400,7 +400,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
                   <button
                     key={col.id}
                     onClick={() => handlePickColumn(col.id)}
-                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-100"
+                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-100"
                   >
                     <span className="text-gray-400">A</span>
                     <span>{col.name}</span>
@@ -433,7 +433,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
                 <div className="relative mt-2">
                   <button
                     onClick={() => setShowAddSortPicker(!showAddSortPicker)}
-                    className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+                    className="flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
                   >
                     <PlusIcon />
                     <span>Add another sort</span>
