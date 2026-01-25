@@ -392,7 +392,7 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
         onClick={() => setOpenPopover(isOpen ? null : "filter")}
         className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-xs md:px-2 ${
           hasActiveFilters
-            ? "bg-green-100 text-green-700"
+            ? "bg-green-100 text-black"
             : "text-gray-600 hover:bg-gray-100"
         }`}
       >
@@ -438,7 +438,7 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
               <button
                 onClick={handleAddFilter}
                 disabled={columns.length === 0}
-                className="flex items-center gap-1.5 text-xs text-green-600 hover:text-green-700 disabled:text-gray-400"
+                className="flex items-center gap-1.5 text-xs text-gray-700 hover:cursor-pointer hover:text-gray-900 disabled:text-gray-400"
               >
                 <PlusIcon />
                 <span>Add condition</span>

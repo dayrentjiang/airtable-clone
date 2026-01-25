@@ -346,7 +346,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
         onClick={() => setOpenPopover(isOpen ? null : "sort")}
         className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-xs md:px-2 ${
           hasActiveSorts
-            ? "bg-orange-100 text-orange-700"
+            ? "bg-orange-100 text-black"
             : "text-gray-600 hover:bg-gray-100"
         }`}
       >
