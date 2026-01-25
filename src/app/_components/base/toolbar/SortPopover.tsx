@@ -344,14 +344,14 @@ export function SortPopover({ tableId }: SortPopoverProps) {
       <button
         ref={buttonRef}
         onClick={() => setOpenPopover(isOpen ? null : "sort")}
-        className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs ${
+        className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-xs md:px-2 ${
           hasActiveSorts
             ? "bg-orange-100 text-orange-700"
             : "text-gray-600 hover:bg-gray-100"
         }`}
       >
         <SortIcon />
-        <span>{getSortSummary()}</span>
+        <span className="hidden md:inline">{getSortSummary()}</span>
       </button>
 
       {/* Popover */}

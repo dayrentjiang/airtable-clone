@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Plus, Table } from "lucide-react";
+import { Tooltip } from "../ui/Tooltip";
 
 interface TableType {
   id: string;
@@ -24,6 +25,7 @@ export function TableBar({
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isNamingTable, setIsNamingTable] = useState(false);
   const [newTableName, setNewTableName] = useState("");
+  const [isAddButtonHovered, setIsAddButtonHovered] = useState(false);
   const addMenuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -79,7 +81,7 @@ export function TableBar({
   return (
     <div className="relative flex h-8 items-end border-b border-gray-300 bg-cyan-50">
       {/* Left: Table tabs */}
-      <div className="flex h-full items-end">
+      <div className="scrollbar-none flex h-full min-w-0 flex-1 items-end overflow-x-auto">
         {/* Table tabs displayed side by side */}
         {tables.map((table, index) => {
           const isActive = table.id === activeTableId;
@@ -88,36 +90,36 @@ export function TableBar({
             !isActive && !nextIsActive && index < tables.length - 1;
 
           return (
-            <div key={table.id} className="flex h-full items-end">
+            <div key={table.id} className="flex h-full shrink-0 items-end">
               <button
                 onClick={() => onTableSelect(table.id)}
-                className={`flex items-center gap-1 px-3 text-[13px] font-medium transition-colors ${
+                className={`flex items-center gap-1 rounded-t-sm px-3 text-[13px] font-medium transition-colors ${
                   isActive
-                    ? "relative z-10 -mb-px h-full rounded-t border-l border-r border-gray-300 bg-white text-black"
-                    : "h-full text-gray-500 hover:bg-cyan-200/50"
+                    ? "relative z-10 -mb-px h-full border-x border-t border-gray-300 bg-white text-black"
+                    : "h-full cursor-pointer text-gray-600 hover:bg-black/10 hover:text-gray-900"
                 }`}
               >
-                <span>{table.name}</span>
+                <span className="max-w-24 truncate sm:max-w-none">{table.name}</span>
                 {isActive && (
                   <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
                 )}
               </button>
               {/* Vertical divider between tabs */}
               {showDivider && (
-                <div className="my-auto h-4 w-px bg-gray-400/50" />
+                <div className="my-auto h-3 w-px bg-gray-400/50" />
               )}
             </div>
           );
         })}
 
         {/* Chevron separator for more tables */}
-        <button className="flex h-full items-center px-1.5 text-gray-600 hover:text-gray-800">
+        <button className="mr-3 flex h-full shrink-0 items-center px-1.5 text-gray-600 hover:text-gray-800">
           <ChevronDown className="h-4 w-4" />
         </button>
 
         {/* Add table button */}
         {isNamingTable ? (
-          <div className="flex h-full items-center gap-2 bg-white/50 px-2.5">
+          <div className="flex h-full shrink-0 items-center gap-2 bg-white/50 px-2.5">
             <Table className="h-4 w-4 text-gray-600" />
             <input
               ref={inputRef}
@@ -131,13 +133,20 @@ export function TableBar({
             />
           </div>
         ) : (
-          <div className="relative flex h-full items-center" ref={addMenuRef}>
+          <div className="relative flex h-full shrink-0 items-center" ref={addMenuRef}>
             <button
               onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
-              className="flex h-full items-center px-1.5 text-gray-600 hover:text-gray-800"
+              onMouseEnter={() => setIsAddButtonHovered(true)}
+              onMouseLeave={() => setIsAddButtonHovered(false)}
+              className="flex h-full cursor-pointer items-center px-1.5 text-gray-600 hover:text-gray-800"
             >
               <Plus className="h-4 w-4" />
             </button>
+            <Tooltip
+              text="Add or import table"
+              visible={isAddButtonHovered && !isAddMenuOpen}
+              position="bottom"
+            />
 
             {/* Dropdown menu */}
             {isAddMenuOpen && (
@@ -158,7 +167,7 @@ export function TableBar({
       </div>
 
       {/* Right: Tools */}
-      <div className="ml-auto flex h-full items-center">
+      <div className="flex h-full shrink-0 items-center">
         <button className="flex h-full items-center gap-1 px-2 text-[13px] text-gray-600 hover:text-gray-800">
           <span>Tools</span>
           <ChevronDown className="h-3.5 w-3.5" />

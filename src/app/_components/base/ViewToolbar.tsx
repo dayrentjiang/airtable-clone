@@ -184,10 +184,10 @@ function ToolbarButton({ icon, label, onClick }: ToolbarButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
+      className="flex items-center gap-1.5 rounded px-1.5 py-1 text-xs text-gray-600 hover:bg-gray-100 md:px-2"
     >
       {icon}
-      <span>{label}</span>
+      <span className="hidden md:inline">{label}</span>
     </button>
   );
 }
@@ -231,9 +231,9 @@ export function ViewToolbar({ onToggleSideNav, tableId }: ViewToolbarProps) {
             <HamburgerIcon />
           </button>
 
-          <button className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100">
+          <button className="flex items-center gap-1.5 rounded px-1.5 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100 md:px-2.5">
             <GridIcon />
-            <span>Grid view</span>
+            <span className="hidden md:inline">Grid view</span>
             <ChevronDownIcon />
           </button>
         </div>

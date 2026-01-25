@@ -170,12 +170,12 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
       <button
         ref={buttonRef}
         onClick={() => setOpenPopover(isOpen ? null : "hideFields")}
-        className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs hover:bg-gray-100 ${
+        className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-xs hover:bg-gray-100 md:px-2 ${
           hasHiddenFields ? "bg-blue-50 text-blue-700" : "text-gray-600"
         }`}
       >
         <EyeOffIcon />
-        <span>{hasHiddenFields ? hiddenFieldsLabel : "Hide fields"}</span>
+        <span className="hidden md:inline">{hasHiddenFields ? hiddenFieldsLabel : "Hide fields"}</span>
       </button>
 
       {/* Popover */}

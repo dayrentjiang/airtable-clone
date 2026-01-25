@@ -390,14 +390,14 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
       <button
         ref={buttonRef}
         onClick={() => setOpenPopover(isOpen ? null : "filter")}
-        className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs ${
+        className={`flex items-center gap-1.5 rounded px-1.5 py-1 text-xs md:px-2 ${
           hasActiveFilters
             ? "bg-green-100 text-green-700"
             : "text-gray-600 hover:bg-gray-100"
         }`}
       >
         <FilterIcon />
-        <span>{getFilterSummary()}</span>
+        <span className="hidden md:inline">{getFilterSummary()}</span>
       </button>
 
       {/* Popover */}
