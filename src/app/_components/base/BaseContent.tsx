@@ -7,6 +7,7 @@ import { BaseSideNav } from "./BaseSideNav";
 import { DataGrid, SelectionProvider, useSelection } from "./DataGrid";
 import { IconSidebar } from "../layout/IconSidebar";
 import { BaseTopNav } from "./BaseTopNav";
+import { ViewConfigProvider } from "./hooks/useViewConfig";
 import { api } from "~/trpc/react";
 
 interface BaseContentProps {
@@ -127,43 +128,46 @@ function BaseContentInner({
           onTableSelect={setActiveTableId}
           onAddTable={handleAddTable}
         />
-        <ViewToolbar
-          onToggleSideNav={toggleSideNav}
-          tableId={activeTableId ?? ""}
-        />
+        {/* ViewConfigProvider wraps toolbar + grid so they share state */}
+        <ViewConfigProvider viewId={activeViewId}>
+          <ViewToolbar
+            onToggleSideNav={toggleSideNav}
+            tableId={activeTableId ?? ""}
+          />
 
-        {/* Content with side nav and main area */}
-        <div className="flex flex-1 overflow-hidden">
-          {isSideNavOpen && (
-            <BaseSideNav
-              tableId={activeTableId}
-              selectedViewId={activeViewId}
-              onViewSelect={setActiveViewId}
-            />
-          )}
+          {/* Content with side nav and main area */}
+          <div className="flex flex-1 overflow-hidden">
+            {isSideNavOpen && (
+              <BaseSideNav
+                tableId={activeTableId}
+                selectedViewId={activeViewId}
+                onViewSelect={setActiveViewId}
+              />
+            )}
 
-          {/* Main content area */}
-          <div className="flex flex-1 flex-col overflow-hidden">
-            {/* Data grid */}
-            <main className="flex-1 overflow-auto bg-gray-50" ref={dataGridRef}>
-              {activeTableId && activeViewId ? (
-                <DataGrid
-                  key={activeViewId}
-                  tableId={activeTableId}
-                  viewId={activeViewId}
-                />
-              ) : activeTableId ? (
-                <div className="flex h-full items-center justify-center text-gray-500">
-                  Loading view...
-                </div>
-              ) : (
-                <div className="flex h-full items-center justify-center text-gray-500">
-                  No table selected. Create a table to get started.
-                </div>
-              )}
-            </main>
+            {/* Main content area */}
+            <div className="flex flex-1 flex-col overflow-hidden">
+              {/* Data grid */}
+              <main className="flex-1 overflow-auto bg-gray-50" ref={dataGridRef}>
+                {activeTableId && activeViewId ? (
+                  <DataGrid
+                    key={activeViewId}
+                    tableId={activeTableId}
+                    viewId={activeViewId}
+                  />
+                ) : activeTableId ? (
+                  <div className="flex h-full items-center justify-center text-gray-500">
+                    Loading view...
+                  </div>
+                ) : (
+                  <div className="flex h-full items-center justify-center text-gray-500">
+                    No table selected. Create a table to get started.
+                  </div>
+                )}
+              </main>
+            </div>
           </div>
-        </div>
+        </ViewConfigProvider>
       </div>
     </div>
   );

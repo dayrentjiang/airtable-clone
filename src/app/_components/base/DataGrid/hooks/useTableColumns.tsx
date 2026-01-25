@@ -24,7 +24,8 @@ const ROW_NUMBER_WIDTH = 66;
 
 export function useTableColumns(
   columns: Column[] | undefined,
-  hiddenFields: string[] = []
+  hiddenFields: string[] = [],
+  searchTerm: string = ""
 ) {
   return useMemo<ColumnDef<RowData>[]>(() => {
     if (!columns) return [];
@@ -63,6 +64,7 @@ export function useTableColumns(
           columnType={col.type}
           columnId={col.id}
           columnIndex={index + 1} // +1 because row number column is at index 0
+          searchTerm={searchTerm} // Pass search term for highlighting
         />
       ),
       meta: {
@@ -72,5 +74,5 @@ export function useTableColumns(
     }));
 
     return [rowNumberColumn, ...dataColumns];
-  }, [columns, hiddenFields]);
+  }, [columns, hiddenFields, searchTerm]);
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api } from "~/trpc/react";
+import { SearchInput } from "./toolbar/SearchInput";
 
 function HamburgerIcon() {
   return (
@@ -167,22 +168,6 @@ function ShareIcon() {
   );
 }
 
-function SearchIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </svg>
-  );
-}
-
 function DatabaseIcon() {
   return (
     <svg
@@ -282,9 +267,7 @@ export function ViewToolbar({ onToggleSideNav, tableId }: ViewToolbarProps) {
 
         <ToolbarButton icon={<ShareIcon />} label="Share and sync" />
 
-        <button className="rounded p-1.5 text-gray-600 hover:bg-gray-100">
-          <SearchIcon />
-        </button>
+        <SearchInput />
       </div>
     </div>
   );

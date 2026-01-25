@@ -8,7 +8,7 @@ import { DataGridTable } from "./DataGridTable";
 import { AddColumnButton } from "./AddColumnButton";
 import { AddRowButton } from "./AddRowButton";
 import { useTableColumns, type RowData } from "./hooks/useTableColumns";
-import type { ViewConfig } from "~/server/lib/types";
+import { useViewConfig } from "../hooks/useViewConfig";
 
 // Re-export SelectionProvider for use in parent components
 export { SelectionProvider, useSelection } from "./hooks/useSelection";
@@ -21,6 +21,13 @@ interface DataGridProps {
 export function DataGrid({ tableId, viewId }: DataGridProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
+  // -------------------------------------------------------------------------
+  // GET LIVE CONFIG FROM CONTEXT
+  // -------------------------------------------------------------------------
+  // This is the "live" state that user is editing (search, filters, sorts)
+  // Changes here immediately affect the query below
+  const { search, filters, sorts, hiddenFields, setSearchMatchCount } = useViewConfig();
+
   // Fetch table with columns - refetch on mount
   const { data: table, isLoading: tableLoading } = api.table.getById.useQuery(
     { id: tableId },
@@ -30,19 +37,14 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     },
   );
 
-  // Fetch view config - refetch on mount to always get fresh data
-  const { data: view } = api.view.getById.useQuery(
-    { id: viewId },
-    {
-      refetchOnMount: true,
-      refetchOnWindowFocus: false,
-      staleTime: 0, // Always refetch when switching views
-      gcTime: 0, // Don't cache
-    },
-  );
-
-  // Use infiniteWithView with TanStack infinite query
-  // Always refetch when switching views to get fresh data
+  // -------------------------------------------------------------------------
+  // FETCH ROWS WITH LIVE CONFIG (filters, sorts, search)
+  // -------------------------------------------------------------------------
+  // This is where the magic happens!
+  // - `search` is passed to the query → server builds SQL with ILIKE
+  // - `filters` is passed → server builds WHERE clauses
+  // - `sorts` is passed → server builds ORDER BY clauses
+  // - All filtering/sorting happens in PostgreSQL, not in JavaScript
   const {
     data,
     isLoading: rowsLoading,
@@ -50,7 +52,15 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     hasNextPage,
     fetchNextPage,
   } = api.row.infiniteWithView.useInfiniteQuery(
-    { tableId, viewId, limit: 150 },
+    {
+      tableId,
+      viewId,
+      limit: 150,
+      // Pass live config to query - these override saved view config
+      search: search || undefined,        // Global text search
+      filters: filters.length > 0 ? filters : undefined,  // Column filters
+      sorts: sorts.length > 0 ? sorts : undefined,        // Column sorts
+    },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
       refetchOnMount: true,
@@ -66,10 +76,45 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     return (data?.pages.flatMap((page) => page.items) ?? []) as RowData[];
   }, [data]);
 
-  // Build column definitions (filtered by view's hiddenFields)
-  const viewConfig = view?.config as ViewConfig | undefined;
-  const hiddenFields = viewConfig?.hiddenFields ?? [];
-  const columns = useTableColumns(table?.columns, hiddenFields);
+  // Build column definitions (filtered by hiddenFields from context)
+  // Note: hiddenFields and search come from useViewConfig() above
+  // search is passed to highlight matching cells
+  const columns = useTableColumns(table?.columns, hiddenFields, search);
+
+  // -------------------------------------------------------------------------
+  // CALCULATE SEARCH MATCH COUNT
+  // -------------------------------------------------------------------------
+  // Count how many cells match the search term in loaded rows
+  // This updates the "X of Y" counter in the search input
+  useEffect(() => {
+    if (!search || !table?.columns) {
+      setSearchMatchCount(0);
+      return;
+    }
+
+    const searchLower = search.toLowerCase();
+    let matchCount = 0;
+
+    // Get visible column IDs (exclude hidden)
+    const visibleColumnIds = table.columns
+      .filter(col => !hiddenFields.includes(col.id))
+      .map(col => col.id);
+
+    // Count matches across all loaded rows and visible columns
+    for (const row of rows) {
+      for (const colId of visibleColumnIds) {
+        const cellValue = row.data[colId];
+        if (cellValue != null) {
+          const stringValue = String(cellValue).toLowerCase();
+          if (stringValue.includes(searchLower)) {
+            matchCount++;
+          }
+        }
+      }
+    }
+
+    setSearchMatchCount(matchCount);
+  }, [search, rows, table?.columns, hiddenFields, setSearchMatchCount]);
 
   // Create table instance
   const tableInstance = useReactTable({

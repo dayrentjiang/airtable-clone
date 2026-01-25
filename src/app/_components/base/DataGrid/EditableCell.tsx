@@ -12,6 +12,7 @@ interface EditableCellProps extends CellContext<RowData, unknown> {
   columnType: ColumnType;
   columnId: string;
   columnIndex: number;
+  searchTerm?: string;  // For highlighting matching cells
 }
 
 export function EditableCell({
@@ -20,6 +21,7 @@ export function EditableCell({
   columnType,
   columnId,
   columnIndex,
+  searchTerm,
 }: EditableCellProps) {
   const initialValue = getValue() as string | number | null;
   const [value, setValue] = useState(String(initialValue ?? ""));
@@ -308,6 +310,12 @@ export function EditableCell({
       ? ""
       : String(displayValue);
 
+  // Check if cell matches search term (case-insensitive)
+  const isSearchMatch =
+    searchTerm &&
+    searchTerm.trim() !== "" &&
+    formattedDisplayValue.toLowerCase().includes(searchTerm.toLowerCase());
+
   // Editing state
   if (isEditing) {
     return (
@@ -369,7 +377,9 @@ export function EditableCell({
         {/* Content */}
         <div
           ref={cellRef}
-          className="absolute inset-0 cursor-default overflow-hidden px-2 py-1.5"
+          className={`absolute inset-0 cursor-default overflow-hidden px-2 py-1.5 ${
+            isSearchMatch ? "bg-yellow-200" : ""
+          }`}
           onMouseDown={handleMouseDown}
           onDoubleClick={handleDoubleClick}
         >
@@ -387,7 +397,9 @@ export function EditableCell({
       ref={cellRef}
       onMouseDown={handleMouseDown}
       onDoubleClick={handleDoubleClick}
-      className="absolute inset-0 cursor-default overflow-hidden px-2 py-1.5"
+      className={`absolute inset-0 cursor-default overflow-hidden px-2 py-1.5 ${
+        isSearchMatch ? "bg-yellow-200" : ""
+      }`}
     >
       <span className="pointer-events-none block truncate text-sm text-gray-900">
         {formattedDisplayValue || <span className="text-gray-400"></span>}
