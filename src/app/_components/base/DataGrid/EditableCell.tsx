@@ -6,7 +6,7 @@ import { api } from "~/trpc/react";
 import { type RowData } from "./hooks/useTableColumns";
 import { useSelection } from "./hooks/useSelection";
 import { getCellHighlightClass } from "./utils/cellHighlight";
-import type { Filter } from "~/server/lib/types";
+import type { Filter, Sort } from "~/server/lib/types";
 
 type ColumnType = "TEXT" | "NUMBER";
 
@@ -16,6 +16,7 @@ interface EditableCellProps extends CellContext<RowData, unknown> {
   columnIndex: number;
   searchTerm?: string;  // For yellow highlighting (search matches)
   filters?: Filter[];   // For green highlighting (filter matches)
+  sorts?: Sort[];       // For orange highlighting (sorted columns)
 }
 
 export function EditableCell({
@@ -26,6 +27,7 @@ export function EditableCell({
   columnIndex,
   searchTerm,
   filters,
+  sorts,
 }: EditableCellProps) {
   const initialValue = getValue() as string | number | null;
   const [value, setValue] = useState(String(initialValue ?? ""));
@@ -327,12 +329,13 @@ export function EditableCell({
       ? ""
       : String(displayValue);
 
-  // Get highlight class based on search (yellow) and filter (green) matches
+  // Get highlight class based on search (yellow), filter (green), and sort (orange)
   const highlightClass = getCellHighlightClass(
     displayValue,
     columnId,
     searchTerm ?? "",
-    filters ?? []
+    filters ?? [],
+    sorts ?? []
   );
 
   // Editing state

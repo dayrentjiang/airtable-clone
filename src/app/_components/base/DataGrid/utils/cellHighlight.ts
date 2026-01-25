@@ -1,4 +1,4 @@
-import type { Filter, FilterOperator } from "~/server/lib/types";
+import type { Filter, FilterOperator, Sort } from "~/server/lib/types";
 
 /**
  * CELL HIGHLIGHTING UTILITIES
@@ -6,7 +6,8 @@ import type { Filter, FilterOperator } from "~/server/lib/types";
  * Determines which background color to show for a cell:
  * - Search match → yellow (bg-yellow-200)
  * - Filter match → green (bg-green-200)
- * - Both → yellow takes priority (search is more specific)
+ * - Sort active on column → orange (bg-orange-100)
+ * - Priority: search > filter > sort
  * - Neither → no background
  */
 
@@ -94,18 +95,20 @@ export function matchesSearch(
 }
 
 /**
- * Get the highlight class for a cell based on search and filter matches
+ * Get the highlight class for a cell based on search, filter, and sort
  *
  * Priority:
- * 1. Search match → yellow
+ * 1. Search match → yellow (most specific)
  * 2. Filter match → green (only for complete filters)
- * 3. No match → empty string
+ * 3. Sort active → orange (column-level highlight)
+ * 4. No match → empty string
  */
 export function getCellHighlightClass(
   cellValue: string | number | null | undefined,
   columnId: string,
   searchTerm: string,
   filters: Filter[],
+  sorts: Sort[],
 ): string {
   // Search takes priority (yellow)
   if (matchesSearch(cellValue, searchTerm)) {
@@ -133,6 +136,12 @@ export function getCellHighlightClass(
 
   if (hasFilterMatch) {
     return "bg-green-200";
+  }
+
+  // Check if this column is being sorted (orange)
+  const isSorted = sorts.some((sort) => sort.columnId === columnId);
+  if (isSorted) {
+    return "bg-orange-100";
   }
 
   return "";

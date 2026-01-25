@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
 import { EditableCell } from "../EditableCell";
-import type { Filter } from "~/server/lib/types";
+import type { Filter, Sort } from "~/server/lib/types";
 
 export interface RowData {
   id: string;
@@ -27,7 +27,8 @@ export function useTableColumns(
   columns: Column[] | undefined,
   hiddenFields: string[] = [],
   searchTerm: string = "",
-  filters: Filter[] = []
+  filters: Filter[] = [],
+  sorts: Sort[] = []
 ) {
   return useMemo<ColumnDef<RowData>[]>(() => {
     if (!columns) return [];
@@ -68,6 +69,7 @@ export function useTableColumns(
           columnIndex={index + 1} // +1 because row number column is at index 0
           searchTerm={searchTerm} // Pass search term for yellow highlighting
           filters={filters} // Pass filters for green highlighting
+          sorts={sorts} // Pass sorts for orange highlighting
         />
       ),
       meta: {
@@ -77,5 +79,5 @@ export function useTableColumns(
     }));
 
     return [rowNumberColumn, ...dataColumns];
-  }, [columns, hiddenFields, searchTerm, filters]);
+  }, [columns, hiddenFields, searchTerm, filters, sorts]);
 }

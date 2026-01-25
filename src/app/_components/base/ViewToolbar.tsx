@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api } from "~/trpc/react";
 import { SearchInput } from "./toolbar/SearchInput";
 import { FilterPopover } from "./toolbar/FilterPopover";
+import { SortPopover } from "./toolbar/SortPopover";
 
 function HamburgerIcon() {
   return (
@@ -244,7 +245,7 @@ export function ViewToolbar({ onToggleSideNav, tableId }: ViewToolbarProps) {
         <ToolbarButton icon={<EyeOffIcon />} label="Hide fields" />
         <FilterPopover tableId={tableId} />
         <ToolbarButton icon={<GroupIcon />} label="Group" />
-        <ToolbarButton icon={<SortIcon />} label="Sort" />
+        <SortPopover tableId={tableId} />
         <ToolbarButton icon={<ColorIcon />} label="Color" />
 
         <button className="rounded p-1.5 text-gray-600 hover:bg-gray-100">

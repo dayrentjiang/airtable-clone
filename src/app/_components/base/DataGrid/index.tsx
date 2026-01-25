@@ -98,14 +98,16 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   }, [data]);
 
   // Build column definitions (filtered by hiddenFields from context)
-  // Note: hiddenFields, search, and filters come from useViewConfig() above
+  // Note: hiddenFields, search, filters, and sorts come from useViewConfig() above
   // search is passed to highlight matching cells (yellow)
   // completeFilters is passed to highlight filter matches (green)
+  // sorts is passed to highlight sorted columns (orange)
   const columns = useTableColumns(
     table?.columns,
     hiddenFields,
     search,
     completeFilters,
+    sorts,
   );
 
   // -------------------------------------------------------------------------
