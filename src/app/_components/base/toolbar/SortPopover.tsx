@@ -5,7 +5,32 @@ import { useViewConfig } from "../hooks/useViewConfig";
 import { useToolbarPopovers } from "../hooks/useToolbarPopovers";
 import { api } from "~/trpc/react";
 import type { Sort } from "~/server/lib/types";
-import { ArrowDownUp, Trash2, Plus, ChevronDown } from "lucide-react";
+import {
+  ArrowDownUp,
+  Plus,
+  ChevronDown,
+  X,
+  CircleQuestionMark,
+  AlignLeft,
+  Hash,
+  Baseline,
+} from "lucide-react";
+import { Toggle } from "../../ui/Toggle";
+
+// ---------------------------------------------------------------------------
+// FIELD ICONS
+// ---------------------------------------------------------------------------
+
+const getFieldIcon = (type: string) => {
+  switch (type) {
+    case "NUMBER":
+      return <Hash size={14} className="text-gray-500" />;
+    case "TEXT":
+      return <Baseline size={14} className="text-gray-500" />;
+    default:
+      return <AlignLeft size={14} className="text-gray-500" />;
+  }
+};
 
 // ---------------------------------------------------------------------------
 // SORT DIRECTION LABELS
@@ -29,6 +54,172 @@ interface Column {
   id: string;
   name: string;
   type: "TEXT" | "NUMBER";
+}
+
+// ---------------------------------------------------------------------------
+// COLUMN DROPDOWN COMPONENT
+// ---------------------------------------------------------------------------
+
+interface ColumnDropdownProps {
+  value: string;
+  columns: Column[];
+  onChange: (columnId: string) => void;
+}
+
+function ColumnDropdown({ value, columns, onChange }: ColumnDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const selectedColumn = columns.find((c) => c.id === value);
+  const filteredColumns = columns.filter((col) =>
+    col.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+        setSearchQuery("");
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const handleSelect = (columnId: string) => {
+    onChange(columnId);
+    setIsOpen(false);
+    setSearchQuery("");
+  };
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex h-7 w-56 items-center justify-between rounded border border-gray-200 bg-white px-2 text-xs text-gray-900 hover:border-gray-300 focus:border-blue-500 focus:outline-none"
+      >
+        <span className="truncate">
+          {selectedColumn?.name ?? "Select field"}
+        </span>
+        <ChevronDown size={14} className="ml-1 shrink-0 text-gray-500" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 z-50 mt-1 w-60 rounded-lg border border-gray-200 bg-white shadow-lg">
+          {/* Search input */}
+          <div className="border-b border-gray-200 p-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Find a field"
+              className="w-full rounded px-2 py-1.5 text-xs placeholder-gray-400 focus:outline-none"
+              autoFocus
+            />
+          </div>
+
+          {/* Column list */}
+          <div className="max-h-60 overflow-y-auto py-1">
+            {filteredColumns.map((col) => (
+              <button
+                key={col.id}
+                onClick={() => handleSelect(col.id)}
+                className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-xs text-gray-900 hover:bg-gray-100"
+              >
+                {getFieldIcon(col.type)}
+                <span>{col.name}</span>
+              </button>
+            ))}
+            {filteredColumns.length === 0 && (
+              <div className="px-3 py-4 text-center text-xs text-gray-400">
+                No fields found
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DIRECTION DROPDOWN COMPONENT
+// ---------------------------------------------------------------------------
+
+interface DirectionDropdownProps {
+  value: "asc" | "desc";
+  directions: { value: "asc" | "desc"; label: string }[];
+  onChange: (direction: "asc" | "desc") => void;
+}
+
+function DirectionDropdown({
+  value,
+  directions,
+  onChange,
+}: DirectionDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const selectedDirection = directions.find((d) => d.value === value);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const handleSelect = (direction: "asc" | "desc") => {
+    onChange(direction);
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex h-7 w-30 items-center justify-between rounded border border-gray-200 bg-white px-2 text-xs text-gray-900 hover:border-gray-300 focus:border-blue-500 focus:outline-none"
+      >
+        <span>{selectedDirection?.label ?? "Select"}</span>
+        <ChevronDown size={14} className="ml-1 shrink-0 text-gray-500" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 z-50 mt-1 w-32 rounded-lg border border-gray-200 bg-white shadow-lg">
+          {/* Direction list */}
+          <div className="py-1">
+            {directions.map((dir) => (
+              <button
+                key={dir.value}
+                onClick={() => handleSelect(dir.value)}
+                className="flex w-full items-center px-3 py-1.5 text-left text-xs text-gray-900 hover:bg-gray-100"
+              >
+                <span>{dir.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -80,62 +271,28 @@ function SortRow({
   };
 
   return (
-    <div className="flex items-center gap-2 py-1.5">
-      {/* Sort by label */}
-      <span className="w-16 text-xs text-gray-500">
-        {isFirst ? "Sort by" : "then by"}
-      </span>
+    <div className="flex items-center gap-2 py-1">
+      {/* Column selector with custom dropdown */}
+      <ColumnDropdown
+        value={sort.columnId}
+        columns={columns}
+        onChange={handleColumnChange}
+      />
 
-      {/* Column type indicator */}
-      <div className="flex h-7 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-xs font-medium text-gray-600">
-        {columnType === "NUMBER" ? "#" : "A"}
-      </div>
-
-      {/* Column selector */}
-      <div className="relative">
-        <select
-          value={sort.columnId}
-          onChange={(e) => handleColumnChange(e.target.value)}
-          className="h-7 w-32 cursor-pointer appearance-none rounded border border-gray-300 bg-white px-2 pr-6 text-xs focus:border-blue-500 focus:outline-none"
-        >
-          {columns.map((col) => (
-            <option key={col.id} value={col.id}>
-              {col.name}
-            </option>
-          ))}
-        </select>
-        <div className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-gray-400">
-          <ChevronDown size={12} />
-        </div>
-      </div>
-
-      {/* Direction selector */}
-      <div className="relative">
-        <select
-          value={sort.direction}
-          onChange={(e) =>
-            handleDirectionChange(e.target.value as "asc" | "desc")
-          }
-          className="h-7 w-20 cursor-pointer appearance-none rounded border border-gray-300 bg-white px-2 pr-6 text-xs focus:border-blue-500 focus:outline-none"
-        >
-          {directions.map((dir) => (
-            <option key={dir.value} value={dir.value}>
-              {dir.label}
-            </option>
-          ))}
-        </select>
-        <div className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-gray-400">
-          <ChevronDown size={12} />
-        </div>
-      </div>
+      {/* Direction selector with custom dropdown */}
+      <DirectionDropdown
+        value={sort.direction}
+        directions={directions}
+        onChange={handleDirectionChange}
+      />
 
       {/* Delete button */}
       <button
         onClick={() => onRemove(index)}
-        className="ml-1 cursor-pointer rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600"
+        className="ml-auto cursor-pointer rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
         title="Remove sort"
       >
-        <Trash2 size={14} />
+        <X size={14} />
       </button>
     </div>
   );
@@ -152,6 +309,7 @@ interface SortPopoverProps {
 export function SortPopover({ tableId }: SortPopoverProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddSortPicker, setShowAddSortPicker] = useState(false);
+  const [autoSort, setAutoSort] = useState(true);
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const addSortPickerRef = useRef<HTMLDivElement>(null);
@@ -282,66 +440,24 @@ export function SortPopover({ tableId }: SortPopoverProps) {
       {isOpen && (
         <div
           ref={popoverRef}
-          className="absolute top-full right-0 z-50 mt-1 min-w-80 rounded-lg border border-gray-200 bg-white shadow-lg"
+          className="absolute top-full right-0 z-50 mt-1 w-105 rounded-lg border border-gray-200 bg-white shadow-lg"
         >
           {/* Header */}
-          <div className="border-b border-gray-100 px-4 py-4 text-xs text-gray-500">
-            Sort by <span className="ml-1 text-gray-400">(?)</span>
-          </div>
-
-          {/* Content: Show column picker if no sorts, otherwise show sort rows */}
-          {sorts.length === 0 ? (
-            /* Column Picker - Show all columns when no sorts yet */
-            <div className="max-h-screen overflow-y-auto">
-              {/* Search input */}
-              <div className="sticky top-0 bg-white px-1 py-2">
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Find a field"
-                    className="w-full rounded border-gray-300 px-3 py-1.5 pl-8 text-xs placeholder-gray-400 focus:border-blue-500 focus:outline-none"
-                  />
-                  <svg
-                    className="absolute top-1/2 left-2.5 -translate-y-1/2 text-gray-400"
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.35-4.35" />
-                  </svg>
-                </div>
+          <div className="px-2">
+            <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2.5">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-medium text-gray-600">
+                  Sort by
+                </span>
+                <CircleQuestionMark size={14} className="text-gray-400" />
               </div>
-
-              {/* Column list */}
-              <div className="px-2 pb-2">
-                {filteredAvailableColumns.map((col) => (
-                  <button
-                    key={col.id}
-                    onClick={() => handlePickColumn(col.id)}
-                    className="flex w-full cursor-pointer items-center gap-3 rounded px-2 py-1.5 text-left text-[12px] text-gray-900 hover:bg-gray-100"
-                  >
-                    <span className="text-gray-500">
-                      {col.type === "NUMBER" ? "#" : "A"}
-                    </span>
-                    <span>{col.name}</span>
-                  </button>
-                ))}
-                {filteredAvailableColumns.length === 0 && (
-                  <div className="px-2 py-4 text-center text-xs text-gray-400">
-                    No fields found
-                  </div>
-                )}
+              <div>
+                <button className="flex h-4 w-4 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100"></button>
               </div>
             </div>
-          ) : (
-            /* Sort Rows - Show active sorts and add button */
-            <div className="px-4 py-2">
+
+            {/* Sort Rows */}
+            <div className="px-3 py-2">
               {sorts.map((sort, index) => (
                 <SortRow
                   key={index}
@@ -356,10 +472,10 @@ export function SortPopover({ tableId }: SortPopoverProps) {
 
               {/* Add another sort button - only show if there are available columns */}
               {availableColumns.length > 0 && (
-                <div className="relative mt-2">
+                <div className="relative mt-1">
                   <button
                     onClick={() => setShowAddSortPicker(!showAddSortPicker)}
-                    className="flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+                    className="flex cursor-pointer items-center gap-1.5 rounded px-0 py-1.5 text-xs text-gray-600 hover:text-gray-900"
                   >
                     <Plus size={14} />
                     <span>Add another sort</span>
@@ -369,49 +485,34 @@ export function SortPopover({ tableId }: SortPopoverProps) {
                   {showAddSortPicker && (
                     <div
                       ref={addSortPickerRef}
-                      className="absolute top-full left-0 z-50 mt-1 w-80 rounded-lg border border-gray-200 bg-white shadow-lg"
+                      className="absolute top-full left-0 z-50 mt-1 w-96 rounded-lg border border-gray-200 bg-white shadow-lg"
                     >
                       {/* Search input */}
-                      <div className="sticky top-0 bg-white px-4 py-2">
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Find a field"
-                            className="w-full rounded border border-gray-300 px-3 py-1.5 pl-8 text-xs placeholder-gray-400 focus:border-blue-500 focus:outline-none"
-                          />
-                          <svg
-                            className="absolute top-1/2 left-2.5 -translate-y-1/2 text-gray-400"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <circle cx="11" cy="11" r="8" />
-                            <path d="m21 21-4.35-4.35" />
-                          </svg>
-                        </div>
+                      <div className="border-b border-gray-200 p-2">
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Find a field"
+                          className="w-full rounded px-2 py-1.5 text-xs placeholder-gray-400 focus:outline-none"
+                          autoFocus
+                        />
                       </div>
 
                       {/* Column list */}
-                      <div className="max-h-60 overflow-y-auto px-2 pb-2">
+                      <div className="max-h-60 overflow-y-auto py-1">
                         {filteredAvailableColumns.map((col) => (
                           <button
                             key={col.id}
                             onClick={() => handlePickColumn(col.id)}
-                            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-100"
+                            className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-xs text-gray-900 hover:bg-gray-100"
                           >
-                            <span className="text-gray-400">
-                              {col.type === "NUMBER" ? "#" : "A"}
-                            </span>
+                            {getFieldIcon(col.type)}
                             <span>{col.name}</span>
                           </button>
                         ))}
                         {filteredAvailableColumns.length === 0 && (
-                          <div className="px-2 py-4 text-center text-xs text-gray-400">
+                          <div className="px-3 py-4 text-center text-xs text-gray-400">
                             No fields found
                           </div>
                         )}
@@ -421,7 +522,17 @@ export function SortPopover({ tableId }: SortPopoverProps) {
                 </div>
               )}
             </div>
-          )}
+          </div>
+
+          {/* Auto-sort toggle */}
+          <div className="border-t border-gray-200 bg-gray-100 px-3 py-3">
+            <div className="flex items-center gap-2">
+              <Toggle enabled={autoSort} onChange={setAutoSort} />
+              <span className="text-xs text-gray-700">
+                Automatically sort records
+              </span>
+            </div>
+          </div>
         </div>
       )}
     </div>
