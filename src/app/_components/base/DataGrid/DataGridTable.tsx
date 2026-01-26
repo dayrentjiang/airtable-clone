@@ -6,6 +6,7 @@ import { DataGridHeader } from "./DataGridHeader";
 import { AddRowButton } from "./AddRowButton";
 import type { RowData } from "./hooks/useTableColumns";
 import { useSelection } from "./hooks/useSelection";
+import type { Filter, Sort } from "~/server/lib/types";
 
 interface DataGridTableProps {
   table: Table<RowData>;
@@ -18,6 +19,8 @@ interface DataGridTableProps {
   tableWidth: number;
   rowsByIndex: Map<number, RowData>; // Map of loaded rows by index
   totalCount: number; // Total rows in database (for scrollbar sizing)
+  filters: Filter[];
+  sorts: Sort[];
 }
 
 export function DataGridTable({
@@ -29,18 +32,22 @@ export function DataGridTable({
   paddingBottom,
   columnCount,
   tableWidth,
+  filters,
+  sorts,
 }: DataGridTableProps) {
   const { rows: tableRows } = table.getRowModel();
   const { isRowSelected, isColumnSelected } = useSelection();
 
   return (
     <table
-      className="border-collapse"
+      className="border-separate border-spacing-0"
       style={{ tableLayout: "fixed", width: tableWidth }}
     >
       <DataGridHeader
         headerGroups={table.getHeaderGroups()}
         tableId={tableId}
+        filters={filters}
+        sorts={sorts}
       />
 
       <tbody className="bg-white">

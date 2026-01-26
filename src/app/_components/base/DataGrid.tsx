@@ -7,7 +7,10 @@ import { api } from "~/trpc/react";
 import { DataGridTable } from "./DataGrid/DataGridTable";
 import { AddColumnButton } from "./DataGrid/AddColumnButton";
 import { AddRowButton } from "./DataGrid/AddRowButton";
-import { useTableColumns, type RowData } from "./DataGrid/hooks/useTableColumns";
+import {
+  useTableColumns,
+  type RowData,
+} from "./DataGrid/hooks/useTableColumns";
 import { useViewConfig } from "./hooks/useViewConfig";
 import { CellContextMenu } from "./DataGrid/CellContextMenu";
 import { ColumnHeaderContextMenu } from "./DataGrid/ColumnHeaderContextMenu";
@@ -398,6 +401,8 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
           tableWidth={tableWidth}
           rowsByIndex={rowsByIndex}
           totalCount={totalCount}
+          filters={completeFilters}
+          sorts={sorts}
         />
         <AddColumnButton tableId={tableId} />
       </div>
