@@ -5,7 +5,6 @@ import {
   Menu,
   ChevronDown,
   LayoutList,
-  Baseline,
   GripHorizontal,
   SquareArrowOutUpRight,
   Database,
@@ -14,7 +13,9 @@ import {
   Image,
   Columns3,
   FileText,
+  PaintBucket,
   type LucideIcon,
+  TableCellsSplit,
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { SearchInput } from "./toolbar/SearchInput";
@@ -342,7 +343,7 @@ export function ViewToolbar({
               }}
               className="flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100 md:px-2.5"
             >
-              <ViewIcon size={16} />
+              <TableCellsSplit size={16} />
               <span className="hidden md:inline">{viewName}</span>
               <ChevronDown size={14} />
             </button>
@@ -369,7 +370,7 @@ export function ViewToolbar({
           <FilterPopover tableId={tableId} />
           <ToolbarButton icon={<LayoutList size={16} />} label="Group" />
           <SortPopover tableId={tableId} />
-          <ToolbarButton icon={<Baseline size={16} />} label="Color" />
+          <ToolbarButton icon={<PaintBucket size={16} />} label="Color" />
 
           <button className="cursor-pointer rounded p-1.5 text-gray-600 hover:bg-gray-100">
             <GripHorizontal size={16} />

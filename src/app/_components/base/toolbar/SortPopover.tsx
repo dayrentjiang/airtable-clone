@@ -5,88 +5,7 @@ import { useViewConfig } from "../hooks/useViewConfig";
 import { useToolbarPopovers } from "../hooks/useToolbarPopovers";
 import { api } from "~/trpc/react";
 import type { Sort } from "~/server/lib/types";
-
-/**
- * SORT POPOVER COMPONENT
- *
- * HOW SORTING WORKS:
- *
- * 1. User clicks "Sort" button → opens this popover
- * 2. User selects column and direction (A→Z or Z→A for text, ascending/descending for numbers)
- * 3. Sorts apply immediately (no "Apply" button)
- * 4. DataGrid re-queries with new sorts
- * 5. Results are sorted on the server (PostgreSQL ORDER BY)
- *
- * KEY PATTERN: Immediate Updates
- * - Like filters, sorts apply instantly
- * - No debouncing needed (no typing involved)
- */
-
-// ---------------------------------------------------------------------------
-// ICONS
-// ---------------------------------------------------------------------------
-
-function SortIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M3 6h18M3 12h12M3 18h6" />
-    </svg>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
-}
-
-function ChevronDownIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-}
+import { ArrowDownUp, Trash2, Plus, ChevronDown } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // SORT DIRECTION LABELS
@@ -186,7 +105,7 @@ function SortRow({
           ))}
         </select>
         <div className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-gray-400">
-          <ChevronDownIcon />
+          <ChevronDown size={12} />
         </div>
       </div>
 
@@ -206,7 +125,7 @@ function SortRow({
           ))}
         </select>
         <div className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-gray-400">
-          <ChevronDownIcon />
+          <ChevronDown size={12} />
         </div>
       </div>
 
@@ -216,7 +135,7 @@ function SortRow({
         className="ml-1 cursor-pointer rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600"
         title="Remove sort"
       >
-        <TrashIcon />
+        <Trash2 size={14} />
       </button>
     </div>
   );
@@ -355,7 +274,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
             : "text-gray-600 hover:bg-gray-100"
         }`}
       >
-        <SortIcon />
+        <ArrowDownUp size={16} />
         <span className="hidden md:inline">{getSortSummary()}</span>
       </button>
 
@@ -442,7 +361,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
                     onClick={() => setShowAddSortPicker(!showAddSortPicker)}
                     className="flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
                   >
-                    <PlusIcon />
+                    <Plus size={14} />
                     <span>Add another sort</span>
                   </button>
 

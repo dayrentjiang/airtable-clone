@@ -6,7 +6,7 @@ import { useToolbarPopovers } from "../hooks/useToolbarPopovers";
 import { api } from "~/trpc/react";
 import type { Filter, FilterOperator } from "~/server/lib/types";
 import {
-  Filter as FilterIcon,
+  ListFilter as FilterIcon,
   Trash2,
   Plus,
   ChevronDown,
