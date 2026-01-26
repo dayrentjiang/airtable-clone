@@ -90,14 +90,17 @@ export function buildSortClause(
       `data->>'${sort.columnId.replace(/'/g, "''")}'`,
     );
 
+    // ASC (A-Z, 1-9): NULLs first, then values ascending
+    // DESC (Z-A, 9-1): values descending, then NULLs last
     if (columnType === "NUMBER") {
       return sort.direction === "asc"
-        ? Prisma.sql`(${jsonPath})::numeric ASC NULLS LAST`
+        ? Prisma.sql`(${jsonPath})::numeric ASC NULLS FIRST`
         : Prisma.sql`(${jsonPath})::numeric DESC NULLS LAST`;
     } else {
+      // Use LOWER() for case-insensitive text sorting
       return sort.direction === "asc"
-        ? Prisma.sql`${jsonPath} ASC NULLS LAST`
-        : Prisma.sql`${jsonPath} DESC NULLS LAST`;
+        ? Prisma.sql`LOWER(${jsonPath}) ASC NULLS FIRST`
+        : Prisma.sql`LOWER(${jsonPath}) DESC NULLS LAST`;
     }
   });
 

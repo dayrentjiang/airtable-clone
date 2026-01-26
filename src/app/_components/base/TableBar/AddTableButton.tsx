@@ -1,7 +1,18 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Plus, Table } from "lucide-react";
+import {
+  Plus,
+  Table,
+  Sparkles,
+  Globe,
+  FileSpreadsheet,
+  Calendar,
+  Sheet,
+  FileText,
+  ChevronRight,
+  SquareStack,
+} from "lucide-react";
 import { Tooltip } from "../../ui/Tooltip";
 import { RenameTableModal } from "./RenameTableModal";
 
@@ -11,6 +22,7 @@ interface AddTableButtonProps {
   newTableId: string | null;
   newTableName: string | null;
   onClearNewTable?: () => void;
+  newTableTabRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 export function AddTableButton({
@@ -19,6 +31,7 @@ export function AddTableButton({
   newTableId,
   newTableName,
   onClearNewTable,
+  newTableTabRef,
 }: AddTableButtonProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
@@ -69,7 +82,7 @@ export function AddTableButton({
     e.stopPropagation();
     e.preventDefault();
     buttonClickedRef.current = true;
-    setIsDropdownOpen(true);
+    setIsDropdownOpen((prev) => !prev);
   };
 
   const handleStartFromScratch = () => {
@@ -104,23 +117,113 @@ export function AddTableButton({
       {isDropdownOpen &&
         (() => {
           const buttonRect = buttonRef.current?.getBoundingClientRect();
+          const menuWidth = 224;
           const top = buttonRect ? buttonRect.bottom + 4 : 0;
-          const left = buttonRect ? buttonRect.left : 0;
+
+          // Prefer right side, fall back to left if no space on the right
+          let left = buttonRect?.left ?? 0;
+          if (buttonRect) {
+            const rightPosition = buttonRect.left;
+            const fitsOnRight = rightPosition + menuWidth <= window.innerWidth;
+
+            if (fitsOnRight) {
+              left = rightPosition;
+            } else {
+              // Fall back to left side
+              left = buttonRect.right - menuWidth;
+            }
+          }
 
           return (
             <div
-              className="fixed z-50 w-48 rounded-lg border border-gray-200 bg-white shadow-lg"
+              className="fixed z-50 w-xs rounded-lg border border-gray-300/50 bg-white px-2 py-2 shadow-xl"
               style={{ top: `${top}px`, left: `${left}px` }}
             >
-              <div className="py-1">
-                <button
-                  onClick={handleStartFromScratch}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  <Table className="h-4 w-4" />
-                  <span>Start from scratch</span>
-                </button>
+              {/* Add a blank table */}
+              <div className="px-3 py-1">
+                <span className="text-[10px] text-gray-500">
+                  Add a blank table
+                </span>
               </div>
+              <button
+                onClick={handleStartFromScratch}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-900 hover:cursor-pointer hover:bg-gray-100"
+              >
+                <span>Start from scratch</span>
+              </button>
+
+              <div className="my-2 border-t border-gray-200" />
+
+              {/* Build with Omni */}
+              <div className="px-3 py-1">
+                <span className="text-xs text-gray-500">Build with Omni</span>
+              </div>
+              <button className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-900 hover:bg-gray-100">
+                <Sparkles className="h-4 w-4 text-purple-500" />
+                <span>New table</span>
+              </button>
+              <button className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-gray-900 hover:bg-gray-100">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-purple-500" />
+                  <span>New table with web data</span>
+                </div>
+                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700">
+                  Beta
+                </span>
+              </button>
+
+              <div className="my-2 border-t border-gray-200" />
+
+              {/* Add from other sources */}
+              <div className="px-3 py-1">
+                <span className="text-xs text-gray-500">
+                  Add from other sources
+                </span>
+              </div>
+              <button className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-900 hover:bg-gray-100">
+                <SquareStack className="h-4 w-4 text-blue-500" />
+                <span>Airtable base</span>
+              </button>
+              <button className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-900 hover:bg-gray-100">
+                <FileText className="h-4 w-4 text-gray-500" />
+                <span>CSV file</span>
+              </button>
+              <button className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-900 hover:bg-gray-100">
+                <Calendar className="h-4 w-4 text-blue-600" />
+                <span>Google Calendar</span>
+              </button>
+              <button className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-900 hover:bg-gray-100">
+                <Sheet className="h-4 w-4 text-green-600" />
+                <span>Google Sheets</span>
+              </button>
+              <button className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-900 hover:bg-gray-100">
+                <FileSpreadsheet className="h-4 w-4 text-green-700" />
+                <span>Microsoft Excel</span>
+              </button>
+              <button className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-gray-900 hover:bg-gray-100">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-4 w-4 items-center justify-center rounded bg-blue-500 text-[8px] font-bold text-white">
+                    S
+                  </div>
+                  <span>Salesforce</span>
+                </div>
+                <span className="rounded bg-cyan-100 px-1.5 py-0.5 text-xs text-cyan-700">
+                  ✦ Business
+                </span>
+              </button>
+              <button className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-900 hover:bg-gray-100">
+                <div className="flex h-4 w-4 items-center justify-center rounded bg-blue-900 text-[8px] font-bold text-white">
+                  S
+                </div>
+                <span>Smartsheet</span>
+              </button>
+              <button className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-gray-900 hover:bg-gray-100">
+                <div className="flex items-center gap-2">
+                  <Table className="h-4 w-4 text-gray-400" />
+                  <span>26 more sources...</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-gray-400" />
+              </button>
             </div>
           );
         })()}
@@ -144,7 +247,7 @@ export function AddTableButton({
             onClearNewTable?.();
           }}
           currentName={newTableName ?? "Table 1"}
-          anchorRef={buttonRef}
+          anchorRef={newTableTabRef ?? buttonRef}
         />
       )}
     </div>

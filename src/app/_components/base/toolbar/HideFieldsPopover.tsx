@@ -4,75 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { useViewConfig } from "../hooks/useViewConfig";
 import { useToolbarPopovers } from "../hooks/useToolbarPopovers";
 import { api } from "~/trpc/react";
-
-/**
- * HIDE FIELDS POPOVER COMPONENT
- *
- * HOW IT WORKS:
- *
- * 1. User clicks "Hide fields" button → opens this popover
- * 2. Shows all columns with toggle switches (eye icons)
- * 3. User can search to filter columns
- * 4. Toggle visibility → immediately updates DataGrid
- * 5. "Hide all" / "Show all" bulk actions
- * 6. Auto-saves to view config on close
- *
- * KEY PATTERN: Immediate Updates
- * - Like filters/sorts, visibility changes apply instantly
- * - Hidden columns are removed from DataGrid immediately
- */
-
-// ---------------------------------------------------------------------------
-// ICONS
-// ---------------------------------------------------------------------------
-
-function EyeIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function EyeOffIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-      <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <circle cx="11" cy="11" r="8" />
-      <path d="m21 21-4.35-4.35" />
-    </svg>
-  );
-}
+import { Toggle } from "../../ui/Toggle";
+import { EyeOff, Search, X, FileText, Hash, GripVertical } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // COLUMN TYPE
@@ -174,7 +107,7 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
           hasHiddenFields ? "bg-blue-50 text-black" : "text-gray-600"
         }`}
       >
-        <EyeOffIcon />
+        <EyeOff size={16} />
         <span className="hidden md:inline">
           {hasHiddenFields ? hiddenFieldsLabel : "Hide fields"}
         </span>
@@ -184,116 +117,60 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
       {isOpen && (
         <div
           ref={popoverRef}
-          className="absolute top-full left-0 z-50 mt-1 w-80 rounded-lg border border-gray-200 bg-white shadow-lg"
+          className="absolute top-full right-0 z-50 mt-1 w-80 rounded-md border border-gray-200 bg-white shadow-lg"
         >
-          {/* Header */}
-          <div className="border-b border-gray-100 px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <EyeOffIcon />
-                <span className="text-sm font-medium text-gray-700">
-                  Hide fields
-                </span>
-              </div>
-              <button
-                onClick={() => {
-                  void saveConfig({ hiddenFields });
-                  setOpenPopover(null);
-                }}
-                className="cursor-pointer text-gray-400 hover:text-gray-600"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
           {/* Search input */}
-          <div className="border-b border-gray-100 px-4 py-3">
-            <div className="relative">
+          <div className="border-gray-200 px-3 py-2">
+            <div className="relative flex items-center border-b border-gray-300 px-0.5 py-2">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Find a field"
-                className="w-full rounded border border-gray-300 px-3 py-1.5 pl-8 text-xs placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                className="w-full border-none bg-transparent py-1 text-xs text-gray-900 placeholder-gray-400 focus:outline-none"
               />
-              <div className="absolute top-1/2 left-2.5 -translate-y-1/2 text-gray-400">
-                <SearchIcon />
-              </div>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
           </div>
-
           {/* Column list */}
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-screen overflow-y-auto px-2 py-2">
             {filteredColumns.map((col) => {
               const visible = isVisible(col.id);
               return (
-                <button
+                <div
                   key={col.id}
-                  onClick={() => toggleFieldVisibility(col.id)}
-                  className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  className="group flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50"
                 >
-                  {/* Eye icon toggle */}
-                  <div
-                    className={`shrink-0 ${visible ? "text-green-600" : "text-gray-300"}`}
-                  >
-                    {visible ? (
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <circle cx="12" cy="12" r="10" />
-                      </svg>
+                  {/* Toggle switch */}
+                  <Toggle
+                    enabled={visible}
+                    onChange={() => toggleFieldVisibility(col.id)}
+                  />
+
+                  {/* Column type icon */}
+                  <div className="flex h-5 w-5 items-center justify-center text-gray-500">
+                    {col.type === "NUMBER" ? (
+                      <Hash size={14} />
                     ) : (
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <circle cx="12" cy="12" r="10" />
-                      </svg>
+                      <FileText size={14} />
                     )}
                   </div>
 
-                  {/* Column type icon */}
-                  <span className="shrink-0 text-gray-400">
-                    {col.type === "NUMBER" ? "#" : "A"}
-                  </span>
-
                   {/* Column name */}
-                  <span className="flex-1">{col.name}</span>
+                  <span className="flex-1 text-xs text-black">{col.name}</span>
 
-                  {/* Drag handle (visual only for now) */}
-                  <div className="shrink-0 text-gray-300">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <line x1="3" y1="12" x2="21" y2="12" />
-                      <line x1="3" y1="6" x2="21" y2="6" />
-                      <line x1="3" y1="18" x2="21" y2="18" />
-                    </svg>
+                  {/* Drag handle */}
+                  <div className="cursor-grab text-gray-300 opacity-0 group-hover:opacity-100">
+                    <GripVertical size={16} />
                   </div>
-                </button>
+                </div>
               );
             })}
 
@@ -303,28 +180,22 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
               </div>
             )}
           </div>
-
           {/* Footer with bulk actions */}
-          <div className="border-t border-gray-100 px-4 py-3">
-            <div className="flex items-center justify-between text-xs">
-              <button
-                onClick={handleHideAll}
-                disabled={hiddenFields.length === columns.length}
-                className="cursor-pointer text-gray-600 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-400"
-              >
-                Hide all
-              </button>
-              <span className="text-gray-500">
-                {visibleCount} of {columns.length} shown
-              </span>
-              <button
-                onClick={handleShowAll}
-                disabled={hiddenFields.length === 0}
-                className="cursor-pointer text-gray-600 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-400"
-              >
-                Show all
-              </button>
-            </div>
+          <div className="flex items-center gap-2 border-gray-200 px-3 py-2.5">
+            <button
+              onClick={handleHideAll}
+              disabled={hiddenFields.length === columns.length}
+              className="flex-1 cursor-pointer rounded bg-gray-100 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-gray-100"
+            >
+              Hide all
+            </button>
+            <button
+              onClick={handleShowAll}
+              disabled={hiddenFields.length === 0}
+              className="flex-1 cursor-pointer rounded bg-gray-100 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-gray-100"
+            >
+              Show all
+            </button>
           </div>
         </div>
       )}

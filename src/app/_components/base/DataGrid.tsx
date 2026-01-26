@@ -7,11 +7,17 @@ import { api } from "~/trpc/react";
 import { DataGridTable } from "./DataGrid/DataGridTable";
 import { AddColumnButton } from "./DataGrid/AddColumnButton";
 import { AddRowButton } from "./DataGrid/AddRowButton";
-import { useTableColumns, type RowData } from "./DataGrid/hooks/useTableColumns";
+import {
+  useTableColumns,
+  type RowData,
+} from "./DataGrid/hooks/useTableColumns";
 import { useViewConfig } from "./hooks/useViewConfig";
 import { CellContextMenu } from "./DataGrid/CellContextMenu";
 import { ColumnHeaderContextMenu } from "./DataGrid/ColumnHeaderContextMenu";
 import { useContextMenu } from "./DataGrid/hooks/useContextMenu";
+
+// Page size for fetching data
+const PAGE_SIZE = 150;
 
 // Re-export SelectionProvider and ContextMenuProvider for use in parent components
 export { SelectionProvider, useSelection } from "./DataGrid/hooks/useSelection";
@@ -93,11 +99,14 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     {
       tableId,
       viewId,
-      limit: 150,
+      limit: PAGE_SIZE,
       // Pass live config to query - these override saved view config
       search: search || undefined, // Global text search
-      filters: completeFilters.length > 0 ? completeFilters : undefined, // Only complete filters
-      sorts: sorts.length > 0 ? sorts : undefined, // Column sorts
+      // IMPORTANT: Always pass filters array (even if empty) to ensure query key changes
+      // when filters are added/removed. Using undefined for both "no filters" and
+      // "filters removed" causes React Query to not refetch.
+      filters: completeFilters.length > 0 ? completeFilters : [],
+      sorts: sorts.length > 0 ? sorts : [], // Same for sorts
     },
     {
       // CRITICAL: Don't run query until config has loaded from DB
@@ -107,14 +116,15 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       refetchOnMount: false, // Don't refetch on mount - use cached data
       refetchOnWindowFocus: false,
       staleTime: 0, // Always consider data stale - refetch when query key changes
-      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-      // Keep previous data while fetching new data (smooth transitions)
-      placeholderData: (previousData) => previousData,
+      gcTime: 0, // Don't cache - prevents showing old cached data when filters change
+      // This eliminates jittering by ensuring we only show fresh data for each query
     },
   );
 
+  // Get total count from first page (all pages return the same totalCount)
+  const totalCount = data?.pages[0]?.totalCount ?? 0;
+
   // Flatten all pages into a single array of rows
-  // TODO: Implement sliding window to cap memory (keep only ~3-5 pages around viewport)
   const rows = useMemo(() => {
     return (data?.pages.flatMap((page) => page.items) ?? []) as RowData[];
   }, [data]);
@@ -179,9 +189,13 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
 
   const { rows: tableRows } = tableInstance.getRowModel();
 
-  // Virtual scrolling setup with optimized overscan for production
+  // Virtual scrolling setup - use totalCount to reflect true table size
+  // This makes the scrollbar represent all rows, not just loaded ones
+  // Use Math.max to handle optimistic updates where rows.length may exceed totalCount
+  const virtualRowCount = Math.max(totalCount, tableRows.length);
+
   const rowVirtualizer = useVirtualizer({
-    count: tableRows.length,
+    count: virtualRowCount,
     getScrollElement: () => tableContainerRef.current,
     estimateSize: () => 35,
     overscan: 50, // 50 rows overscan - optimal for smooth fast scrolling
@@ -193,6 +207,38 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
 
   const virtualRows = rowVirtualizer.getVirtualItems();
   const totalSize = rowVirtualizer.getTotalSize();
+
+  // Build a map of rows by index for quick lookup
+  const rowsByIndex = useMemo(() => {
+    const map = new Map<number, RowData>();
+    rows.forEach((row, index) => {
+      map.set(index, row);
+    });
+    return map;
+  }, [rows]);
+
+  // -------------------------------------------------------------------------
+  // CLAMP SCROLL POSITION TO LOADED DATA
+  // -------------------------------------------------------------------------
+  // The scrollbar reflects total rows, but we limit scrolling to loaded data only
+  // This prevents scrolling into unloaded regions while keeping correct scrollbar size
+  const maxScrollableRow = rows.length;
+  const maxScrollTop = maxScrollableRow * 35; // 35px per row estimate
+
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container || maxScrollableRow === 0) return;
+
+    const handleScrollClamp = () => {
+      // If user tries to scroll past loaded data, clamp them back
+      if (container.scrollTop > maxScrollTop) {
+        container.scrollTop = maxScrollTop;
+      }
+    };
+
+    container.addEventListener("scroll", handleScrollClamp, { passive: false });
+    return () => container.removeEventListener("scroll", handleScrollClamp);
+  }, [maxScrollTop, maxScrollableRow]);
 
   // -------------------------------------------------------------------------
   // RESTORE SCROLL POSITION FROM LOCALSTORAGE
@@ -253,13 +299,14 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   // -------------------------------------------------------------------------
   // PREFETCH NEXT PAGE
   // -------------------------------------------------------------------------
-  // Prefetch when user is 70 rows from end (with 150 rows/page)
+  // Prefetch when user is near the end of loaded data
   useEffect(() => {
     const lastItem = virtualRows[virtualRows.length - 1];
     if (!lastItem) return;
 
+    // Prefetch when near the end of loaded data
     if (
-      lastItem.index >= tableRows.length - 70 &&
+      lastItem.index >= rows.length - 70 &&
       hasNextPage &&
       !isFetchingNextPage
     ) {
@@ -267,7 +314,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     }
   }, [
     virtualRows,
-    tableRows.length,
+    rows.length,
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
@@ -354,6 +401,10 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
           paddingBottom={paddingBottom}
           columnCount={columns.length}
           tableWidth={tableWidth}
+          rowsByIndex={rowsByIndex}
+          totalCount={totalCount}
+          filters={highlightFilters}
+          sorts={highlightSorts}
         />
         <AddColumnButton tableId={tableId} />
       </div>

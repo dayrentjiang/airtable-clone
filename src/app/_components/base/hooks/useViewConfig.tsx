@@ -141,6 +141,10 @@ export function ViewConfigProvider({
   const [searchMatchCount, setSearchMatchCount] = useState(0);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
 
+  // Track whether we've synced state from the saved config
+  // With key={viewId} on provider, this starts fresh on each view
+  const [hasSynced, setHasSynced] = useState(false);
+
   // Wrapper for setSearch that resets match index
   const setSearch = useCallback((value: string) => {
     setSearchState(value);
@@ -156,6 +160,9 @@ export function ViewConfigProvider({
   // 2. User switches to a different view
   // 3. After saving (to confirm sync)
   useEffect(() => {
+    // Only sync if we have a viewId and query is done loading
+    if (!viewId || isLoading) return;
+
     // Reset search when switching views (search is not saved to view config)
     setSearch("");
 
@@ -163,7 +170,10 @@ export function ViewConfigProvider({
     setFilters(savedConfig.filters);
     setSorts(savedConfig.sorts);
     setHiddenFields(savedConfig.hiddenFields);
-  }, [savedConfig, viewId]); // viewId in deps ensures reset on view switch
+
+    // Mark as synced (allows rendering)
+    setHasSynced(true);
+  }, [savedConfig, viewId, isLoading]); // viewId in deps ensures reset on view switch
 
   // ---------------------------------------------------------------------------
   // DIRTY CHECK: Has local state diverged from saved?
@@ -335,7 +345,9 @@ export function ViewConfigProvider({
       setSearchMatchCount,
       goToNextMatch,
       goToPrevMatch,
-      isConfigLoaded: !isLoading, // Config is loaded when view query finishes
+      // Config is loaded when BOTH: query finished AND state synced
+      // With key={viewId} on provider, hasSynced starts false on each view
+      isConfigLoaded: !isLoading && hasSynced,
       isDirty,
       isSaving: updateConfigMutation.isPending,
       saveConfig,
@@ -360,6 +372,7 @@ export function ViewConfigProvider({
       goToNextMatch,
       goToPrevMatch,
       isLoading,
+      hasSynced,
       isDirty,
       updateConfigMutation.isPending,
       saveConfig,

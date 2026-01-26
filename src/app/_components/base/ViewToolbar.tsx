@@ -1,15 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Menu,
-  LayoutGrid,
   ChevronDown,
   LayoutList,
-  Baseline,
   GripHorizontal,
   SquareArrowOutUpRight,
   Database,
+  Grid3X3,
+  Calendar,
+  Image,
+  Columns3,
+  FileText,
+  PaintBucket,
+  type LucideIcon,
+  TableCellsSplit,
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { SearchInput } from "./toolbar/SearchInput";
@@ -17,6 +23,16 @@ import { FilterPopover } from "./toolbar/FilterPopover";
 import { SortPopover } from "./toolbar/SortPopover";
 import { HideFieldsPopover } from "./toolbar/HideFieldsPopover";
 import { ToolbarPopoversProvider } from "./hooks/useToolbarPopovers";
+import { ViewMenu } from "./toolbar/ViewMenu";
+
+// Map view types to their icons
+const VIEW_TYPE_ICONS: Record<string, LucideIcon> = {
+  GRID: Grid3X3,
+  CALENDAR: Calendar,
+  GALLERY: Image,
+  KANBAN: Columns3,
+  FORM: FileText,
+};
 
 interface ToolbarButtonProps {
   icon: React.ReactNode;
@@ -39,16 +55,140 @@ function ToolbarButton({ icon, label, onClick }: ToolbarButtonProps) {
 interface ViewToolbarProps {
   onToggleSideNav: () => void;
   tableId: string;
+  viewId: string;
+  onViewSelect: (viewId: string) => void;
 }
 
-export function ViewToolbar({ onToggleSideNav, tableId }: ViewToolbarProps) {
+export function ViewToolbar({
+  onToggleSideNav,
+  tableId,
+  viewId,
+  onViewSelect,
+}: ViewToolbarProps) {
   const [isCreating, setIsCreating] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingName, setEditingName] = useState("");
+  const viewSelectorRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
   const utils = api.useUtils();
+
+  // Fetch current view data
+  const { data: view } = api.view.getById.useQuery(
+    { id: viewId },
+    { enabled: !!viewId },
+  );
+
+  // Fetch all views for the table (to check if we can delete)
+  const { data: views = [] } = api.view.getByTableId.useQuery(
+    { tableId },
+    { enabled: !!tableId },
+  );
+
+  // Rename view mutation with optimistic update
+  const renameViewMutation = api.view.rename.useMutation({
+    onMutate: async (variables) => {
+      // Cancel outgoing refetches
+      await utils.view.getById.cancel({ id: viewId });
+      await utils.view.getByTableId.cancel({ tableId });
+
+      // Snapshot previous data
+      const previousView = utils.view.getById.getData({ id: viewId });
+      const previousViews = utils.view.getByTableId.getData({ tableId });
+
+      // Optimistically update the cache
+      if (previousView) {
+        utils.view.getById.setData(
+          { id: viewId },
+          {
+            ...previousView,
+            name: variables.name,
+          },
+        );
+      }
+
+      utils.view.getByTableId.setData({ tableId }, (old) => {
+        if (!old) return old;
+        return old.map((v) =>
+          v.id === variables.id ? { ...v, name: variables.name } : v,
+        );
+      });
+
+      // Close editing state immediately
+      setIsEditing(false);
+      setEditingName("");
+
+      return { previousView, previousViews };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousView) {
+        utils.view.getById.setData({ id: viewId }, context.previousView);
+      }
+      if (context?.previousViews) {
+        utils.view.getByTableId.setData({ tableId }, context.previousViews);
+      }
+    },
+    onSettled: () => {
+      // Sync with server
+      void utils.view.getByTableId.invalidate({ tableId });
+      void utils.view.getById.invalidate({ id: viewId });
+    },
+  });
+
+  // Delete view mutation with optimistic update
+  const deleteViewMutation = api.view.delete.useMutation({
+    onMutate: async (variables) => {
+      // Cancel outgoing refetches
+      await utils.view.getByTableId.cancel({ tableId });
+
+      // Snapshot previous data
+      const previousViews = utils.view.getByTableId.getData({ tableId });
+
+      // Optimistically remove the view from the cache
+      utils.view.getByTableId.setData({ tableId }, (old) => {
+        if (!old) return old;
+        return old.filter((v) => v.id !== variables.id);
+      });
+
+      // Close menu immediately
+      setIsMenuOpen(false);
+
+      // Select another view immediately
+      if (previousViews && previousViews.length > 1) {
+        const remainingViews = previousViews.filter(
+          (v) => v.id !== variables.id,
+        );
+        if (remainingViews.length > 0) {
+          onViewSelect(remainingViews[0]!.id);
+        }
+      }
+
+      return { previousViews };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousViews) {
+        utils.view.getByTableId.setData({ tableId }, context.previousViews);
+      }
+    },
+    onSettled: () => {
+      // Sync with server
+      void utils.view.getByTableId.invalidate({ tableId });
+    },
+  });
+
+  // Get icon for current view type
+  const ViewIcon = view?.type
+    ? (VIEW_TYPE_ICONS[view.type] ?? Grid3X3)
+    : Grid3X3;
+  const viewName = view?.name ?? "Grid view";
 
   const bulkCreate = api.row.bulkCreate.useMutation({
     onSuccess: async (data) => {
       alert(data.message);
-      // Invalidate queries to refresh the data
       await utils.row.invalidate();
       setIsCreating(false);
     },
@@ -63,6 +203,102 @@ export function ViewToolbar({ onToggleSideNav, tableId }: ViewToolbarProps) {
     bulkCreate.mutate({ tableId, count: 100000 });
   };
 
+  const handleOpenMenu = () => {
+    if (viewSelectorRef.current) {
+      const rect = viewSelectorRef.current.getBoundingClientRect();
+      const menuWidth = 288;
+
+      // Prefer left side positioning
+      const leftPosition = rect.right - menuWidth;
+      const left = leftPosition >= 0 ? leftPosition : rect.left;
+
+      setMenuPosition({
+        top: rect.bottom + 4,
+        left,
+      });
+    }
+    setIsMenuOpen((prev) => !prev);
+  };
+
+  const handleRename = () => {
+    setIsMenuOpen(false);
+    setEditingName(viewName);
+    setIsEditing(true);
+  };
+
+  const handleSaveRename = () => {
+    if (!editingName.trim() || editingName === viewName) {
+      setIsEditing(false);
+      setEditingName("");
+      return;
+    }
+    renameViewMutation.mutate({
+      id: viewId,
+      name: editingName.trim(),
+    });
+  };
+
+  const handleDelete = () => {
+    // Don't allow deleting the last view
+    if (views.length <= 1) {
+      setIsMenuOpen(false);
+      return;
+    }
+    deleteViewMutation.mutate({ id: viewId });
+  };
+
+  // Focus edit input when editing starts
+  useEffect(() => {
+    if (isEditing && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [isEditing]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const clickedInsideMenu = menuRef.current?.contains(e.target as Node);
+      const clickedInsideButton = viewSelectorRef.current?.contains(
+        e.target as Node,
+      );
+
+      if (!clickedInsideMenu && !clickedInsideButton) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
+  // Close menu on escape
+  useEffect(() => {
+    if (!isMenuOpen && !isEditing) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isEditing) {
+          setIsEditing(false);
+          setEditingName("");
+        } else {
+          setIsMenuOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [isMenuOpen, isEditing]);
+
   return (
     <ToolbarPopoversProvider>
       <div className="flex h-12 items-center justify-between border-b border-gray-200 bg-white px-3">
@@ -75,11 +311,52 @@ export function ViewToolbar({ onToggleSideNav, tableId }: ViewToolbarProps) {
             <Menu size={16} />
           </button>
 
-          <button className="flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100 md:px-2.5">
-            <LayoutGrid size={16} />
-            <span className="hidden md:inline">Grid view</span>
-            <ChevronDown size={14} />
-          </button>
+          {isEditing ? (
+            <div className="flex items-center gap-1.5 px-1.5 py-1.5 md:px-2.5">
+              <input
+                ref={editInputRef}
+                type="text"
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSaveRename();
+                  } else if (e.key === "Escape") {
+                    setIsEditing(false);
+                    setEditingName("");
+                  }
+                }}
+                onBlur={handleSaveRename}
+                className="0 w-42 rounded border border-gray-300 bg-white px-2 py-1 text-sm font-medium text-gray-800 outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-300"
+              />
+            </div>
+          ) : (
+            <button
+              ref={viewSelectorRef}
+              onClick={handleOpenMenu}
+              onDoubleClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsMenuOpen(false);
+                setEditingName(viewName);
+                setIsEditing(true);
+              }}
+              className="flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100 md:px-2.5"
+            >
+              <TableCellsSplit size={16} className="text-blue-600" />
+              <span className="hidden md:inline">{viewName}</span>
+              <ChevronDown size={14} />
+            </button>
+          )}
+
+          <ViewMenu
+            isOpen={isMenuOpen}
+            position={menuPosition}
+            onRename={handleRename}
+            onDelete={handleDelete}
+            menuRef={menuRef}
+            canDelete={views.length > 1}
+          />
         </div>
 
         {/* Right: Toolbar actions */}
@@ -93,7 +370,7 @@ export function ViewToolbar({ onToggleSideNav, tableId }: ViewToolbarProps) {
           <FilterPopover tableId={tableId} />
           <ToolbarButton icon={<LayoutList size={16} />} label="Group" />
           <SortPopover tableId={tableId} />
-          <ToolbarButton icon={<Baseline size={16} />} label="Color" />
+          <ToolbarButton icon={<PaintBucket size={16} />} label="Color" />
 
           <button className="cursor-pointer rounded p-1.5 text-gray-600 hover:bg-gray-100">
             <GripHorizontal size={16} />

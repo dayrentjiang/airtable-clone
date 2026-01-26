@@ -30,6 +30,7 @@ function ViewConfigContent({
   dataGridRef,
   activeViewId,
   setActiveViewId,
+  onViewSelect,
 }: {
   onToggleSideNav: () => void;
   tableId: string;
@@ -38,11 +39,27 @@ function ViewConfigContent({
   dataGridRef: React.RefObject<HTMLDivElement | null>;
   activeViewId: string | null;
   setActiveViewId: (id: string | null) => void;
+  onViewSelect: (viewId: string) => void;
 }) {
   const { isConfigLoaded } = useViewConfig();
 
+  // Fetch table with columns - toolbar needs column names for filter/sort summaries
+  // This ensures we don't render "Filter" then "Filter by Name" flash
+  const { data: table, isLoading: tableLoading } = api.table.getById.useQuery(
+    { id: tableId },
+    {
+      enabled: !!tableId,
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    },
+  );
+
+  // Wait for BOTH view config AND table columns to load
+  // This prevents toolbar from rendering with stale/incomplete data
+  const isFullyLoaded = isConfigLoaded && !tableLoading && !!table?.columns;
+
   // Show minimal loading UI while config loads
-  if (!isConfigLoaded) {
+  if (!isFullyLoaded) {
     return (
       <>
         {/* Empty toolbar to maintain layout */}
@@ -68,7 +85,12 @@ function ViewConfigContent({
   // Config loaded - render toolbar and grid
   return (
     <>
-      <ViewToolbar onToggleSideNav={onToggleSideNav} tableId={tableId} />
+      <ViewToolbar
+        onToggleSideNav={onToggleSideNav}
+        tableId={tableId}
+        viewId={viewId}
+        onViewSelect={onViewSelect}
+      />
 
       {/* Content area with side nav and grid */}
       <div className="flex flex-1 overflow-hidden">
@@ -427,8 +449,9 @@ function BaseContentInner({
         />
 
         {/* ViewConfigProvider wraps toolbar + sidebar + grid */}
+        {/* key={activeViewId} forces fresh mount on view switch - prevents stale state flash */}
         {activeTableId && activeViewId ? (
-          <ViewConfigProvider viewId={activeViewId}>
+          <ViewConfigProvider key={activeViewId} viewId={activeViewId}>
             <ViewConfigContent
               onToggleSideNav={toggleSideNav}
               tableId={activeTableId}
@@ -437,6 +460,7 @@ function BaseContentInner({
               dataGridRef={dataGridRef}
               activeViewId={activeViewId}
               setActiveViewId={setActiveViewId}
+              onViewSelect={setActiveViewId}
             />
           </ViewConfigProvider>
         ) : (

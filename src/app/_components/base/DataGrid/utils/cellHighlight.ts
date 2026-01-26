@@ -141,7 +141,7 @@ export function getCellHighlightClass(
   // Check if this column is being sorted (orange)
   const isSorted = sorts.some((sort) => sort.columnId === columnId);
   if (isSorted) {
-    return "bg-orange-50";
+    return "bg-orange-100";
   }
 
   return "";

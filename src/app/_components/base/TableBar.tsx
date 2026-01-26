@@ -41,6 +41,7 @@ export function TableBar({
 
   // Refs
   const activeTabRef = useRef<HTMLDivElement>(null);
+  const newTableTabRef = useRef<HTMLDivElement>(null);
   const tableMenuRef = useRef<HTMLDivElement>(null);
   const tableListRef = useRef<HTMLButtonElement>(null);
 
@@ -79,7 +80,14 @@ export function TableBar({
 
     if (activeTabRef.current) {
       const rect = activeTabRef.current.getBoundingClientRect();
-      setMenuPosition({ top: rect.bottom + 4, left: rect.left });
+      const menuWidth = 312; // w-78 = 19.5rem = 312px
+      const top = rect.bottom + 4;
+
+      // Prefer left side, fall back to right if no space
+      const leftPosition = rect.right - menuWidth;
+      const left = leftPosition >= 0 ? leftPosition : rect.left;
+
+      setMenuPosition({ top, left });
     }
 
     setIsTableMenuOpen((prev) => !prev);
@@ -115,14 +123,22 @@ export function TableBar({
       <div className="scrollbar-none flex h-full min-w-0 flex-1 items-end overflow-x-auto overflow-y-visible">
         {tables.map((table, index) => {
           const isActive = table.id === activeTableId;
+          const isNewTable = table.id === newTableId;
           const nextIsActive = tables[index + 1]?.id === activeTableId;
           const showDivider =
             !isActive && !nextIsActive && index < tables.length - 1;
 
+          // Determine which ref to use: newTableTabRef for newly created, activeTabRef for active
+          const tabRef = isNewTable
+            ? newTableTabRef
+            : isActive
+              ? activeTabRef
+              : undefined;
+
           return (
             <div
               key={table.id}
-              ref={isActive ? activeTabRef : undefined}
+              ref={tabRef}
               className="relative flex h-full shrink-0 items-end"
             >
               <TableTab
@@ -152,6 +168,7 @@ export function TableBar({
           newTableId={newTableId}
           newTableName={newTableName}
           onClearNewTable={onClearNewTable}
+          newTableTabRef={newTableTabRef}
         />
       </div>
 

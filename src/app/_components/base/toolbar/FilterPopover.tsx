@@ -5,88 +5,13 @@ import { useViewConfig } from "../hooks/useViewConfig";
 import { useToolbarPopovers } from "../hooks/useToolbarPopovers";
 import { api } from "~/trpc/react";
 import type { Filter, FilterOperator } from "~/server/lib/types";
-
-/**
- * FILTER POPOVER COMPONENT
- *
- * HOW FILTERING WORKS:
- *
- * 1. User clicks "Filter" button → opens this popover
- * 2. User selects column, operator, and types value
- * 3. After 300ms of no typing (debounce), filters are applied
- * 4. DataGrid re-queries with new filters
- * 5. Matching cells are highlighted green
- *
- * KEY PATTERN: Live Updates with Debounce
- * - Like search, filters apply automatically
- * - Debouncing prevents excessive API calls while typing
- */
-
-// ---------------------------------------------------------------------------
-// ICONS
-// ---------------------------------------------------------------------------
-
-function FilterIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-    </svg>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
-}
-
-function ChevronDownIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-}
+import {
+  ListFilter as FilterIcon,
+  Trash2,
+  Plus,
+  ChevronDown,
+  GripVertical,
+} from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // OPERATOR LABELS
@@ -217,14 +142,14 @@ function FilterRow({
   };
 
   return (
-    <div className="flex items-center gap-2 py-1.5">
+    <div className="flex items-center px-3 py-1.5">
       {/* Where / And label */}
-      <span className="w-12 text-xs text-gray-500">
+      <span className="w-12 shrink-0 text-xs text-gray-800">
         {isFirst ? "Where" : "and"}
       </span>
 
       {/* Column selector */}
-      <div className="relative">
+      <div className="relative shrink-0">
         <select
           value={filter.columnId}
           onChange={(e) => handleColumnChange(e.target.value)}
@@ -237,18 +162,18 @@ function FilterRow({
           ))}
         </select>
         <div className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-gray-400">
-          <ChevronDownIcon />
+          <ChevronDown size={12} />
         </div>
       </div>
 
       {/* Operator selector */}
-      <div className="relative">
+      <div className="relative shrink-0">
         <select
           value={filter.operator}
           onChange={(e) =>
             handleOperatorChange(e.target.value as FilterOperator)
           }
-          className="h-7 w-32 cursor-pointer appearance-none rounded border border-gray-300 bg-white px-2 pr-6 text-xs focus:border-blue-500 focus:outline-none"
+          className="h-7 w-28 cursor-pointer appearance-none rounded border border-gray-300 bg-white px-2 pr-6 text-xs focus:border-blue-500 focus:outline-none"
         >
           {operators.map((op) => (
             <option key={op.value} value={op.value}>
@@ -257,7 +182,7 @@ function FilterRow({
           ))}
         </select>
         <div className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-gray-400">
-          <ChevronDownIcon />
+          <ChevronDown size={12} />
         </div>
       </div>
 
@@ -268,17 +193,25 @@ function FilterRow({
           value={localValue}
           onChange={(e) => setLocalValue(e.target.value)}
           placeholder="Enter a value"
-          className="h-7 w-32 rounded border border-gray-300 px-2 text-xs placeholder:text-gray-400 focus:border-blue-500 focus:outline-none"
+          className="h-7 min-w-0 flex-1 rounded border border-gray-300 px-2 text-xs placeholder:text-gray-400 focus:border-blue-500 focus:outline-none"
         />
       )}
 
       {/* Delete button */}
       <button
         onClick={() => onRemove(index)}
-        className="cursor-pointer rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+        className="shrink-0 cursor-pointer rounded border border-gray-300 p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
         title="Remove filter"
       >
-        <TrashIcon />
+        <Trash2 size={14} />
+      </button>
+
+      {/* Drag handle */}
+      <button
+        className="shrink-0 cursor-grab rounded text-gray-300 hover:text-gray-400"
+        title="Reorder"
+      >
+        <GripVertical size={16} />
       </button>
     </div>
   );
@@ -396,7 +329,7 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
             : "text-gray-600 hover:bg-gray-100"
         }`}
       >
-        <FilterIcon />
+        <FilterIcon size={16} />
         <span className="hidden md:inline">{getFilterSummary()}</span>
       </button>
 
@@ -404,7 +337,7 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
       {isOpen && (
         <div
           ref={popoverRef}
-          className="absolute top-full left-0 z-50 mt-1 min-w-105 rounded-lg border border-gray-200 bg-white shadow-lg"
+          className="absolute top-full right-0 z-50 mt-1 w-140 rounded-md border border-gray-300/60 bg-white py-2 shadow-lg"
         >
           {/* Header */}
           <div className="border-b border-gray-100 px-4 py-3 text-xs text-gray-500">
@@ -438,9 +371,9 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
               <button
                 onClick={handleAddFilter}
                 disabled={columns.length === 0}
-                className="flex cursor-pointer items-center gap-1.5 text-xs text-gray-700 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-400"
+                className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-400"
               >
-                <PlusIcon />
+                <Plus size={14} />
                 <span>Add condition</span>
               </button>
             </div>

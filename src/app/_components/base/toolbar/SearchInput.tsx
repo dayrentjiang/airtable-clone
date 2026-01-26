@@ -94,7 +94,9 @@ interface SearchInputProps {
   placeholder?: string;
 }
 
-export function SearchInput({ placeholder = "Find in view" }: SearchInputProps) {
+export function SearchInput({
+  placeholder = "Find in view",
+}: SearchInputProps) {
   const {
     search,
     setSearch,
@@ -108,15 +110,38 @@ export function SearchInput({ placeholder = "Find in view" }: SearchInputProps) 
   const [localValue, setLocalValue] = useState(search);
   const [isExpanded, setIsExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Sync local value when search changes externally (e.g., view switch)
   useEffect(() => {
     setLocalValue(search);
-    // Collapse if search is cleared externally
-    if (!search) {
+    // Only collapse if search is cleared externally AND popover is not currently open
+    // This prevents auto-closing when user deletes all text while typing
+    if (!search && !isExpanded) {
       setIsExpanded(false);
     }
-  }, [search]);
+  }, [search, isExpanded]);
+
+  // Close popover when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setIsExpanded(false);
+      }
+    }
+
+    if (isExpanded) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isExpanded]);
 
   // ---------------------------------------------------------------------------
   // DEBOUNCE LOGIC
@@ -163,68 +188,51 @@ export function SearchInput({ placeholder = "Find in view" }: SearchInputProps) 
   // ---------------------------------------------------------------------------
 
   // Collapsed state: just show icon button
-  if (!isExpanded) {
-    return (
+  return (
+    <div className="relative">
       <button
+        ref={buttonRef}
         onClick={handleExpand}
         className="rounded p-1.5 text-gray-600 hover:bg-gray-100"
         title="Search"
       >
         <SearchIcon />
       </button>
-    );
-  }
 
-  // Expanded state: show search input with match counter and navigation
-  return (
-    <div className="flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1">
-      <input
-        ref={inputRef}
-        type="text"
-        value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        className="w-32 border-none bg-transparent text-xs outline-none placeholder:text-gray-400"
-      />
+      {/* Popover */}
+      {isExpanded && (
+        <div
+          ref={popoverRef}
+          className="absolute top-full right-0 z-50 mt-2 w-96 rounded-lg border border-gray-200 bg-white shadow-lg"
+        >
+          {/* Search input bar */}
+          <div className="flex items-center gap-2 p-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={localValue}
+              onChange={(e) => setLocalValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={placeholder}
+              className="flex-1 rounded px-2 py-1.5 text-xs outline-none placeholder:text-gray-400"
+            />
 
-      {/* Match counter: "1 of 4" */}
-      {search && (
-        <span className="whitespace-nowrap text-xs text-gray-500">
-          {searchMatchCount > 0
-            ? `${currentMatchIndex + 1} of ${searchMatchCount}`
-            : "0 results"}
-        </span>
+            {/* Ask Omni button */}
+            <button className="shrink-0 rounded bg-black px-2 py-1 text-xs font-medium text-white hover:bg-gray-800">
+              Ask Omni
+            </button>
+
+            {/* Close button */}
+            <button
+              onClick={handleClose}
+              className="shrink-0 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              title="Close search"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+        </div>
       )}
-
-      {/* Navigation arrows */}
-      {search && searchMatchCount > 0 && (
-        <>
-          <button
-            onClick={goToPrevMatch}
-            className="rounded p-0.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-            title="Previous match"
-          >
-            <ChevronUpIcon />
-          </button>
-          <button
-            onClick={goToNextMatch}
-            className="rounded p-0.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-            title="Next match"
-          >
-            <ChevronDownIcon />
-          </button>
-        </>
-      )}
-
-      {/* Close button */}
-      <button
-        onClick={handleClose}
-        className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-        title="Close search"
-      >
-        <CloseIcon />
-      </button>
     </div>
   );
 }
