@@ -107,6 +107,12 @@ function BaseContentInner({
   setActiveViewId: (id: string | null) => void;
 }) {
   const [isSideNavOpen, setIsSideNavOpen] = useState(true);
+  const [newlyCreatedTableId, setNewlyCreatedTableId] = useState<string | null>(
+    null,
+  );
+  const [newlyCreatedTableName, setNewlyCreatedTableName] = useState<
+    string | null
+  >(null);
   const dataGridRef = useRef<HTMLDivElement>(null);
   const { clearSelection } = useSelection();
 
@@ -208,11 +214,62 @@ function BaseContentInner({
   }, [baseId, activeTableId, activeViewId]);
 
   const createTableMutation = api.table.create.useMutation({
-    onSuccess: (newTable) => {
-      // Refetch tables to include the new one
+    onMutate: async (variables) => {
+      // Cancel outgoing refetches
+      await utils.table.getAllByBase.cancel({ baseId });
+
+      // Snapshot previous data
+      const previousTables = utils.table.getAllByBase.getData({ baseId });
+
+      // Generate a temporary ID for optimistic update
+      const tempId = `temp-${Date.now()}`;
+      const optimisticTable = {
+        id: tempId,
+        name: variables.name,
+        baseId: variables.baseId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // Optimistically add the new table to the cache
+      utils.table.getAllByBase.setData({ baseId }, (old) => {
+        if (!old) return [optimisticTable];
+        return [...old, optimisticTable];
+      });
+
+      // DO NOT select the table yet - wait for user to name it or cancel
+      // Just track it for the modal
+      setNewlyCreatedTableId(tempId);
+      setNewlyCreatedTableName(variables.name);
+
+      return { previousTables, tempId, previousActiveTableId: activeTableId };
+    },
+    onSuccess: (newTable, _variables, context) => {
+      // Replace temp ID with real ID in cache
+      if (context?.tempId) {
+        utils.table.getAllByBase.setData({ baseId }, (old) => {
+          if (!old) return [newTable];
+          return old.map((table) =>
+            table.id === context.tempId ? newTable : table,
+          );
+        });
+
+        // Update tracked table ID to real ID
+        setNewlyCreatedTableId(newTable.id);
+      }
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousTables) {
+        utils.table.getAllByBase.setData({ baseId }, context.previousTables);
+      }
+      // Clear newly created table tracking on error
+      setNewlyCreatedTableId(null);
+      setNewlyCreatedTableName(null);
+    },
+    onSettled: () => {
+      // Sync with server
       void utils.table.getAllByBase.invalidate({ baseId });
-      // Select the newly created table
-      setActiveTableId(newTable.id);
     },
   });
 
@@ -230,9 +287,14 @@ function BaseContentInner({
         return old.map((table) =>
           table.id === variables.id
             ? { ...table, name: variables.name }
-            : table
+            : table,
         );
       });
+
+      // If we're renaming the newly created table, update the tracked name
+      if (variables.id === newlyCreatedTableId) {
+        setNewlyCreatedTableName(variables.name);
+      }
 
       return { previousTables };
     },
@@ -263,8 +325,14 @@ function BaseContentInner({
       });
 
       // If the deleted table was active, select another table
-      if (variables.id === activeTableId && previousTables && previousTables.length > 1) {
-        const remainingTables = previousTables.filter((t) => t.id !== variables.id);
+      if (
+        variables.id === activeTableId &&
+        previousTables &&
+        previousTables.length > 1
+      ) {
+        const remainingTables = previousTables.filter(
+          (t) => t.id !== variables.id,
+        );
         if (remainingTables.length > 0) {
           setActiveTableId(remainingTables[0]!.id);
         }
@@ -306,6 +374,16 @@ function BaseContentInner({
     deleteTableMutation.mutate({ id: tableId });
   };
 
+  const handleClearNewTable = () => {
+    // When modal is closed (either by save or cancel), select the newly created table
+    if (newlyCreatedTableId) {
+      setActiveTableId(newlyCreatedTableId);
+    }
+    // Clear the tracking state
+    setNewlyCreatedTableId(null);
+    setNewlyCreatedTableName(null);
+  };
+
   const toggleSideNav = () => {
     setIsSideNavOpen((prev) => !prev);
   };
@@ -343,6 +421,9 @@ function BaseContentInner({
           onAddTable={handleAddTable}
           onRenameTable={handleRenameTable}
           onDeleteTable={handleDeleteTable}
+          newTableId={newlyCreatedTableId}
+          newTableName={newlyCreatedTableName}
+          onClearNewTable={handleClearNewTable}
         />
 
         {/* ViewConfigProvider wraps toolbar + sidebar + grid */}

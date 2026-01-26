@@ -75,7 +75,7 @@ export function Modal({
         className={`relative ${sizeClasses[size]} rounded-lg border border-gray-200 bg-white shadow-xl`}
       >
         {/* Header */}
-        {(title || showCloseButton) && (
+        {(title ?? showCloseButton) && (
           <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
             {title && (
               <h2 className="text-base font-semibold text-gray-900">{title}</h2>
@@ -140,10 +140,8 @@ export function Button({
   disabled = false,
 }: ButtonProps) {
   const variantClasses = {
-    primary:
-      "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300",
-    secondary:
-      "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300",
+    primary: "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300",
+    secondary: "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300",
     danger: "bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300",
   };
 

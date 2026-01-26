@@ -29,7 +29,7 @@ export function TableMenu({
   menuRef,
 }: TableMenuProps) {
   console.log("TableMenu render - isOpen:", isOpen, "position:", position);
-  
+
   if (!isOpen) return null;
 
   return (

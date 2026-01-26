@@ -4,7 +4,7 @@
   --font-sans:
     var(--font-inter), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  
+
   /* Custom z-index values for modals and dropdowns */
   --z-90: 90;
   --z-100: 100;

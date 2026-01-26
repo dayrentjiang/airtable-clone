@@ -25,7 +25,12 @@ export function RenameTableModal({
 
   // Reset state when dropdown opens
   useEffect(() => {
-    console.log("RenameTableModal useEffect - isOpen:", isOpen, "currentName:", currentName);
+    console.log(
+      "RenameTableModal useEffect - isOpen:",
+      isOpen,
+      "currentName:",
+      currentName,
+    );
     if (isOpen) {
       setName(currentName);
       setTimeout(() => {

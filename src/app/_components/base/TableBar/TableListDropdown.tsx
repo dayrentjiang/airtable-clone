@@ -147,15 +147,23 @@ export function TableListDropdown({
                   </span>
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                  <button
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={(e) => {
                       e.stopPropagation();
                       // TODO: Implement hide table
                     }}
-                    className="rounded p-1 hover:bg-gray-200"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.stopPropagation();
+                        // TODO: Implement hide table
+                      }
+                    }}
+                    className="cursor-pointer rounded p-1 hover:bg-gray-200"
                   >
                     <EyeOff className="h-3.5 w-3.5 text-gray-500" />
-                  </button>
+                  </div>
                 </div>
               </button>
             );
