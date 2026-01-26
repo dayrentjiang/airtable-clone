@@ -36,7 +36,7 @@ export function CreateViewModal({
       <div className="fixed inset-0 z-40" onClick={onCancel} />
 
       {/* Modal positioned next to sidebar */}
-      <div className="fixed left-76 top-16 z-50 flex h-full items-start justify-start pl-8 pt-20">
+      <div className="fixed top-16 left-76 z-50 flex h-full items-start justify-start pt-20 pl-8">
         <div className="w-md rounded-lg border border-gray-200 bg-white p-6 shadow-xl">
           {/* View Name Input */}
           <div className="mb-5">
@@ -52,7 +52,7 @@ export function CreateViewModal({
                   onCancel();
                 }
               }}
-              className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
               placeholder="Enter view name"
             />
           </div>

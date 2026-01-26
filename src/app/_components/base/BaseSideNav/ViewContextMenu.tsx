@@ -46,7 +46,7 @@ export function ViewContextMenu({
         disabled
       >
         <Star className="h-4 w-4" />
-        <span>Add to 'My favorites'</span>
+        <span>Add to &apos;My favorites&apos;</span>
       </button>
 
       <button

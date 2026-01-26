@@ -84,10 +84,13 @@ export function BaseSideNav({
 
       // Optimistically update the individual view cache (for toolbar)
       if (previousView) {
-        utils.view.getById.setData({ id: newData.id }, {
-          ...previousView,
-          name: newData.name,
-        });
+        utils.view.getById.setData(
+          { id: newData.id },
+          {
+            ...previousView,
+            name: newData.name,
+          },
+        );
       }
 
       // Return a context object with the snapshotted values
@@ -102,10 +105,7 @@ export function BaseSideNav({
         );
       }
       if (context?.previousView) {
-        utils.view.getById.setData(
-          { id: newData.id },
-          context.previousView,
-        );
+        utils.view.getById.setData({ id: newData.id }, context.previousView);
       }
     },
     onSettled: (_, __, variables) => {
