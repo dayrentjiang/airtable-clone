@@ -292,7 +292,12 @@ export function EditableCell({
       e.preventDefault();
       handleCancel();
     } else if (e.key === "Tab") {
-      handleSave();
+      e.preventDefault();
+      if (e.shiftKey) {
+        handleSaveAndNavigate("left");
+      } else {
+        handleSaveAndNavigate("right");
+      }
     }
     // Arrow keys now just move cursor within input, no navigation
   };
