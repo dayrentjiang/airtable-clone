@@ -102,6 +102,29 @@ export const tableRouter = createTRPCRouter({
       return table;
     }),
 
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const table = await ctx.db.table.findFirst({
+        where: { id: input.id },
+        include: { base: { include: { workspace: true } } },
+      });
+
+      if (!table || table.base.workspace.userId !== ctx.session.user.id) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Table not found" });
+      }
+
+      return ctx.db.table.update({
+        where: { id: input.id },
+        data: { name: input.name },
+      });
+    }),
+
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
