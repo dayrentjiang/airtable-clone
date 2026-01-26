@@ -4,6 +4,14 @@ import { Plus } from "lucide-react";
 import { api } from "~/trpc/react";
 import { generateRowId } from "~/lib/id-generator";
 import { useSelection } from "./hooks/useSelection";
+import { useViewConfig } from "../hooks/useViewConfig";
+import { useMemo } from "react";
+
+// Page size constant (must match DataGrid)
+const PAGE_SIZE = 150;
+
+// Operators that don't require a value
+const NO_VALUE_OPERATORS = ["is_empty", "is_not_empty"];
 
 interface AddRowButtonProps {
   tableId: string;
@@ -13,26 +21,43 @@ interface AddRowButtonProps {
 export function AddRowButton({ tableId, viewId }: AddRowButtonProps) {
   const utils = api.useUtils();
   const { selectCell } = useSelection();
+  const { filters, sorts, search } = useViewConfig();
+
+  // Filter out incomplete filters (must match DataGrid logic)
+  const completeFilters = useMemo(() => {
+    return filters.filter((f) => {
+      if (NO_VALUE_OPERATORS.includes(f.operator)) {
+        return true;
+      }
+      return f.value !== undefined && f.value !== null && f.value !== "";
+    });
+  }, [filters]);
 
   const createRow = api.row.create.useMutation({
     // Optimistic update: Add row to UI immediately
     onMutate: async (newRow) => {
       if (viewId) {
-        // Cancel any outgoing refetches
-        await utils.row.infiniteWithView.cancel({ tableId, viewId });
-
-        // Snapshot the previous value
-        const previousData = utils.row.infiniteWithView.getInfiniteData({
+        // Build the exact query params that DataGrid uses
+        const queryParams = {
           tableId,
           viewId,
-          limit: 150,
-        });
+          limit: PAGE_SIZE,
+          search: search || undefined,
+          filters: completeFilters.length > 0 ? completeFilters : [],
+          sorts: sorts.length > 0 ? sorts : [],
+        };
+
+        // Cancel any outgoing refetches
+        await utils.row.infiniteWithView.cancel(queryParams);
+
+        // Snapshot the previous value
+        const previousData = utils.row.infiniteWithView.getInfiniteData(queryParams);
 
         let newRowIndex = 0;
 
         // Optimistically update the infinite query data
         utils.row.infiniteWithView.setInfiniteData(
-          { tableId, viewId, limit: 150 },
+          queryParams,
           (old) => {
             if (!old) return old;
 
@@ -67,30 +92,24 @@ export function AddRowButton({ tableId, viewId }: AddRowButtonProps) {
         );
 
         // Select the first cell of the new row (column index 1, skip row number column)
-        // Use the index we calculated during the update
         selectCell({ rowIndex: newRowIndex, columnIndex: 1 });
 
-        return { previousData };
+        return { previousData, queryParams };
       }
       return {};
     },
 
-    // On error: rollback to previous state and refetch
+    // On error: rollback to previous state
     onError: (_err, _newRow, context) => {
-      if (viewId && context?.previousData) {
+      if (viewId && context?.previousData && context?.queryParams) {
         utils.row.infiniteWithView.setInfiniteData(
-          { tableId, viewId, limit: 150 },
+          context.queryParams,
           context.previousData,
         );
       }
-      // Only invalidate on error to get correct server state
-      if (viewId) {
-        void utils.row.infiniteWithView.invalidate({ tableId, viewId });
-      }
     },
 
-    // No onSettled invalidation needed - optimistic update uses client-generated ID
-    // which the server accepts, so the data is already correct
+    // No onSettled needed - optimistic update uses client-generated ID
   });
 
   const handleAddRow = () => {
