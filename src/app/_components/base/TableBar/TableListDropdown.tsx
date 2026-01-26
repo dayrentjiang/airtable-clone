@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Check, EyeOff, Plus } from "lucide-react";
+import {
+  Search,
+  Check,
+  EyeOff,
+  Plus,
+  ChevronRight,
+  MoreVertical,
+} from "lucide-react";
 import type { TableType } from "./types";
 import { AddTableModal } from "./AddTableModal";
 
@@ -95,8 +102,15 @@ export function TableListDropdown({
   if (!isOpen) return null;
 
   const anchorRect = anchorRef.current?.getBoundingClientRect();
+  const dropdownWidth = 288; // w-72 = 18rem = 288px
   const top = anchorRect ? anchorRect.bottom + 4 : 0;
-  const left = anchorRect ? anchorRect.left - 100 : 0;
+
+  // Calculate left position: prefer left side, fall back to right if no space
+  let left = 0;
+  if (anchorRect) {
+    const leftPosition = anchorRect.right - dropdownWidth;
+    left = leftPosition >= 0 ? leftPosition : anchorRect.left;
+  }
 
   return (
     <>
@@ -108,33 +122,33 @@ export function TableListDropdown({
       />
       <div
         ref={dropdownRef}
-        className="fixed z-100 w-64 rounded-lg border border-gray-200 bg-white shadow-lg"
+        className="fixed z-100 w-lg rounded-lg border border-gray-200 bg-white py-2 shadow-lg"
         style={{ top, left }}
       >
         {/* Search input */}
-        <div className="border-b border-gray-200 p-2">
-          <div className="flex items-center gap-2 rounded-md border border-gray-300 px-2 py-1.5">
-            <Search className="h-4 w-4 text-gray-400" />
+        <div className="px-4 pb-2">
+          <div className="flex items-center gap-4 border-b border-gray-300 py-3">
+            <Search className="ml-2 h-4 w-4 text-gray-400" />
             <input
               ref={inputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Find a table"
-              className="flex-1 border-none bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
+              className="flex-1 border-none bg-transparent text-xs text-gray-900 outline-none placeholder:text-gray-400"
             />
           </div>
         </div>
 
         {/* Table list */}
-        <div className="max-h-64 overflow-y-auto py-1">
+        <div className="max-h-screen overflow-y-auto px-4">
           {filteredTables.map((table) => {
             const isActive = table.id === activeTableId;
             return (
               <button
                 key={table.id}
                 onClick={() => handleTableClick(table.id)}
-                className="group flex w-full items-center justify-between px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                className={`group flex w-full items-center justify-between px-4 py-1.5 text-left text-sm font-semibold text-gray-700 hover:bg-gray-100 ${isActive ? "bg-gray-100" : ""}`}
               >
                 <div className="flex items-center gap-2">
                   {isActive ? (
@@ -142,9 +156,7 @@ export function TableListDropdown({
                   ) : (
                     <div className="h-4 w-4" />
                   )}
-                  <span className={isActive ? "font-medium" : ""}>
-                    {table.name}
-                  </span>
+                  <span>{table.name}</span>
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
                   <div
@@ -162,7 +174,24 @@ export function TableListDropdown({
                     }}
                     className="cursor-pointer rounded p-1 hover:bg-gray-200"
                   >
-                    <EyeOff className="h-3.5 w-3.5 text-gray-500" />
+                    <EyeOff className="h-4 w-4 text-gray-500" />
+                  </div>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // TODO: Implement more options
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.stopPropagation();
+                        // TODO: Implement more options
+                      }
+                    }}
+                    className="cursor-pointer rounded p-1 hover:bg-gray-200"
+                  >
+                    <MoreVertical className="h-4 w-4 text-gray-500" />
                   </div>
                 </div>
               </button>
@@ -170,21 +199,24 @@ export function TableListDropdown({
           })}
 
           {filteredTables.length === 0 && (
-            <div className="px-3 py-2 text-sm text-gray-500">
+            <div className="px-4 py-2 text-sm text-gray-500">
               No tables found
             </div>
           )}
         </div>
 
         {/* Add table */}
-        <div className="border-t border-gray-200 py-1">
+        <div className="border-t border-gray-200 px-4 pt-2">
           <button
             ref={addButtonRef}
             onClick={handleAddTableClick}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+            className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
           >
-            <Plus className="h-4 w-4" />
-            <span>Add table</span>
+            <div className="flex items-center gap-3">
+              <Plus className="h-4 w-4" />
+              <span>Add table</span>
+            </div>
+            <ChevronRight className="h-4 w-4 text-gray-400" />
           </button>
         </div>
       </div>

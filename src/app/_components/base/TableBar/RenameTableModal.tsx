@@ -92,8 +92,23 @@ export function RenameTableModal({
   if (!isOpen) return null;
 
   const anchorRect = anchorRef.current?.getBoundingClientRect();
+  const modalWidth = 320; // w-80 = 20rem = 320px
   const top = anchorRect ? anchorRect.bottom + 4 : 0;
-  const left = anchorRect ? anchorRect.left : 0;
+
+  // Calculate left position: prefer left side, fall back to right if no space
+  let left = 0;
+  if (anchorRect) {
+    // Try to position on the left: modal's left edge = anchor's right edge - modal width
+    const leftPosition = anchorRect.right - modalWidth;
+
+    if (leftPosition >= 0) {
+      // Enough space on the left
+      left = leftPosition;
+    } else {
+      // Not enough space on left, position on the right
+      left = anchorRect.left;
+    }
+  }
 
   return (
     <div
