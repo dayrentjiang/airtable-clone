@@ -102,8 +102,11 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       limit: PAGE_SIZE,
       // Pass live config to query - these override saved view config
       search: search || undefined, // Global text search
-      filters: completeFilters.length > 0 ? completeFilters : undefined, // Only complete filters
-      sorts: sorts.length > 0 ? sorts : undefined, // Column sorts
+      // IMPORTANT: Always pass filters array (even if empty) to ensure query key changes
+      // when filters are added/removed. Using undefined for both "no filters" and
+      // "filters removed" causes React Query to not refetch.
+      filters: completeFilters.length > 0 ? completeFilters : [],
+      sorts: sorts.length > 0 ? sorts : [], // Same for sorts
     },
     {
       // CRITICAL: Don't run query until config has loaded from DB
@@ -113,9 +116,8 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       refetchOnMount: false, // Don't refetch on mount - use cached data
       refetchOnWindowFocus: false,
       staleTime: 0, // Always consider data stale - refetch when query key changes
-      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-      // Keep previous data while fetching new data (smooth transitions)
-      placeholderData: (previousData) => previousData,
+      gcTime: 0, // Don't cache - prevents showing old cached data when filters change
+      // This eliminates jittering by ensuring we only show fresh data for each query
     },
   );
 
@@ -401,8 +403,8 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
           tableWidth={tableWidth}
           rowsByIndex={rowsByIndex}
           totalCount={totalCount}
-          filters={completeFilters}
-          sorts={sorts}
+          filters={highlightFilters}
+          sorts={highlightSorts}
         />
         <AddColumnButton tableId={tableId} />
       </div>
