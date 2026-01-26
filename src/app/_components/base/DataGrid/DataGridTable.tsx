@@ -16,6 +16,8 @@ interface DataGridTableProps {
   paddingBottom: number;
   columnCount: number;
   tableWidth: number;
+  rowsByIndex: Map<number, RowData>; // Map of loaded rows by index
+  totalCount: number; // Total rows in database (for scrollbar sizing)
 }
 
 export function DataGridTable({
@@ -90,8 +92,6 @@ export function DataGridTable({
             <td style={{ height: `${paddingBottom}px` }} />
           </tr>
         )}
-
-        {/* Loading indicator removed - background fetching is silent for seamless UX */}
 
         {/* Add row button */}
         <tr>

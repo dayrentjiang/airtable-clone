@@ -13,6 +13,9 @@ import { CellContextMenu } from "./DataGrid/CellContextMenu";
 import { ColumnHeaderContextMenu } from "./DataGrid/ColumnHeaderContextMenu";
 import { useContextMenu } from "./DataGrid/hooks/useContextMenu";
 
+// Page size for fetching data
+const PAGE_SIZE = 150;
+
 // Re-export SelectionProvider and ContextMenuProvider for use in parent components
 export { SelectionProvider, useSelection } from "./DataGrid/hooks/useSelection";
 export { ContextMenuProvider } from "./DataGrid/hooks/useContextMenu";
@@ -93,7 +96,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     {
       tableId,
       viewId,
-      limit: 150,
+      limit: PAGE_SIZE,
       // Pass live config to query - these override saved view config
       search: search || undefined, // Global text search
       filters: completeFilters.length > 0 ? completeFilters : undefined, // Only complete filters
@@ -113,8 +116,10 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     },
   );
 
+  // Get total count from first page (all pages return the same totalCount)
+  const totalCount = data?.pages[0]?.totalCount ?? 0;
+
   // Flatten all pages into a single array of rows
-  // TODO: Implement sliding window to cap memory (keep only ~3-5 pages around viewport)
   const rows = useMemo(() => {
     return (data?.pages.flatMap((page) => page.items) ?? []) as RowData[];
   }, [data]);
@@ -179,9 +184,13 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
 
   const { rows: tableRows } = tableInstance.getRowModel();
 
-  // Virtual scrolling setup with optimized overscan for production
+  // Virtual scrolling setup - use totalCount to reflect true table size
+  // This makes the scrollbar represent all rows, not just loaded ones
+  // Use Math.max to handle optimistic updates where rows.length may exceed totalCount
+  const virtualRowCount = Math.max(totalCount, tableRows.length);
+
   const rowVirtualizer = useVirtualizer({
-    count: tableRows.length,
+    count: virtualRowCount,
     getScrollElement: () => tableContainerRef.current,
     estimateSize: () => 35,
     overscan: 50, // 50 rows overscan - optimal for smooth fast scrolling
@@ -193,6 +202,38 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
 
   const virtualRows = rowVirtualizer.getVirtualItems();
   const totalSize = rowVirtualizer.getTotalSize();
+
+  // Build a map of rows by index for quick lookup
+  const rowsByIndex = useMemo(() => {
+    const map = new Map<number, RowData>();
+    rows.forEach((row, index) => {
+      map.set(index, row);
+    });
+    return map;
+  }, [rows]);
+
+  // -------------------------------------------------------------------------
+  // CLAMP SCROLL POSITION TO LOADED DATA
+  // -------------------------------------------------------------------------
+  // The scrollbar reflects total rows, but we limit scrolling to loaded data only
+  // This prevents scrolling into unloaded regions while keeping correct scrollbar size
+  const maxScrollableRow = rows.length;
+  const maxScrollTop = maxScrollableRow * 35; // 35px per row estimate
+
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container || maxScrollableRow === 0) return;
+
+    const handleScrollClamp = () => {
+      // If user tries to scroll past loaded data, clamp them back
+      if (container.scrollTop > maxScrollTop) {
+        container.scrollTop = maxScrollTop;
+      }
+    };
+
+    container.addEventListener("scroll", handleScrollClamp, { passive: false });
+    return () => container.removeEventListener("scroll", handleScrollClamp);
+  }, [maxScrollTop, maxScrollableRow]);
 
   // -------------------------------------------------------------------------
   // RESTORE SCROLL POSITION FROM LOCALSTORAGE
@@ -253,13 +294,14 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   // -------------------------------------------------------------------------
   // PREFETCH NEXT PAGE
   // -------------------------------------------------------------------------
-  // Prefetch when user is 70 rows from end (with 150 rows/page)
+  // Prefetch when user is near the end of loaded data
   useEffect(() => {
     const lastItem = virtualRows[virtualRows.length - 1];
     if (!lastItem) return;
 
+    // Prefetch when near the end of loaded data
     if (
-      lastItem.index >= tableRows.length - 70 &&
+      lastItem.index >= rows.length - 70 &&
       hasNextPage &&
       !isFetchingNextPage
     ) {
@@ -267,7 +309,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     }
   }, [
     virtualRows,
-    tableRows.length,
+    rows.length,
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
@@ -354,6 +396,8 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
           paddingBottom={paddingBottom}
           columnCount={columns.length}
           tableWidth={tableWidth}
+          rowsByIndex={rowsByIndex}
+          totalCount={totalCount}
         />
         <AddColumnButton tableId={tableId} />
       </div>

@@ -76,10 +76,11 @@ export const rowRouter = createTRPCRouter({
         search: z.string().optional(), // Global search across all columns
         limit: z.number().min(1).max(150).default(50),
         cursor: z.string().nullish(), // Cursor-based pagination
+        offset: z.number().optional(), // Offset-based pagination (for virtual scrolling jumps)
       }),
     )
     .query(async ({ ctx, input }) => {
-      const { tableId, viewId, filters, sorts, search, limit, cursor } = input;
+      const { tableId, viewId, filters, sorts, search, limit, cursor, offset } = input;
 
       // Verify table ownership
       const table = await ctx.db.table.findFirst({
@@ -152,7 +153,8 @@ export const rowRouter = createTRPCRouter({
       // Build ORDER BY
       const orderBy = buildSortClause(activeSorts, columnTypes);
 
-      // Add cursor condition if provided
+      // Add cursor condition if provided (cursor takes precedence over offset)
+      let useOffset = false;
       if (cursor) {
         // Get the cursor row's order value for pagination
         const cursorRow = await ctx.db.row.findUnique({
@@ -162,10 +164,32 @@ export const rowRouter = createTRPCRouter({
         if (cursorRow) {
           whereClause = Prisma.sql`${whereClause} AND "order" > ${cursorRow.order}`;
         }
+      } else if (offset !== undefined && offset > 0) {
+        // Use offset-based pagination for virtual scrolling jumps
+        useOffset = true;
       }
 
-      // Get rows with cursor-based pagination (fetch limit + 1 to check if there's more)
-      const rowsQuery = Prisma.sql`SELECT * FROM "Row" WHERE ${whereClause} ORDER BY ${orderBy} LIMIT ${limit + 1}`;
+      // Build base WHERE clause (without cursor) for counting
+      let baseWhereClause: Prisma.Sql;
+      if (filterConditions.length === 0) {
+        baseWhereClause = Prisma.sql`"tableId" = ${tableId}`;
+      } else {
+        baseWhereClause = Prisma.sql`"tableId" = ${tableId}`;
+        for (const condition of filterConditions) {
+          baseWhereClause = Prisma.sql`${baseWhereClause} AND ${condition}`;
+        }
+      }
+
+      // Get total count (without cursor/limit) - this tells us total matching rows
+      const countQuery = Prisma.sql`SELECT COUNT(*)::int as count FROM "Row" WHERE ${baseWhereClause}`;
+      const countResult = await ctx.db.$queryRaw<[{ count: number }]>(countQuery);
+      const totalCount = countResult[0]?.count ?? 0;
+
+      // Get rows with pagination (fetch limit + 1 to check if there's more)
+      // Use offset-based pagination when jumping to a position, cursor-based otherwise
+      const rowsQuery = useOffset
+        ? Prisma.sql`SELECT * FROM "Row" WHERE ${whereClause} ORDER BY ${orderBy} LIMIT ${limit + 1} OFFSET ${offset}`
+        : Prisma.sql`SELECT * FROM "Row" WHERE ${whereClause} ORDER BY ${orderBy} LIMIT ${limit + 1}`;
 
       const rows = await ctx.db.$queryRaw<
         Array<{
@@ -188,6 +212,9 @@ export const rowRouter = createTRPCRouter({
       return {
         items: rows,
         nextCursor,
+        totalCount,
+        // Return the offset that was used (0 if cursor-based or first page)
+        offset: useOffset ? offset! : 0,
       };
     }),
 
