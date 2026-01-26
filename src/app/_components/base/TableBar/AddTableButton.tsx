@@ -143,7 +143,7 @@ export function AddTableButton({
             // Clear the newly created table tracking after saving
             onClearNewTable?.();
           }}
-          currentName={newTableName || "Table 1"}
+          currentName={newTableName ?? "Table 1"}
           anchorRef={buttonRef}
         />
       )}
