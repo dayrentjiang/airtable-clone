@@ -368,7 +368,7 @@ export function EditableCell({
         {/* Editing border - matches selection border exactly */}
         <div className="pointer-events-none absolute -inset-1 z-20 rounded-sm border-3 border-blue-600"></div>
         {/* Input */}
-        <div className="absolute inset-0 z-10 overflow-hidden">
+        <div className="absolute inset-0 z-10 flex items-center overflow-hidden">
           <input
             ref={inputRef}
             type="text"
@@ -396,7 +396,7 @@ export function EditableCell({
             }}
             onKeyDown={handleInputKeyDown}
             onBlur={handleBlur}
-            className="h-full w-full bg-white px-2 py-1 text-sm outline-none"
+            className="h-full w-full bg-white px-2 text-sm outline-none"
             placeholder={
               columnType === "NUMBER" ? "Enter number..." : "Enter text..."
             }
@@ -422,7 +422,7 @@ export function EditableCell({
         {/* Content */}
         <div
           ref={cellRef}
-          className={`absolute inset-0 cursor-default overflow-hidden px-2 py-1 ${highlightClass}`}
+          className={`absolute inset-0 flex items-center cursor-default overflow-hidden px-2 ${highlightClass}`}
           onMouseDown={handleMouseDown}
           onDoubleClick={handleDoubleClick}
           onContextMenu={handleContextMenu}
@@ -442,7 +442,7 @@ export function EditableCell({
       onMouseDown={handleMouseDown}
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
-      className={`absolute inset-0 cursor-default overflow-hidden px-2 py-1 ${highlightClass}`}
+      className={`absolute inset-0 flex items-center cursor-default overflow-hidden px-2 ${highlightClass}`}
     >
       <span className="pointer-events-none block truncate text-sm text-gray-900">
         {formattedDisplayValue || <span className="text-gray-400"></span>}
