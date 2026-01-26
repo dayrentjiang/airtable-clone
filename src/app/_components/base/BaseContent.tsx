@@ -30,6 +30,7 @@ function ViewConfigContent({
   dataGridRef,
   activeViewId,
   setActiveViewId,
+  onViewSelect,
 }: {
   onToggleSideNav: () => void;
   tableId: string;
@@ -38,6 +39,7 @@ function ViewConfigContent({
   dataGridRef: React.RefObject<HTMLDivElement | null>;
   activeViewId: string | null;
   setActiveViewId: (id: string | null) => void;
+  onViewSelect: (viewId: string) => void;
 }) {
   const { isConfigLoaded } = useViewConfig();
 
@@ -68,7 +70,12 @@ function ViewConfigContent({
   // Config loaded - render toolbar and grid
   return (
     <>
-      <ViewToolbar onToggleSideNav={onToggleSideNav} tableId={tableId} />
+      <ViewToolbar
+        onToggleSideNav={onToggleSideNav}
+        tableId={tableId}
+        viewId={viewId}
+        onViewSelect={onViewSelect}
+      />
 
       {/* Content area with side nav and grid */}
       <div className="flex flex-1 overflow-hidden">
@@ -437,6 +444,7 @@ function BaseContentInner({
               dataGridRef={dataGridRef}
               activeViewId={activeViewId}
               setActiveViewId={setActiveViewId}
+              onViewSelect={setActiveViewId}
             />
           </ViewConfigProvider>
         ) : (
