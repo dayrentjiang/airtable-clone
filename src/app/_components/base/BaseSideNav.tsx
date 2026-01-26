@@ -181,7 +181,7 @@ export function BaseSideNav({
   }, [isModalOpen]);
 
   return (
-    <aside className="flex w-76 flex-col border-r border-gray-200 bg-gray-50/50">
+    <aside className="flex w-70 flex-col border-r border-gray-200 bg-gray-50/50">
       {/* Top section */}
       <div className="flex-1 p-3">
         {/* Create new */}
