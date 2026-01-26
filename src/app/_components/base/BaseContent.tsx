@@ -216,11 +216,94 @@ function BaseContentInner({
     },
   });
 
+  const renameTableMutation = api.table.update.useMutation({
+    onMutate: async (variables) => {
+      // Cancel outgoing refetches
+      await utils.table.getAllByBase.cancel({ baseId });
+
+      // Snapshot previous data
+      const previousTables = utils.table.getAllByBase.getData({ baseId });
+
+      // Optimistically update the cache
+      utils.table.getAllByBase.setData({ baseId }, (old) => {
+        if (!old) return old;
+        return old.map((table) =>
+          table.id === variables.id
+            ? { ...table, name: variables.name }
+            : table
+        );
+      });
+
+      return { previousTables };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousTables) {
+        utils.table.getAllByBase.setData({ baseId }, context.previousTables);
+      }
+    },
+    onSettled: () => {
+      // Sync with server
+      void utils.table.getAllByBase.invalidate({ baseId });
+    },
+  });
+
+  const deleteTableMutation = api.table.delete.useMutation({
+    onMutate: async (variables) => {
+      // Cancel outgoing refetches
+      await utils.table.getAllByBase.cancel({ baseId });
+
+      // Snapshot previous data
+      const previousTables = utils.table.getAllByBase.getData({ baseId });
+
+      // Optimistically update the cache - remove the deleted table
+      utils.table.getAllByBase.setData({ baseId }, (old) => {
+        if (!old) return old;
+        return old.filter((table) => table.id !== variables.id);
+      });
+
+      // If the deleted table was active, select another table
+      if (variables.id === activeTableId && previousTables && previousTables.length > 1) {
+        const remainingTables = previousTables.filter((t) => t.id !== variables.id);
+        if (remainingTables.length > 0) {
+          setActiveTableId(remainingTables[0]!.id);
+        }
+      }
+
+      return { previousTables };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousTables) {
+        utils.table.getAllByBase.setData({ baseId }, context.previousTables);
+      }
+    },
+    onSettled: () => {
+      // Sync with server
+      void utils.table.getAllByBase.invalidate({ baseId });
+    },
+  });
+
   const handleAddTable = (name: string) => {
     createTableMutation.mutate({
       baseId,
       name,
     });
+  };
+
+  const handleRenameTable = (tableId: string, newName: string) => {
+    renameTableMutation.mutate({
+      id: tableId,
+      name: newName,
+    });
+  };
+
+  const handleDeleteTable = (tableId: string) => {
+    // Don't allow deleting the last table
+    if (tables.length <= 1) {
+      return;
+    }
+    deleteTableMutation.mutate({ id: tableId });
   };
 
   const toggleSideNav = () => {
@@ -258,6 +341,8 @@ function BaseContentInner({
           activeTableId={activeTableId}
           onTableSelect={setActiveTableId}
           onAddTable={handleAddTable}
+          onRenameTable={handleRenameTable}
+          onDeleteTable={handleDeleteTable}
         />
 
         {/* ViewConfigProvider wraps toolbar + sidebar + grid */}

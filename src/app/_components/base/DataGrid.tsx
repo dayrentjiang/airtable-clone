@@ -4,18 +4,18 @@ import { useRef, useEffect, useMemo } from "react";
 import { useReactTable, getCoreRowModel } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { api } from "~/trpc/react";
-import { DataGridTable } from "./DataGridTable";
-import { AddColumnButton } from "./AddColumnButton";
-import { AddRowButton } from "./AddRowButton";
-import { useTableColumns, type RowData } from "./hooks/useTableColumns";
-import { useViewConfig } from "../hooks/useViewConfig";
-import { CellContextMenu } from "./CellContextMenu";
-import { ColumnHeaderContextMenu } from "./ColumnHeaderContextMenu";
-import { useContextMenu } from "./hooks/useContextMenu";
+import { DataGridTable } from "./DataGrid/DataGridTable";
+import { AddColumnButton } from "./DataGrid/AddColumnButton";
+import { AddRowButton } from "./DataGrid/AddRowButton";
+import { useTableColumns, type RowData } from "./DataGrid/hooks/useTableColumns";
+import { useViewConfig } from "./hooks/useViewConfig";
+import { CellContextMenu } from "./DataGrid/CellContextMenu";
+import { ColumnHeaderContextMenu } from "./DataGrid/ColumnHeaderContextMenu";
+import { useContextMenu } from "./DataGrid/hooks/useContextMenu";
 
 // Re-export SelectionProvider and ContextMenuProvider for use in parent components
-export { SelectionProvider, useSelection } from "./hooks/useSelection";
-export { ContextMenuProvider } from "./hooks/useContextMenu";
+export { SelectionProvider, useSelection } from "./DataGrid/hooks/useSelection";
+export { ContextMenuProvider } from "./DataGrid/hooks/useContextMenu";
 
 // Operators that don't require a value
 const NO_VALUE_OPERATORS = ["is_empty", "is_not_empty"];
