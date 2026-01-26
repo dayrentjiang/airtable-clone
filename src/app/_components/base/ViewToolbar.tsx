@@ -343,7 +343,7 @@ export function ViewToolbar({
               }}
               className="flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100 md:px-2.5"
             >
-              <TableCellsSplit size={16} />
+              <TableCellsSplit size={16} className="text-blue-600" />
               <span className="hidden md:inline">{viewName}</span>
               <ChevronDown size={14} />
             </button>
