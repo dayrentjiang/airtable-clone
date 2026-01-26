@@ -357,7 +357,7 @@ export function BaseSideNav({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleContextMenu(e as any, view.id, view.name);
+                      handleContextMenu(e, view.id, view.name);
                     }}
                     className="hidden rounded p-1 text-gray-500 group-hover:block hover:bg-gray-200"
                   >
@@ -529,7 +529,9 @@ export function BaseSideNav({
                 disabled
               >
                 <Star className="h-4 w-4 text-gray-400" />
-                <span className="text-gray-400">Add to 'My favorites'</span>
+                <span className="text-gray-400">
+                  Add to &apos;My favorites&apos;
+                </span>
               </button>
 
               <button
