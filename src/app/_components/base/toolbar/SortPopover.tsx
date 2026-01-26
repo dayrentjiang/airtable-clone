@@ -167,6 +167,11 @@ function SortRow({
         {isFirst ? "Sort by" : "then by"}
       </span>
 
+      {/* Column type indicator */}
+      <div className="flex h-7 w-6 shrink-0 items-center justify-center rounded border border-gray-300 bg-gray-50 text-xs font-medium text-gray-600">
+        {columnType === "NUMBER" ? "#" : "A"}
+      </div>
+
       {/* Column selector */}
       <div className="relative">
         <select
@@ -358,26 +363,26 @@ export function SortPopover({ tableId }: SortPopoverProps) {
       {isOpen && (
         <div
           ref={popoverRef}
-          className="absolute top-full left-0 z-50 mt-1 min-w-80 rounded-lg border border-gray-200 bg-white shadow-lg"
+          className="absolute top-full right-0 z-50 mt-1 min-w-80 rounded-lg border border-gray-200 bg-white shadow-lg"
         >
           {/* Header */}
-          <div className="border-b border-gray-100 px-4 py-3 text-xs text-gray-500">
+          <div className="border-b border-gray-100 px-4 py-4 text-xs text-gray-500">
             Sort by <span className="ml-1 text-gray-400">(?)</span>
           </div>
 
           {/* Content: Show column picker if no sorts, otherwise show sort rows */}
           {sorts.length === 0 ? (
             /* Column Picker - Show all columns when no sorts yet */
-            <div className="max-h-80 overflow-y-auto">
+            <div className="max-h-screen overflow-y-auto">
               {/* Search input */}
-              <div className="sticky top-0 bg-white px-4 py-2">
+              <div className="sticky top-0 bg-white px-1 py-2">
                 <div className="relative">
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Find a field"
-                    className="w-full rounded border border-gray-300 px-3 py-1.5 pl-8 text-xs placeholder-gray-400 focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded border-gray-300 px-3 py-1.5 pl-8 text-xs placeholder-gray-400 focus:border-blue-500 focus:outline-none"
                   />
                   <svg
                     className="absolute top-1/2 left-2.5 -translate-y-1/2 text-gray-400"
@@ -400,9 +405,11 @@ export function SortPopover({ tableId }: SortPopoverProps) {
                   <button
                     key={col.id}
                     onClick={() => handlePickColumn(col.id)}
-                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-100"
+                    className="flex w-full cursor-pointer items-center gap-3 rounded px-2 py-1.5 text-left text-[12px] text-gray-900 hover:bg-gray-100"
                   >
-                    <span className="text-gray-400">A</span>
+                    <span className="text-gray-500">
+                      {col.type === "NUMBER" ? "#" : "A"}
+                    </span>
                     <span>{col.name}</span>
                   </button>
                 ))}
@@ -478,7 +485,9 @@ export function SortPopover({ tableId }: SortPopoverProps) {
                             onClick={() => handlePickColumn(col.id)}
                             className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-100"
                           >
-                            <span className="text-gray-400">A</span>
+                            <span className="text-gray-400">
+                              {col.type === "NUMBER" ? "#" : "A"}
+                            </span>
                             <span>{col.name}</span>
                           </button>
                         ))}
