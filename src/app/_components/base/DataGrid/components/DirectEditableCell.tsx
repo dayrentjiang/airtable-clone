@@ -118,9 +118,12 @@ export function DirectEditableCell({
         }
       } else if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();
-        setValue("");
-        setValidationError(null);
-        startEditing({ rowIndex, columnIndex });
+        // Clear the cell value without entering editing mode
+        updateCellMutation.mutate({
+          rowId,
+          columnId,
+          value: null,
+        });
       }
     };
 
@@ -129,11 +132,29 @@ export function DirectEditableCell({
   }, [isSelected, isEditing, rowIndex, columnIndex, startEditing, columnType]);
 
   const updateCellMutation = api.row.updateCell.useMutation({
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches
+      await utils.row.infiniteWithView.cancel();
+
+      // Optimistically update the display value immediately
+      if (variables.columnId === columnId && variables.rowId === rowId) {
+        setDisplayValue(variables.value);
+        setValue(variables.value?.toString() ?? "");
+      }
+
+      // Return context for potential rollback
+      return { previousDisplayValue: displayValue };
+    },
     onSuccess: () => {
       void utils.row.infiniteWithView.invalidate({ tableId });
     },
-    onError: (err) => {
+    onError: (err, _variables, context) => {
       console.error("Failed to update cell:", err);
+      // Revert to original value on error
+      if (context?.previousDisplayValue !== undefined) {
+        setDisplayValue(context.previousDisplayValue);
+        setValue(context.previousDisplayValue?.toString() ?? "");
+      }
     },
   });
 
