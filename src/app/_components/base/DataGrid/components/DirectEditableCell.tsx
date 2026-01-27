@@ -56,6 +56,8 @@ export function DirectEditableCell({
     startEditing,
     stopEditing,
     selectedRowIds,
+    totalRows,
+    totalColumns,
   } = useSelection();
 
   const isSelected = checkIsSelected(rowIndex, columnIndex);
@@ -204,10 +206,22 @@ export function DirectEditableCell({
         newRow = rowIndex + 1;
         break;
       case "left":
-        newCol = Math.max(1, columnIndex - 1);
+        // Move left, or up and to last column
+        if (columnIndex > 1) {
+          newCol = columnIndex - 1;
+        } else if (rowIndex > 0) {
+          newRow = rowIndex - 1;
+          newCol = totalColumns - 1;
+        }
         break;
       case "right":
-        newCol = columnIndex + 1;
+        // Move right, or down and to first data column
+        if (columnIndex < totalColumns - 1) {
+          newCol = columnIndex + 1;
+        } else if (rowIndex < totalRows - 1) {
+          newRow = rowIndex + 1;
+          newCol = 1; // First data column (skip row number)
+        }
         break;
     }
 

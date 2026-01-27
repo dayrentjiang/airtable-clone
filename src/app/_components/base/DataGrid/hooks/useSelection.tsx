@@ -34,6 +34,8 @@ interface SelectionContextValue {
   selectedRows: Set<number>; // Row indices for UI highlighting
   selectedRowIds: Set<string>; // Row IDs for operations like delete
   selectedColumns: Set<number>;
+  totalRows: number;
+  totalColumns: number;
 }
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
@@ -334,6 +336,8 @@ export function SelectionProvider({
         selectedRows,
         selectedRowIds,
         selectedColumns,
+        totalRows,
+        totalColumns,
       }}
     >
       {children}

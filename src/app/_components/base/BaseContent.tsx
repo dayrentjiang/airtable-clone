@@ -484,20 +484,40 @@ export function BaseContent({ baseId, userInitial }: BaseContentProps) {
   const [activeTableId, setActiveTableId] = useState<string | null>(null);
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
 
-  // Fetch views to get the total row/column count for SelectionProvider
-  const { data: views } = api.view.getByTableId.useQuery(
-    { tableId: activeTableId! },
+  // Fetch table to get the column count
+  const { data: table } = api.table.getById.useQuery(
+    { id: activeTableId! },
     {
       enabled: !!activeTableId,
       refetchOnMount: true,
       refetchOnWindowFocus: false,
-      staleTime: 0, // Always refetch
-      gcTime: 0, // Don't cache
     },
   );
 
+  // Fetch row count for the active view
+  const { data: rowData } = api.row.infiniteWithView.useQuery(
+    {
+      tableId: activeTableId!,
+      viewId: activeViewId!,
+      filters: [],
+      sorts: [],
+      offset: 0,
+      limit: 1,
+    },
+    {
+      enabled: !!activeTableId && !!activeViewId,
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    },
+  );
+
+  // Calculate totalRows and totalColumns
+  // Add 1 to columns for the row number column
+  const totalColumns = table?.columns ? table.columns.length + 1 : 10;
+  const totalRows = rowData?.totalCount ?? 100;
+
   return (
-    <SelectionProvider totalRows={100} totalColumns={10}>
+    <SelectionProvider totalRows={totalRows} totalColumns={totalColumns}>
       <ContextMenuProvider>
         <BaseContentInner
           baseId={baseId}
