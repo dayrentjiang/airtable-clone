@@ -12,6 +12,8 @@ interface TextColumnPanelProps {
   onCancel: () => void;
   onCreate: () => void;
   onTypeChange?: (type: FieldType) => void;
+  isEditMode?: boolean;
+  disablePositioning?: boolean;
 }
 
 export function TextColumnPanel({
@@ -22,6 +24,8 @@ export function TextColumnPanel({
   onCancel,
   onCreate,
   onTypeChange,
+  isEditMode = false,
+  disablePositioning = false,
 }: TextColumnPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -85,9 +89,7 @@ export function TextColumnPanel({
   return (
     <div
       ref={panelRef}
-      className={`absolute top-5 z-50 mt-1 w-sm rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-lg ${
-        position === "left" ? "right-0" : "left-0"
-      }`}
+      className={`${disablePositioning ? '' : 'absolute top-5 mt-1'} ${disablePositioning ? '' : (position === "left" ? "right-0" : "left-0")} z-50 w-sm rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-lg`}
       onClick={(e) => e.stopPropagation()}
     >
       {/* Field name input - FUNCTIONAL */}
@@ -110,6 +112,7 @@ export function TextColumnPanel({
           setSelectedType(type);
           onTypeChange?.(type);
         }}
+        disabled={isEditMode}
       />
 
       {/* Helper text - NON-FUNCTIONAL */}
@@ -154,7 +157,7 @@ export function TextColumnPanel({
             disabled={!columnName.trim() || isCreating}
             className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Create field
+            {isEditMode ? (isCreating ? "Saving..." : "Save") : "Create field"}
           </button>
         </div>
       </div>

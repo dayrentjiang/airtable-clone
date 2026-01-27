@@ -1,9 +1,38 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
 import { useQueryClient } from "@tanstack/react-query";
+import { TextColumnPanel } from "./ColumnNamingPanel/TextColumnPanel";
+import { NumberColumnPanel } from "./ColumnNamingPanel/NumberColumnPanel";
+import type { FieldType } from "./ColumnNamingPanel/FieldTypeSelector";
+import {
+  Pencil,
+  Copy,
+  ArrowLeft,
+  ArrowRight,
+  CornerUpLeft,
+  Link2,
+  FileText,
+  Lock,
+  ArrowUpAZ,
+  ArrowDownZA,
+  Filter,
+  Layers,
+  GitBranch,
+  Trash2,
+} from "lucide-react";
+
+interface MenuItemType {
+  id: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  variant?: "default" | "danger";
+  showDividerAfter?: boolean;
+}
 
 interface ColumnHeaderContextMenuProps {
   headerRef: HTMLElement;
@@ -19,8 +48,37 @@ export function ColumnHeaderContextMenu({
   onClose,
 }: ColumnHeaderContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const editPanelRef = useRef<HTMLDivElement>(null);
   const utils = api.useUtils();
   const queryClient = useQueryClient();
+  const [showEditPanel, setShowEditPanel] = useState(false);
+  const [columnName, setColumnName] = useState("");
+  const [columnType, setColumnType] = useState<"TEXT" | "NUMBER">("TEXT");
+  const [menuPosition, setMenuPosition] = useState({ left: 0, top: 0 });
+
+  // Fetch column data
+  const { data: tableData } = api.table.getById.useQuery({ id: tableId });
+  const column = tableData?.columns.find((col) => col.id === columnId);
+
+  // Initialize form when column data loads
+  useEffect(() => {
+    if (column) {
+      setColumnName(column.name);
+      setColumnType(column.type);
+    }
+  }, [column]);
+
+  const updateColumnMutation = api.column.update.useMutation({
+    onSuccess: async () => {
+      setShowEditPanel(false);
+      onClose();
+      await utils.table.getById.invalidate({ id: tableId });
+    },
+    onError: (error) => {
+      console.error("Failed to update column:", error);
+      alert("Failed to update column. Please try again.");
+    },
+  });
 
   const deleteColumnMutation = api.column.delete.useMutation({
     onMutate: async () => {
@@ -60,17 +118,57 @@ export function ColumnHeaderContextMenu({
     deleteColumnMutation.mutate({ id: columnId });
   };
 
-  // Close menu when clicking outside
+  const handleEditColumn = () => {
+    setShowEditPanel(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!columnName.trim()) {
+      alert("Column name cannot be empty");
+      return;
+    }
+    updateColumnMutation.mutate({
+      id: columnId,
+      name: columnName,
+      type: columnType,
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setShowEditPanel(false);
+    // Reset to original values
+    if (column) {
+      setColumnName(column.name);
+      setColumnType(column.type);
+    }
+  };
+
+  const handleTypeChange = (type: FieldType) => {
+    setColumnType(type);
+  };
+
+  // Close menu when clicking outside (but not when clicking on edit panel)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        onClose();
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node) &&
+        (!editPanelRef.current ||
+          !editPanelRef.current.contains(event.target as Node))
+      ) {
+        if (!showEditPanel) {
+          onClose();
+        }
       }
     };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onClose();
+        if (showEditPanel) {
+          handleCancelEdit();
+        } else {
+          onClose();
+        }
       }
     };
 
@@ -81,7 +179,7 @@ export function ColumnHeaderContextMenu({
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [onClose]);
+  }, [onClose, showEditPanel]);
 
   // Adjust position to keep menu within viewport - position below the header
   useEffect(() => {
@@ -118,42 +216,195 @@ export function ColumnHeaderContextMenu({
       menuRef.current.style.left = `${adjustedX}px`;
       menuRef.current.style.top = `${adjustedY}px`;
       menuRef.current.style.opacity = "1";
+
+      // Store the position for the edit panel to reuse
+      setMenuPosition({ left: adjustedX, top: adjustedY });
     }
   }, [targetHeader]);
+
+  // Define menu items
+  const menuItems: MenuItemType[] = [
+    {
+      id: "edit",
+      icon: Pencil,
+      label: "Edit field",
+      onClick: handleEditColumn,
+    },
+    {
+      id: "duplicate",
+      icon: Copy,
+      label: "Duplicate field",
+      disabled: true,
+    },
+    {
+      id: "insert-left",
+      icon: ArrowLeft,
+      label: "Insert left",
+      disabled: true,
+    },
+    {
+      id: "insert-right",
+      icon: ArrowRight,
+      label: "Insert right",
+      disabled: true,
+      showDividerAfter: true,
+    },
+    {
+      id: "change-primary",
+      icon: CornerUpLeft,
+      label: "Change primary field",
+      disabled: true,
+    },
+    {
+      id: "copy-url",
+      icon: Link2,
+      label: "Copy field URL",
+      disabled: true,
+    },
+    {
+      id: "edit-description",
+      icon: FileText,
+      label: "Edit field description",
+      disabled: true,
+    },
+    {
+      id: "edit-permissions",
+      icon: Lock,
+      label: "Edit field permissions",
+      disabled: true,
+      showDividerAfter: true,
+    },
+    {
+      id: "sort-asc",
+      icon: ArrowUpAZ,
+      label: "Sort A → Z",
+      disabled: true,
+    },
+    {
+      id: "sort-desc",
+      icon: ArrowDownZA,
+      label: "Sort Z → A",
+      disabled: true,
+      showDividerAfter: true,
+    },
+    {
+      id: "filter",
+      icon: Filter,
+      label: "Filter by this field",
+      disabled: true,
+    },
+    {
+      id: "group",
+      icon: Layers,
+      label: "Group by this field",
+      disabled: true,
+    },
+    {
+      id: "dependencies",
+      icon: GitBranch,
+      label: "Show dependencies",
+      disabled: true,
+      showDividerAfter: true,
+    },
+    {
+      id: "delete",
+      icon: Trash2,
+      label: "Delete field",
+      onClick: handleDeleteColumn,
+      variant: "danger",
+      disabled: deleteColumnMutation.isPending,
+    },
+  ];
 
   const menu = (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-45 rounded-md border border-gray-200 bg-white shadow-lg transition-opacity"
+      className="fixed z-50 w-64 rounded-md border border-gray-200 bg-white shadow-lg transition-opacity"
       style={{ opacity: 0 }}
     >
       <div className="py-1">
-        <button
-          onClick={handleDeleteColumn}
-          disabled={deleteColumnMutation.isPending}
-          className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <svg
-            className="mr-2 h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
-          </svg>
-          {deleteColumnMutation.isPending ? "Deleting..." : "Delete Column"}
-        </button>
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          const isDelete = item.variant === "danger";
+
+          return (
+            <div key={item.id}>
+              <button
+                onClick={item.onClick}
+                disabled={item.disabled}
+                className={`flex max-h-screen w-full items-center overflow-y-auto px-4 py-2.5 text-xs hover:cursor-pointer ${
+                  isDelete
+                    ? "text-red-600 hover:bg-red-50"
+                    : "text-gray-700 hover:bg-gray-100"
+                } ${item.disabled ? "cursor-not-allowed opacity-50" : ""}`}
+              >
+                <Icon className="mr-3.5 h-4 w-4" />
+                {item.id === "delete" && deleteColumnMutation.isPending
+                  ? "Deleting..."
+                  : item.label}
+              </button>
+              {item.showDividerAfter && (
+                <div className="my-1 border-t border-gray-200" />
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 
+  // Position the edit panel at the same location as the menu
+  useEffect(() => {
+    if (showEditPanel && editPanelRef.current) {
+      // Just fade in, position is already set in the style
+      editPanelRef.current.style.opacity = "1";
+    }
+  }, [showEditPanel]);
+
+  // Edit field panel
+  const editPanel = showEditPanel && (
+    <div
+      ref={editPanelRef}
+      className="fixed z-50 transition-opacity"
+      style={{
+        opacity: 0,
+        left: `${menuPosition.left}px`,
+        top: `${menuPosition.top}px`,
+      }}
+    >
+      {columnType === "TEXT" ? (
+        <TextColumnPanel
+          isOpen={true}
+          columnName={columnName}
+          isCreating={updateColumnMutation.isPending}
+          onNameChange={setColumnName}
+          onCancel={handleCancelEdit}
+          onCreate={handleSaveEdit}
+          onTypeChange={handleTypeChange}
+          isEditMode={true}
+          disablePositioning={true}
+        />
+      ) : (
+        <NumberColumnPanel
+          isOpen={true}
+          columnName={columnName}
+          isCreating={updateColumnMutation.isPending}
+          onNameChange={setColumnName}
+          onCancel={handleCancelEdit}
+          onCreate={handleSaveEdit}
+          onTypeChange={handleTypeChange}
+          isEditMode={true}
+          disablePositioning={true}
+        />
+      )}
+    </div>
+  );
+
   // Render menu in a portal to avoid z-index/positioning conflicts
-  return typeof document !== "undefined"
-    ? createPortal(menu, document.body)
-    : null;
+  return typeof document !== "undefined" ? (
+    <>
+      {!showEditPanel && createPortal(menu, document.body)}
+      {showEditPanel && createPortal(editPanel, document.body)}
+    </>
+  ) : null;
 }

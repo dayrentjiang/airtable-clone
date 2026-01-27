@@ -98,7 +98,7 @@ export function DataGridHeader({
                 onContextMenu={(e) =>
                   handleContextMenu(e, columnId, columnIndex)
                 }
-                className={`truncate overflow-hidden border-r border-b border-gray-200 px-2 py-2 text-left text-xs font-semibold text-gray-700 ${bgClasses}`}
+                className={`group truncate overflow-hidden border-r border-b border-gray-200 px-2 py-2 text-left text-xs font-semibold text-gray-700 ${bgClasses}`}
                 style={{
                   width: header.getSize(),
                   maxWidth: header.getSize(),
@@ -119,10 +119,43 @@ export function DataGridHeader({
                     />
                   </div>
                 ) : header.isPlaceholder ? null : (
-                  flexRender(
-                    header.column.columnDef.header,
-                    header.getContext(),
-                  )
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-600">
+                        {(
+                          header.column.columnDef.meta as
+                            | { type?: "TEXT" | "NUMBER" }
+                            | undefined
+                        )?.type === "NUMBER"
+                          ? "#"
+                          : "A"}
+                      </span>
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
+                    </div>
+                    <svg
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const headerElement = headerRefs.current.get(columnId);
+                        if (headerElement) {
+                          showColumnContextMenu(headerElement, columnId, tableId);
+                        }
+                      }}
+                      className="h-4 w-4 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-pointer hover:text-gray-700"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </div>
                 )}
               </th>
             );
