@@ -19,7 +19,10 @@ export function BaseSideNav({
     "GRID" | "CALENDAR" | "KANBAN" | "GALLERY" | "FORM" | null
   >(null);
   const [viewName, setViewName] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const utils = api.useUtils();
 
   // Close dropdown when clicking outside
@@ -35,6 +38,13 @@ export function BaseSideNav({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Focus search input when searching is enabled
+  useEffect(() => {
+    if (isSearching && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearching]);
 
   // Fetch views for the current table
   const { data: views, isLoading } = api.view.getByTableId.useQuery(
@@ -171,6 +181,26 @@ export function BaseSideNav({
     deleteView.mutate({ id: viewId });
   };
 
+  // Filter views based on search query
+  const filteredViews = views?.filter((view) =>
+    view.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
+  const handleSearchToggle = () => {
+    setIsSearching(true);
+  };
+
+  const handleSearchBlur = () => {
+    if (!searchQuery) {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchClear = () => {
+    setSearchQuery("");
+    setIsSearching(false);
+  };
+
   return (
     <aside className="flex w-70 flex-col border-r border-gray-200 bg-gray-50/50">
       {/* Top section */}
@@ -185,10 +215,41 @@ export function BaseSideNav({
 
         {/* Find a view */}
         <div className="mt-2 flex items-center justify-between">
-          <button className="flex items-center gap-2 rounded px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-100">
-            <Search className="h-3 w-3" />
-            <span>Find a view</span>
-          </button>
+          {isSearching ? (
+            <div className="flex flex-1 items-center gap-2 rounded px-2.5 py-2">
+              <Search className="h-3 w-3 text-gray-700" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onBlur={handleSearchBlur}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    handleSearchClear();
+                  }
+                }}
+                placeholder="Find a view"
+                className="flex-1 bg-transparent text-xs text-gray-700 outline-none placeholder:text-gray-500"
+              />
+              {searchQuery && (
+                <button
+                  onClick={handleSearchClear}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={handleSearchToggle}
+              className="flex items-center gap-2 rounded px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-100"
+            >
+              <Search className="h-3 w-3" />
+              <span>Find a view</span>
+            </button>
+          )}
           <button className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
             <Settings className="h-4 w-4" />
           </button>
@@ -197,7 +258,7 @@ export function BaseSideNav({
         {/* Views list */}
         <div className="mt-3 space-y-0">
           <ViewList
-            views={views}
+            views={filteredViews}
             isLoading={isLoading}
             selectedViewId={selectedViewId}
             onViewSelect={onViewSelect}

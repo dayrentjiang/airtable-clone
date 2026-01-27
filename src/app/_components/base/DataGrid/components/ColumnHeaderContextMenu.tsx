@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { TextColumnPanel } from "./ColumnNamingPanel/TextColumnPanel";
 import { NumberColumnPanel } from "./ColumnNamingPanel/NumberColumnPanel";
 import type { FieldType } from "./ColumnNamingPanel/FieldTypeSelector";
@@ -50,7 +49,6 @@ export function ColumnHeaderContextMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const editPanelRef = useRef<HTMLDivElement>(null);
   const utils = api.useUtils();
-  const queryClient = useQueryClient();
   const [showEditPanel, setShowEditPanel] = useState(false);
   const [columnName, setColumnName] = useState("");
   const [columnType, setColumnType] = useState<"TEXT" | "NUMBER">("TEXT");
@@ -153,8 +151,7 @@ export function ColumnHeaderContextMenu({
       if (
         menuRef.current &&
         !menuRef.current.contains(event.target as Node) &&
-        (!editPanelRef.current ||
-          !editPanelRef.current.contains(event.target as Node))
+        !editPanelRef.current?.contains(event.target as Node)
       ) {
         if (!showEditPanel) {
           onClose();

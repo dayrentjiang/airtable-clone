@@ -12,6 +12,7 @@ interface DataGridHeaderProps {
   tableId: string;
   filters: Filter[];
   sorts: Sort[];
+  rowsByIndex: Map<number, RowData>; // All loaded rows for select all functionality
 }
 
 export function DataGridHeader({
@@ -19,8 +20,15 @@ export function DataGridHeader({
   tableId,
   filters,
   sorts,
+  rowsByIndex,
 }: DataGridHeaderProps) {
-  const { isColumnSelected, toggleColumnSelection } = useSelection();
+  const {
+    isColumnSelected,
+    toggleColumnSelection,
+    selectedRows,
+    selectAllRows,
+    deselectAllRows,
+  } = useSelection();
   const { showColumnContextMenu } = useContextMenu();
   const headerRefs = useRef<Map<string, HTMLTableHeaderCellElement>>(new Map());
 
@@ -61,9 +69,24 @@ export function DataGridHeader({
             const hasFilter = filteredColumnIds.has(columnId);
             const hasSort = sortedColumnIds.has(columnId);
 
+            // Check if all rows are selected (checkbox is fully checked, not indeterminate)
+            const allRowsSelected =
+              selectedRows.size > 0 &&
+              selectedRows.size === rowsByIndex.size &&
+              rowsByIndex.size > 0; // Ensure we have rows loaded
+
             // Determine background color - prioritize filter over sort
             let bgClasses = "";
-            if (isSelected) {
+            if (allRowsSelected && columnIndex === 0) {
+              // When all rows are selected, highlight the checkbox header in blue
+              bgClasses = "bg-blue-100";
+            } else if (allRowsSelected && columnIndex > 0) {
+              // When all rows are selected, highlight all data column headers in blue
+              bgClasses = "cursor-pointer bg-blue-100";
+            } else if (columnIndex === 0) {
+              // Row number column - stay gray when some (but not all) rows are selected
+              bgClasses = "bg-gray-50";
+            } else if (isSelected) {
               bgClasses = "cursor-pointer bg-blue-100";
             } else if (hasFilter) {
               // Filter: green background
@@ -71,12 +94,9 @@ export function DataGridHeader({
             } else if (hasSort) {
               // Sort: orange background
               bgClasses = "cursor-pointer bg-orange-50 hover:bg-orange-100";
-            } else if (columnIndex > 0) {
+            } else {
               // Normal column
               bgClasses = "cursor-pointer bg-gray-50 hover:bg-gray-100";
-            } else {
-              // Row number column (index 0)
-              bgClasses = "bg-gray-50";
             }
 
             return (
@@ -114,7 +134,28 @@ export function DataGridHeader({
                   <div className="flex items-center justify-center">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-gray-100 text-blue-600 focus:ring-blue-500"
+                      className="h-4 w-4 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      checked={
+                        selectedRows.size > 0 &&
+                        selectedRows.size === rowsByIndex.size
+                      }
+                      onChange={(e) => {
+                        e.stopPropagation();
+
+                        if (selectedRows.size > 0) {
+                          // If any rows are selected, deselect all
+                          deselectAllRows();
+                        } else {
+                          // Select all loaded rows
+                          const allRows = Array.from(rowsByIndex.entries()).map(
+                            ([index, row]) => ({
+                              index,
+                              id: row.id,
+                            }),
+                          );
+                          selectAllRows(allRows);
+                        }
+                      }}
                       onClick={(e) => e.stopPropagation()}
                     />
                   </div>
@@ -140,10 +181,14 @@ export function DataGridHeader({
                         e.stopPropagation();
                         const headerElement = headerRefs.current.get(columnId);
                         if (headerElement) {
-                          showColumnContextMenu(headerElement, columnId, tableId);
+                          showColumnContextMenu(
+                            headerElement,
+                            columnId,
+                            tableId,
+                          );
                         }
                       }}
-                      className="h-4 w-4 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-pointer hover:text-gray-700"
+                      className="h-4 w-4 shrink-0 cursor-pointer text-gray-500 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-700"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"

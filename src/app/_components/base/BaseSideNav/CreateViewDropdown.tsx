@@ -30,7 +30,7 @@ export function CreateViewDropdown({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 z-50 mt-1 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+        <div className="absolute top-full right-0 z-50 mt-1 w-60 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
           {ALL_VIEW_TYPES.map(({ type, label, Icon, enabled, team, color }) => (
             <button
               key={type}

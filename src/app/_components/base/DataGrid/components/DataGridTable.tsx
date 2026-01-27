@@ -53,6 +53,7 @@ export function DataGridTable({
         tableId={tableId}
         filters={filters}
         sorts={sorts}
+        rowsByIndex={rowsByIndex}
       />
 
       <tbody className="bg-white">
