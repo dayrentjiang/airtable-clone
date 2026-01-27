@@ -108,6 +108,20 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     tableContainerRef
   );
 
+  // Track if we've received the first data response
+  // This prevents the "No data yet" flash before data loads
+  const hasReceivedDataRef = useRef(false);
+  useEffect(() => {
+    if (totalCount >= 0 && (rowsByIndex.size > 0 || !rowsLoading)) {
+      hasReceivedDataRef.current = true;
+    }
+  }, [totalCount, rowsByIndex.size, rowsLoading]);
+
+  // Reset flag when view changes
+  useEffect(() => {
+    hasReceivedDataRef.current = false;
+  }, [viewId]);
+
   // Convert rowsByIndex map to array for components that need it
   const rows = useMemo(() => {
     const arr: RowData[] = [];
@@ -296,8 +310,8 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   // Wrap everything that needs the context in the provider
   return (
     <WindowedRowsProvider value={{ addOptimisticRow, invalidate, totalCount }}>
-      {/* Empty state - check totalCount since rows might not be loaded yet */}
-      {totalCount === 0 && rowsByIndex.size === 0 ? (
+      {/* Empty state - only show after we've confirmed there's no data */}
+      {totalCount === 0 && rowsByIndex.size === 0 && hasReceivedDataRef.current ? (
         <div className="flex h-full flex-col items-center justify-center">
           <div className="text-center">
             <p className="text-gray-500">No data yet</p>
