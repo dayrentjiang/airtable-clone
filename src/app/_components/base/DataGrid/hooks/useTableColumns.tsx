@@ -1,8 +1,5 @@
 import { useMemo } from "react";
 import { type ColumnDef } from "@tanstack/react-table";
-import { EditableCell } from "../EditableCell";
-import { RowNumberCell } from "../RowNumberCell";
-import type { Filter, Sort } from "~/server/lib/types";
 
 export interface RowData {
   id: string;
@@ -24,12 +21,14 @@ interface Column {
 const DEFAULT_COLUMN_WIDTH = 180;
 const ROW_NUMBER_WIDTH = 66;
 
+/**
+ * Creates column definitions for TanStack Table.
+ * Note: Cell rendering is handled directly in DataGridTable using DirectEditableCell,
+ * not via TanStack Table's cell function. This hook only provides column structure/metadata.
+ */
 export function useTableColumns(
   columns: Column[] | undefined,
   hiddenFields: string[] = [],
-  searchTerm = "",
-  filters: Filter[] = [],
-  sorts: Sort[] = [],
 ) {
   return useMemo<ColumnDef<RowData>[]>(() => {
     if (!columns) return [];
@@ -44,46 +43,22 @@ export function useTableColumns(
       id: "_rowNumber",
       accessorFn: () => "",
       header: "",
-      cell: ({ row }) => (
-        <RowNumberCell
-          rowIndex={row.index}
-          rowNumber={row.index + 1} // Use row index for automatic renumbering
-          rowId={row.original.id}
-          tableId={row.original.tableId}
-        />
-      ),
       size: ROW_NUMBER_WIDTH,
       enableSorting: false,
       enableResizing: false,
     };
 
-    // Data columns from visible columns with EditableCell
-    const dataColumns: ColumnDef<RowData>[] = visibleColumns.map(
-      (col, index) => ({
-        id: col.id,
-        accessorFn: (row) => {
-          const cellData = row.data;
-          return cellData[col.id];
-        },
-        header: col.name,
-        cell: (props) => (
-          <EditableCell
-            {...props}
-            columnType={col.type}
-            columnId={col.id}
-            columnIndex={index + 1} // +1 because row number column is at index 0
-            searchTerm={searchTerm} // Pass search term for yellow highlighting
-            filters={filters} // Pass filters for green highlighting
-            sorts={sorts} // Pass sorts for orange highlighting
-          />
-        ),
-        meta: {
-          type: col.type,
-        },
-        size: DEFAULT_COLUMN_WIDTH,
-      }),
-    );
+    // Data columns from visible columns
+    const dataColumns: ColumnDef<RowData>[] = visibleColumns.map((col) => ({
+      id: col.id,
+      accessorFn: (row) => row.data[col.id],
+      header: col.name,
+      meta: {
+        type: col.type,
+      },
+      size: DEFAULT_COLUMN_WIDTH,
+    }));
 
     return [rowNumberColumn, ...dataColumns];
-  }, [columns, hiddenFields, searchTerm, filters, sorts]);
+  }, [columns, hiddenFields]);
 }

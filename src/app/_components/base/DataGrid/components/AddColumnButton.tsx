@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Plus, Type, Hash, X } from "lucide-react";
 import { api } from "~/trpc/react";
-import { useSelection } from "./hooks/useSelection";
+import { useSelection } from "../hooks/useSelection";
 
 interface AddColumnButtonProps {
   tableId: string;

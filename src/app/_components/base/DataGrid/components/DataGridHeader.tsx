@@ -2,9 +2,9 @@
 
 import { useRef, useMemo } from "react";
 import { type HeaderGroup, flexRender } from "@tanstack/react-table";
-import type { RowData } from "./hooks/useTableColumns";
-import { useSelection } from "./hooks/useSelection";
-import { useContextMenu } from "./hooks/useContextMenu";
+import type { RowData } from "../hooks/useTableColumns";
+import { useSelection } from "../hooks/useSelection";
+import { useContextMenu } from "../hooks/useContextMenu";
 import type { Filter, Sort } from "~/server/lib/types";
 
 interface DataGridHeaderProps {

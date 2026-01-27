@@ -4,20 +4,20 @@ import { useRef, useEffect, useMemo } from "react";
 import { useReactTable, getCoreRowModel } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { api } from "~/trpc/react";
-import { DataGridTable } from "./DataGrid/DataGridTable";
-import { AddColumnButton } from "./DataGrid/AddColumnButton";
-import { AddRowButton } from "./DataGrid/AddRowButton";
+import { DataGridTable } from "./DataGrid/components/DataGridTable";
+import { AddColumnButton } from "./DataGrid/components/AddColumnButton";
+import { AddRowButton } from "./DataGrid/components/AddRowButton";
 import {
   useTableColumns,
   type RowData,
 } from "./DataGrid/hooks/useTableColumns";
+import { useWindowedRows } from "./DataGrid/hooks/useWindowedRows";
+import { WindowedRowsProvider } from "./DataGrid/hooks/useWindowedRowsContext";
 import { useViewConfig } from "./hooks/useViewConfig";
-import { CellContextMenu } from "./DataGrid/CellContextMenu";
-import { ColumnHeaderContextMenu } from "./DataGrid/ColumnHeaderContextMenu";
+import { CellContextMenu } from "./DataGrid/components/CellContextMenu";
+import { ColumnHeaderContextMenu } from "./DataGrid/components/ColumnHeaderContextMenu";
 import { useContextMenu } from "./DataGrid/hooks/useContextMenu";
-
-// Page size for fetching data
-const PAGE_SIZE = 150;
+import { ROW_HEIGHT, OVERSCAN_COUNT } from "./DataGrid/constants";
 
 // Re-export SelectionProvider and ContextMenuProvider for use in parent components
 export { SelectionProvider, useSelection } from "./DataGrid/hooks/useSelection";
@@ -67,13 +67,14 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   );
 
   // -------------------------------------------------------------------------
-  // FETCH ROWS WITH LIVE CONFIG (filters, sorts, search)
+  // FETCH ROWS WITH WINDOWED OFFSET-BASED PAGINATION
   // -------------------------------------------------------------------------
-  // This is where the magic happens!
-  // - `search` is passed to the query → server builds SQL with ILIKE
-  // - `filters` is passed → server builds WHERE clauses
-  // - `sorts` is passed → server builds ORDER BY clauses
-  // - All filtering/sorting happens in PostgreSQL, not in JavaScript
+  // This uses offset-based fetching instead of cursor-based infinite scroll.
+  // Benefits:
+  // - User can scroll to ANY position immediately (e.g., row 90,000)
+  // - Scrollbar reflects true dataset size from the start
+  // - Multiple windows are cached for smooth bi-directional scrolling
+  // - All filtering/sorting still happens in PostgreSQL
 
   // Filter out incomplete filters (no value when needed)
   // This prevents query from running when user clicks "Add condition"
@@ -88,61 +89,42 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     });
   }, [filters]);
 
+  // Use windowed rows hook for offset-based fetching
   const {
-    data,
+    rowsByIndex,
+    totalCount,
     isLoading: rowsLoading,
-    isPlaceholderData,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-  } = api.row.infiniteWithView.useInfiniteQuery(
+    addOptimisticRow,
+    invalidate,
+  } = useWindowedRows(
     {
       tableId,
       viewId,
-      limit: PAGE_SIZE,
-      // Pass live config to query - these override saved view config
-      search: search || undefined, // Global text search
-      // IMPORTANT: Always pass filters array (even if empty) to ensure query key changes
-      // when filters are added/removed. Using undefined for both "no filters" and
-      // "filters removed" causes React Query to not refetch.
       filters: completeFilters.length > 0 ? completeFilters : [],
-      sorts: sorts.length > 0 ? sorts : [], // Same for sorts
-    },
-    {
-      // CRITICAL: Don't run query until config has loaded from DB
-      // This prevents fetching with empty filters before saved filters load
+      sorts: sorts.length > 0 ? sorts : [],
+      search: search || undefined,
       enabled: isConfigLoaded,
-      getNextPageParam: (lastPage) => lastPage.nextCursor,
-      refetchOnMount: false, // Don't refetch on mount - use cached data
-      refetchOnWindowFocus: false,
-      staleTime: 0, // Always consider data stale - refetch when query key changes
-      gcTime: 0, // Don't cache - prevents showing old cached data when filters change
-      // This eliminates jittering by ensuring we only show fresh data for each query
     },
+    tableContainerRef
   );
 
-  // Get total count from first page (all pages return the same totalCount)
-  const totalCount = data?.pages[0]?.totalCount ?? 0;
-
-  // Flatten all pages into a single array of rows
+  // Convert rowsByIndex map to array for components that need it
   const rows = useMemo(() => {
-    return (data?.pages.flatMap((page) => page.items) ?? []) as RowData[];
-  }, [data]);
+    const arr: RowData[] = [];
+    for (const [index, row] of rowsByIndex.entries()) {
+      arr[index] = row;
+    }
+    return arr;
+  }, [rowsByIndex]);
 
   // Build column definitions (filtered by hiddenFields from context)
-  // IMPORTANT: When showing placeholder data (old results), use empty filters/search
-  // to avoid highlighting NEW criteria on OLD data
-  // Only apply highlighting once new data arrives
-  const highlightSearch = isPlaceholderData ? "" : search;
-  const highlightFilters = isPlaceholderData ? [] : completeFilters;
-  const highlightSorts = isPlaceholderData ? [] : sorts;
+  const highlightSearch = search;
+  const highlightFilters = completeFilters;
+  const highlightSorts = sorts;
 
   const columns = useTableColumns(
     table?.columns,
     hiddenFields,
-    highlightSearch,
-    highlightFilters,
-    highlightSorts,
   );
 
   // -------------------------------------------------------------------------
@@ -165,7 +147,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       .map((col) => col.id);
 
     // Count matches across all loaded rows and visible columns
-    for (const row of rows) {
+    for (const row of rowsByIndex.values()) {
       for (const colId of visibleColumnIds) {
         const cellValue = row.data[colId];
         if (cellValue != null) {
@@ -178,7 +160,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     }
 
     setSearchMatchCount(matchCount);
-  }, [search, rows, table?.columns, hiddenFields, setSearchMatchCount]);
+  }, [search, rowsByIndex, table?.columns, hiddenFields, setSearchMatchCount]);
 
   // Create table instance
   const tableInstance = useReactTable({
@@ -197,8 +179,8 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   const rowVirtualizer = useVirtualizer({
     count: virtualRowCount,
     getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => 35,
-    overscan: 50, // 50 rows overscan - optimal for smooth fast scrolling
+    estimateSize: () => ROW_HEIGHT,
+    overscan: OVERSCAN_COUNT,
     measureElement:
       typeof window !== "undefined" && !navigator.userAgent.includes("Firefox")
         ? (element) => element.getBoundingClientRect().height
@@ -208,44 +190,15 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   const virtualRows = rowVirtualizer.getVirtualItems();
   const totalSize = rowVirtualizer.getTotalSize();
 
-  // Build a map of rows by index for quick lookup
-  const rowsByIndex = useMemo(() => {
-    const map = new Map<number, RowData>();
-    rows.forEach((row, index) => {
-      map.set(index, row);
-    });
-    return map;
-  }, [rows]);
-
-  // -------------------------------------------------------------------------
-  // CLAMP SCROLL POSITION TO LOADED DATA
-  // -------------------------------------------------------------------------
-  // The scrollbar reflects total rows, but we limit scrolling to loaded data only
-  // This prevents scrolling into unloaded regions while keeping correct scrollbar size
-  const maxScrollableRow = rows.length;
-  const maxScrollTop = maxScrollableRow * 35; // 35px per row estimate
-
-  useEffect(() => {
-    const container = tableContainerRef.current;
-    if (!container || maxScrollableRow === 0) return;
-
-    const handleScrollClamp = () => {
-      // If user tries to scroll past loaded data, clamp them back
-      if (container.scrollTop > maxScrollTop) {
-        container.scrollTop = maxScrollTop;
-      }
-    };
-
-    container.addEventListener("scroll", handleScrollClamp, { passive: false });
-    return () => container.removeEventListener("scroll", handleScrollClamp);
-  }, [maxScrollTop, maxScrollableRow]);
+  // NOTE: rowsByIndex now comes from useWindowedRows hook
+  // No scroll clamping needed - windowed fetching handles any scroll position
 
   // -------------------------------------------------------------------------
   // RESTORE SCROLL POSITION FROM LOCALSTORAGE
   // -------------------------------------------------------------------------
   // When switching views, restore the scroll position to where user was
   useEffect(() => {
-    if (!rows.length || hasRestoredScrollRef.current) return;
+    if (rowsByIndex.size === 0 || hasRestoredScrollRef.current) return;
 
     const storageKey = `airtable-scroll-${viewId}`;
     const savedScrollTop = localStorage.getItem(storageKey);
@@ -263,7 +216,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     } else {
       hasRestoredScrollRef.current = true;
     }
-  }, [viewId, rows.length]);
+  }, [viewId, rowsByIndex.size]);
 
   // -------------------------------------------------------------------------
   // SAVE SCROLL POSITION TO LOCALSTORAGE
@@ -296,29 +249,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     hasRestoredScrollRef.current = false;
   }, [viewId]);
 
-  // -------------------------------------------------------------------------
-  // PREFETCH NEXT PAGE
-  // -------------------------------------------------------------------------
-  // Prefetch when user is near the end of loaded data
-  useEffect(() => {
-    const lastItem = virtualRows[virtualRows.length - 1];
-    if (!lastItem) return;
-
-    // Prefetch when near the end of loaded data
-    if (
-      lastItem.index >= rows.length - 70 &&
-      hasNextPage &&
-      !isFetchingNextPage
-    ) {
-      void fetchNextPage();
-    }
-  }, [
-    virtualRows,
-    rows.length,
-    hasNextPage,
-    isFetchingNextPage,
-    fetchNextPage,
-  ]);
+  // NOTE: Prefetching is now handled by useWindowedRows based on scroll position
 
   const paddingTop = virtualRows.length > 0 ? (virtualRows[0]?.start ?? 0) : 0;
   const paddingBottom =
@@ -344,10 +275,8 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   }
 
   // Show loading ONLY on initial load (no data yet)
-  // When filtering/searching, keep showing current data with placeholderData
-  // rowsLoading = true only on first load (no cached data)
-  // isFetching = true when refetching (filters/search changed)
-  if (tableLoading || (rowsLoading && !data)) {
+  // rowsLoading = true only when we have no data at all
+  if (tableLoading || rowsLoading) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-gray-500">Loading...</div>
@@ -364,71 +293,73 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     );
   }
 
-  // Empty state
-  if (rows.length === 0) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-500">No data yet</p>
-          <p className="mt-2 text-sm text-gray-400">
-            Click the button below to add your first row
-          </p>
-        </div>
-        <div className="mt-4">
-          <div className="inline-block">
-            <div className="w-64">
-              <AddRowButton tableId={tableId} viewId={viewId} />
+  // Wrap everything that needs the context in the provider
+  return (
+    <WindowedRowsProvider value={{ addOptimisticRow, invalidate, totalCount }}>
+      {/* Empty state - check totalCount since rows might not be loaded yet */}
+      {totalCount === 0 && rowsByIndex.size === 0 ? (
+        <div className="flex h-full flex-col items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-500">No data yet</p>
+            <p className="mt-2 text-sm text-gray-400">
+              Click the button below to add your first row
+            </p>
+          </div>
+          <div className="mt-4">
+            <div className="inline-block">
+              <div className="w-64">
+                <AddRowButton tableId={tableId} viewId={viewId} />
+              </div>
             </div>
           </div>
         </div>
+      ) : (
+      <div
+        ref={tableContainerRef}
+        className="h-full overflow-auto"
+        style={{ contain: "strict" }}
+      >
+        <div className="flex pb-30">
+          <DataGridTable
+            table={tableInstance}
+            tableId={tableId}
+            viewId={viewId}
+            virtualRows={virtualRows}
+            paddingTop={paddingTop}
+            paddingBottom={paddingBottom}
+            columnCount={columns.length}
+            tableWidth={tableWidth}
+            rowsByIndex={rowsByIndex}
+            totalCount={totalCount}
+            filters={highlightFilters}
+            sorts={highlightSorts}
+            searchTerm={highlightSearch}
+          />
+          <AddColumnButton tableId={tableId} />
+        </div>
+
+        {/* Global context menu for rows - rendered once at DataGrid level */}
+        {contextMenuState?.cellRef && (
+          <CellContextMenu
+            cellRef={contextMenuState.cellRef}
+            rowId={contextMenuState.rowId}
+            tableId={contextMenuState.tableId}
+            selectedRowIds={contextMenuState.selectedRowIds}
+            onClose={hideContextMenu}
+          />
+        )}
+
+        {/* Global context menu for columns - rendered once at DataGrid level */}
+        {columnContextMenuState?.headerRef && (
+          <ColumnHeaderContextMenu
+            headerRef={columnContextMenuState.headerRef}
+            columnId={columnContextMenuState.columnId}
+            tableId={columnContextMenuState.tableId}
+            onClose={hideColumnContextMenu}
+          />
+        )}
       </div>
-    );
-  }
-
-  return (
-    <div
-      ref={tableContainerRef}
-      className="h-full overflow-auto"
-      style={{ contain: "strict" }}
-    >
-      <div className="flex pb-30">
-        <DataGridTable
-          table={tableInstance}
-          tableId={tableId}
-          viewId={viewId}
-          virtualRows={virtualRows}
-          paddingTop={paddingTop}
-          paddingBottom={paddingBottom}
-          columnCount={columns.length}
-          tableWidth={tableWidth}
-          rowsByIndex={rowsByIndex}
-          totalCount={totalCount}
-          filters={highlightFilters}
-          sorts={highlightSorts}
-        />
-        <AddColumnButton tableId={tableId} />
-      </div>
-
-      {/* Global context menu for rows - rendered once at DataGrid level */}
-      {contextMenuState?.cellRef && (
-        <CellContextMenu
-          cellRef={contextMenuState.cellRef}
-          rowId={contextMenuState.rowId}
-          tableId={contextMenuState.tableId}
-          selectedRowIds={contextMenuState.selectedRowIds}
-          onClose={hideContextMenu}
-        />
       )}
-
-      {/* Global context menu for columns - rendered once at DataGrid level */}
-      {columnContextMenuState?.headerRef && (
-        <ColumnHeaderContextMenu
-          headerRef={columnContextMenuState.headerRef}
-          columnId={columnContextMenuState.columnId}
-          tableId={columnContextMenuState.tableId}
-          onClose={hideColumnContextMenu}
-        />
-      )}
-    </div>
+    </WindowedRowsProvider>
   );
 }

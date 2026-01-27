@@ -1,40 +1,45 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { type CellContext } from "@tanstack/react-table";
 import { api } from "~/trpc/react";
-import { type RowData } from "./hooks/useTableColumns";
-import { useSelection } from "./hooks/useSelection";
-import { useContextMenu } from "./hooks/useContextMenu";
-import { getCellHighlightClass } from "./utils/cellHighlight";
+import { useSelection } from "../hooks/useSelection";
+import { useContextMenu } from "../hooks/useContextMenu";
+import { getCellHighlightClass } from "../utils/cellHighlight";
 import type { Filter, Sort } from "~/server/lib/types";
 
 type ColumnType = "TEXT" | "NUMBER";
 
-interface EditableCellProps extends CellContext<RowData, unknown> {
-  columnType: ColumnType;
+interface DirectEditableCellProps {
+  rowIndex: number;
+  rowId: string;
+  tableId: string;
   columnId: string;
   columnIndex: number;
-  searchTerm?: string; // For yellow highlighting (search matches)
-  filters?: Filter[]; // For green highlighting (filter matches)
-  sorts?: Sort[]; // For orange highlighting (sorted columns)
+  columnType: ColumnType;
+  value: string | number | null;
+  searchTerm?: string;
+  filters?: Filter[];
+  sorts?: Sort[];
 }
 
-export function EditableCell({
-  row,
-  getValue,
-  columnType,
+/**
+ * A simplified EditableCell that works directly with raw data
+ * instead of requiring TanStack Table's cell context
+ */
+export function DirectEditableCell({
+  rowIndex,
+  rowId,
+  tableId,
   columnId,
   columnIndex,
+  columnType,
+  value: initialValue,
   searchTerm,
   filters,
   sorts,
-}: EditableCellProps) {
-  const initialValue = getValue() as string | number | null;
+}: DirectEditableCellProps) {
   const [value, setValue] = useState(String(initialValue ?? ""));
-  const [displayValue, setDisplayValue] = useState<string | number | null>(
-    initialValue,
-  );
+  const [displayValue, setDisplayValue] = useState<string | number | null>(initialValue);
   const [validationError, setValidationError] = useState<string | null>(null);
   const previousValueRef = useRef<string | number | null>(initialValue);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -53,14 +58,10 @@ export function EditableCell({
     selectedRowIds,
   } = useSelection();
 
-  const rowIndex = row.index;
   const isSelected = checkIsSelected(rowIndex, columnIndex);
   const isEditing = checkIsEditing(rowIndex, columnIndex);
 
-  const tableId = row.original.tableId;
-  const rowId = row.original.id;
-
-  // Auto-focus input on edit mode and reset save flag
+  // Auto-focus input on edit mode
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
@@ -68,65 +69,43 @@ export function EditableCell({
     }
   }, [isEditing]);
 
-  // Only sync with server changes from OTHER users/sessions
-  // Don't overwrite our optimistic updates
+  // Sync with external value changes
   useEffect(() => {
-    // Skip if we're currently editing
     if (isEditing) return;
-
-    // Only update if the value actually changed from an external source
-    // (not from our own optimistic update)
-    if (
-      initialValue !== previousValueRef.current &&
-      initialValue !== displayValue
-    ) {
+    if (initialValue !== previousValueRef.current && initialValue !== displayValue) {
       setValue(String(initialValue ?? ""));
       setDisplayValue(initialValue);
     }
-
     previousValueRef.current = initialValue;
   }, [initialValue, isEditing, displayValue]);
 
-  // Handle keyboard input when selected (not editing) - for typing characters
+  // Handle keyboard input when selected
   useEffect(() => {
     if (!isSelected || isEditing) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Skip if user is typing in an input, textarea, or contenteditable element
       const target = e.target as HTMLElement;
-      if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
-      ) {
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
         return;
       }
 
-      // Start editing on printable characters
       if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
-
-        // For NUMBER columns, validate before starting edit
         if (columnType === "NUMBER") {
-          // Allow digits, decimal point, and minus sign
           if (/^[-0-9.]$/.test(e.key)) {
             setValue(e.key);
             setValidationError(null);
             startEditing({ rowIndex, columnIndex });
           } else {
-            // Show error but don't enter edit mode
             setValidationError("Please enter a number");
             setTimeout(() => setValidationError(null), 2000);
           }
         } else {
-          // TEXT column - allow any character
           setValue(e.key);
           setValidationError(null);
           startEditing({ rowIndex, columnIndex });
         }
-      }
-      // Backspace/Delete clears and enters edit mode
-      else if (e.key === "Backspace" || e.key === "Delete") {
+      } else if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();
         setValue("");
         setValidationError(null);
@@ -139,57 +118,15 @@ export function EditableCell({
   }, [isSelected, isEditing, rowIndex, columnIndex, startEditing, columnType]);
 
   const updateCellMutation = api.row.updateCell.useMutation({
-    onMutate: async (variables) => {
-      // Cancel any outgoing refetches to prevent optimistic updates from being overwritten
-      await utils.row.infiniteWithView.cancel();
-
-      // Snapshot the previous value for rollback
-      const previousData = utils.row.infiniteWithView.getInfiniteData();
-
-      // Optimistically update the cell in the cache
-      utils.row.infiniteWithView.setInfiniteData(
-        { tableId, limit: 150 }, // Match the limit from DataGrid query
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              items: page.items.map((r) => {
-                if (r.id !== rowId) return r;
-                const currentData = r.data as Record<string, unknown> | null;
-                const updatedData = {
-                  ...(currentData ?? {}),
-                  [columnId]: variables.value,
-                };
-                return { ...r, data: updatedData as typeof r.data };
-              }),
-            })),
-          };
-        },
-      );
-
-      return { previousData };
-    },
     onSuccess: () => {
-      // Invalidate and refetch to get server-filtered data
-      // This ensures rows that no longer match filters disappear
       void utils.row.infiniteWithView.invalidate({ tableId });
     },
-    onError: (err, _variables, context) => {
-      // Rollback on error
-      if (context?.previousData) {
-        utils.row.infiniteWithView.setInfiniteData(
-          { tableId, limit: 150 },
-          context.previousData,
-        );
-      }
+    onError: (err) => {
       console.error("Failed to update cell:", err);
     },
   });
 
   const handleSave = () => {
-    // Skip if already saved (e.g., from arrow key navigation)
     if (hasSavedRef.current) {
       stopEditing();
       return;
@@ -213,7 +150,6 @@ export function EditableCell({
       finalValue = null;
     }
 
-    // Update display value immediately to prevent flashing
     setDisplayValue(finalValue);
 
     if (finalValue !== initialValue) {
@@ -230,13 +166,9 @@ export function EditableCell({
     stopEditing();
   };
 
-  const handleSaveAndNavigate = (
-    direction: "up" | "down" | "left" | "right",
-  ) => {
-    // Mark as saved to prevent double-save from blur
+  const handleSaveAndNavigate = (direction: "up" | "down" | "left" | "right") => {
     hasSavedRef.current = true;
 
-    // Save current value
     let finalValue: string | number | null = value;
 
     if (columnType === "NUMBER") {
@@ -255,14 +187,12 @@ export function EditableCell({
       finalValue = null;
     }
 
-    // Update display value immediately to prevent flashing
     setDisplayValue(finalValue);
 
     if (finalValue !== initialValue) {
       updateCellMutation.mutate({ rowId, columnId, value: finalValue });
     }
 
-    // Calculate new position and navigate
     let newRow = rowIndex;
     let newCol = columnIndex;
 
@@ -299,22 +229,13 @@ export function EditableCell({
         handleSaveAndNavigate("right");
       }
     }
-    // Arrow keys now just move cursor within input, no navigation
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("Cell clicked:", {
-      rowIndex,
-      columnIndex,
-      isSelected,
-      isEditing,
-    });
-    // Blur any active input first to trigger save
     if (document.activeElement instanceof HTMLInputElement) {
       document.activeElement.blur();
-      // Wait for blur event to complete and save to happen before selecting new cell
       setTimeout(() => {
         selectCell({ rowIndex, columnIndex });
       }, 0);
@@ -332,13 +253,7 @@ export function EditableCell({
     e.preventDefault();
     e.stopPropagation();
     if (cellRef.current) {
-      // Pass selected row IDs for bulk operations
-      showContextMenu(
-        cellRef.current,
-        rowId,
-        tableId,
-        Array.from(selectedRowIds),
-      );
+      showContextMenu(cellRef.current, rowId, tableId, Array.from(selectedRowIds));
     }
   };
 
@@ -346,28 +261,22 @@ export function EditableCell({
     handleSave();
   };
 
-  // Format display value
   const formattedDisplayValue =
-    displayValue === null || displayValue === undefined
-      ? ""
-      : String(displayValue);
+    displayValue === null || displayValue === undefined ? "" : String(displayValue);
 
-  // Get highlight class based on search (yellow), filter (green), and sort (orange)
   const highlightClass = getCellHighlightClass(
     displayValue,
     columnId,
     searchTerm ?? "",
     filters ?? [],
-    sorts ?? [],
+    sorts ?? []
   );
 
   // Editing state
   if (isEditing) {
     return (
       <>
-        {/* Editing border - matches selection border exactly */}
         <div className="pointer-events-none absolute -inset-1 z-20 rounded-sm border-3 border-blue-600"></div>
-        {/* Input */}
         <div className="absolute inset-0 z-10 flex items-center overflow-hidden">
           <input
             ref={inputRef}
@@ -375,21 +284,15 @@ export function EditableCell({
             value={value}
             onChange={(e) => {
               const newValue = e.target.value;
-
-              // For NUMBER columns, validate input
               if (columnType === "NUMBER") {
-                // Allow empty, or valid number patterns (including incomplete ones like "-", ".", "1.", "-5")
-                // This regex allows: optional minus, optional digits, optional decimal, optional digits
                 if (newValue === "" || /^-?\d*\.?\d*$/.test(newValue)) {
                   setValue(newValue);
                   setValidationError(null);
                 } else {
-                  // Don't update value, show error
                   setValidationError("Please enter a number");
                   setTimeout(() => setValidationError(null), 2000);
                 }
               } else {
-                // TEXT column - allow anything
                 setValue(newValue);
                 setValidationError(null);
               }
@@ -397,9 +300,7 @@ export function EditableCell({
             onKeyDown={handleInputKeyDown}
             onBlur={handleBlur}
             className="h-full w-full bg-white px-2 text-sm outline-none"
-            placeholder={
-              columnType === "NUMBER" ? "Enter number..." : "Enter text..."
-            }
+            placeholder={columnType === "NUMBER" ? "Enter number..." : "Enter text..."}
           />
           {validationError && (
             <div className="absolute top-full left-0 z-50 mt-1 rounded bg-red-50 px-2 py-1 text-xs whitespace-nowrap text-red-600 shadow-md">
@@ -415,11 +316,9 @@ export function EditableCell({
   if (isSelected) {
     return (
       <>
-        {/* Selection border */}
         <div className="pointer-events-none absolute -inset-0.5 z-20 rounded-sm border-2 border-blue-600">
           <div className="absolute -right-1 -bottom-1 h-2 w-2 border border-blue-500 bg-white" />
         </div>
-        {/* Content */}
         <div
           ref={cellRef}
           className={`absolute inset-0 flex items-center cursor-default overflow-hidden px-2 ${highlightClass}`}
@@ -435,7 +334,7 @@ export function EditableCell({
     );
   }
 
-  // Default state - use absolute positioning to ensure click covers entire td
+  // Default state
   return (
     <div
       ref={cellRef}

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useSelection } from "./hooks/useSelection";
-import { useContextMenu } from "./hooks/useContextMenu";
+import { useSelection } from "../hooks/useSelection";
+import { useContextMenu } from "../hooks/useContextMenu";
 
 interface RowNumberCellProps {
   rowIndex: number;
