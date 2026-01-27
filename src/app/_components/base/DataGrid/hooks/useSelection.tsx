@@ -31,9 +31,13 @@ interface SelectionContextValue {
   ) => void;
   toggleColumnSelection: (columnIndex: number, isShiftKey?: boolean) => void;
   clearSelection: () => void;
+  selectAllRows: (rows: Array<{ index: number; id: string }>) => void;
+  deselectAllRows: () => void;
   selectedRows: Set<number>; // Row indices for UI highlighting
   selectedRowIds: Set<string>; // Row IDs for operations like delete
   selectedColumns: Set<number>;
+  totalRows: number;
+  totalColumns: number;
 }
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
@@ -195,6 +199,28 @@ export function SelectionProvider({
     setSelectedColumns(new Set());
   }, []);
 
+  const selectAllRows = useCallback(
+    (rows: Array<{ index: number; id: string }>) => {
+      // Clear cell and column selections
+      setSelectedCell(null);
+      setEditingCell(null);
+      setSelectedColumns(new Set());
+
+      // Select all provided rows
+      const rowIndices = new Set(rows.map((r) => r.index));
+      const rowIds = new Set(rows.map((r) => r.id));
+
+      setSelectedRows(rowIndices);
+      setSelectedRowIds(rowIds);
+    },
+    [],
+  );
+
+  const deselectAllRows = useCallback(() => {
+    setSelectedRows(new Set());
+    setSelectedRowIds(new Set());
+  }, []);
+
   // Keyboard navigation
   useEffect(() => {
     if (!selectedCell || editingCell) return;
@@ -331,9 +357,13 @@ export function SelectionProvider({
         toggleRowSelection,
         toggleColumnSelection,
         clearSelection,
+        selectAllRows,
+        deselectAllRows,
         selectedRows,
         selectedRowIds,
         selectedColumns,
+        totalRows,
+        totalColumns,
       }}
     >
       {children}

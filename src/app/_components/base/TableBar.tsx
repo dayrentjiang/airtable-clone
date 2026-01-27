@@ -118,7 +118,7 @@ export function TableBar({
   const activeTable = tables.find((t) => t.id === activeTableId);
 
   return (
-    <div className="relative flex h-8 items-end overflow-visible bg-blue-50 after:absolute after:right-0 after:bottom-0 after:left-0 after:h-px after:bg-gray-300">
+    <div className="relative flex h-8 items-end overflow-visible bg-cyan-50 after:absolute after:right-0 after:bottom-0 after:left-0 after:h-px after:bg-gray-300">
       {/* Table tabs */}
       <div className="scrollbar-none flex h-full min-w-0 flex-1 items-end overflow-x-auto overflow-y-visible">
         {tables.map((table, index) => {

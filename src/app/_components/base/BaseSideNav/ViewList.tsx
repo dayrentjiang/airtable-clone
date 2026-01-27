@@ -29,11 +29,13 @@ export function ViewList({
   }
 
   if (!views || views.length === 0) {
-    return <div className="px-2.5 py-2 text-sm text-gray-500">No views</div>;
+    return (
+      <div className="px-2.5 py-2 text-xs text-gray-500">No views found</div>
+    );
   }
 
   return (
-    <>
+    <div>
       {views.map((view) => (
         <ViewItem
           key={view.id}
@@ -45,6 +47,6 @@ export function ViewList({
           onDelete={() => onViewDelete(view.id)}
         />
       ))}
-    </>
+    </div>
   );
 }

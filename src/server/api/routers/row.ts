@@ -29,7 +29,7 @@ export const rowRouter = createTRPCRouter({
     .input(
       z.object({
         tableId: z.string(),
-        limit: z.number().min(1).max(150).default(50),
+        limit: z.number().min(1).max(500).default(50),
         cursor: z.string().nullish(),
       }),
     )
@@ -74,7 +74,7 @@ export const rowRouter = createTRPCRouter({
         filters: z.array(filterSchema).optional(),
         sorts: z.array(sortSchema).optional(),
         search: z.string().optional(), // Global search across all columns
-        limit: z.number().min(1).max(150).default(50),
+        limit: z.number().min(1).max(500).default(50),
         cursor: z.string().nullish(), // Cursor-based pagination
         offset: z.number().optional(), // Offset-based pagination (for virtual scrolling jumps)
       }),
@@ -415,6 +415,49 @@ export const rowRouter = createTRPCRouter({
       // Delete all rows in a single transaction
       const result = await ctx.db.row.deleteMany({
         where: { id: { in: ids } },
+      });
+
+      return { count: result.count };
+    }),
+
+  /**
+   * CLEAR ROW VALUES
+   * Clears all data values from specified rows (sets data to empty object)
+   * Used when pressing Backspace/Delete on selected rows
+   */
+  clearRowValues: protectedProcedure
+    .input(
+      z.object({
+        ids: z.array(z.string()).min(1).max(1000), // Allow up to 1000 rows at once
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { ids } = input;
+
+      // Verify all rows exist and belong to user before clearing
+      const rows = await ctx.db.row.findMany({
+        where: { id: { in: ids } },
+        include: {
+          table: { include: { base: { include: { workspace: true } } } },
+        },
+      });
+
+      // Check if all rows belong to the user
+      const unauthorizedRow = rows.find(
+        (row) => row.table.base.workspace.userId !== ctx.session.user.id,
+      );
+
+      if (unauthorizedRow || rows.length !== ids.length) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "One or more rows not found or unauthorized",
+        });
+      }
+
+      // Clear data for all rows in a single update
+      const result = await ctx.db.row.updateMany({
+        where: { id: { in: ids } },
+        data: { data: {} as Prisma.InputJsonValue },
       });
 
       return { count: result.count };

@@ -12,6 +12,7 @@ import {
   ChevronDown,
   GripVertical,
 } from "lucide-react";
+import { createPortal } from "react-dom";
 
 // ---------------------------------------------------------------------------
 // OPERATOR LABELS
@@ -228,6 +229,7 @@ interface FilterPopoverProps {
 export function FilterPopover({ tableId }: FilterPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
 
   // Use shared popover state
   const { isPopoverOpen, setOpenPopover } = useToolbarPopovers();
@@ -244,6 +246,17 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
   );
 
   const columns: Column[] = table?.columns ?? [];
+
+  // Calculate popover position when opening
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPopoverPosition({
+        top: rect.bottom + 4,
+        left: rect.right - 560, // 560px = w-140
+      });
+    }
+  }, [isOpen]);
 
   // Close popover when clicking outside
   useEffect(() => {
@@ -334,52 +347,55 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
       </button>
 
       {/* Popover */}
-      {isOpen && (
-        <div
-          ref={popoverRef}
-          className="absolute top-full right-0 z-50 mt-1 w-140 rounded-md border border-gray-300/60 bg-white py-2 shadow-lg"
-        >
-          {/* Header */}
-          <div className="border-b border-gray-100 px-4 py-3 text-xs text-gray-500">
-            In this view, show records
-          </div>
-
-          {/* Filter rows */}
-          <div className="px-4 py-2">
-            {filters.length === 0 ? (
-              <div className="py-4 text-center text-xs text-gray-400">
-                No filters applied. Add a condition to filter records.
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {filters.map((filter, index) => (
-                  <FilterRow
-                    key={index}
-                    filter={filter}
-                    index={index}
-                    columns={columns}
-                    onUpdate={updateFilter}
-                    onRemove={removeFilter}
-                    isFirst={index === 0}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Add condition button */}
-            <div className="mt-3 pt-2">
-              <button
-                onClick={handleAddFilter}
-                disabled={columns.length === 0}
-                className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-400"
-              >
-                <Plus size={14} />
-                <span>Add condition</span>
-              </button>
+      {isOpen &&
+        createPortal(
+          <div
+            ref={popoverRef}
+            className="fixed z-50 w-140 rounded-md border border-gray-300/60 bg-white py-2 shadow-lg"
+            style={{ top: popoverPosition.top, left: popoverPosition.left }}
+          >
+            {/* Header */}
+            <div className="border-b border-gray-100 px-4 py-3 text-xs text-gray-500">
+              In this view, show records
             </div>
-          </div>
-        </div>
-      )}
+
+            {/* Filter rows */}
+            <div className="px-4 py-2">
+              {filters.length === 0 ? (
+                <div className="py-4 text-center text-xs text-gray-400">
+                  No filters applied. Add a condition to filter records.
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {filters.map((filter, index) => (
+                    <FilterRow
+                      key={index}
+                      filter={filter}
+                      index={index}
+                      columns={columns}
+                      onUpdate={updateFilter}
+                      onRemove={removeFilter}
+                      isFirst={index === 0}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Add condition button */}
+              <div className="mt-3 pt-2">
+                <button
+                  onClick={handleAddFilter}
+                  disabled={columns.length === 0}
+                  className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-400"
+                >
+                  <Plus size={14} />
+                  <span>Add condition</span>
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

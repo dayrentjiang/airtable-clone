@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useViewConfig } from "../hooks/useViewConfig";
+import { createPortal } from "react-dom";
 
 /**
  * SEARCH INPUT COMPONENT
@@ -109,6 +110,7 @@ export function SearchInput({
   // Local state for immediate UI feedback
   const [localValue, setLocalValue] = useState(search);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -122,6 +124,17 @@ export function SearchInput({
       setIsExpanded(false);
     }
   }, [search, isExpanded]);
+
+  // Calculate popover position when expanding
+  useEffect(() => {
+    if (isExpanded && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPopoverPosition({
+        top: rect.bottom + 8,
+        left: rect.right - 384, // 384px = w-96
+      });
+    }
+  }, [isExpanded]);
 
   // Close popover when clicking outside
   useEffect(() => {
@@ -200,39 +213,42 @@ export function SearchInput({
       </button>
 
       {/* Popover */}
-      {isExpanded && (
-        <div
-          ref={popoverRef}
-          className="absolute top-full right-0 z-50 mt-2 w-96 rounded-lg border border-gray-200 bg-white shadow-lg"
-        >
-          {/* Search input bar */}
-          <div className="flex items-center gap-2 p-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={localValue}
-              onChange={(e) => setLocalValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-              className="flex-1 rounded px-2 py-1.5 text-xs outline-none placeholder:text-gray-400"
-            />
+      {isExpanded &&
+        createPortal(
+          <div
+            ref={popoverRef}
+            className="fixed z-50 w-96 rounded-lg border border-gray-200 bg-white shadow-lg"
+            style={{ top: popoverPosition.top, left: popoverPosition.left }}
+          >
+            {/* Search input bar */}
+            <div className="flex items-center gap-2 p-2">
+              <input
+                ref={inputRef}
+                type="text"
+                value={localValue}
+                onChange={(e) => setLocalValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={placeholder}
+                className="flex-1 rounded px-2 py-1.5 text-xs outline-none placeholder:text-gray-400"
+              />
 
-            {/* Ask Omni button */}
-            <button className="shrink-0 rounded bg-black px-2 py-1 text-xs font-medium text-white hover:bg-gray-800">
-              Ask Omni
-            </button>
+              {/* Ask Omni button */}
+              <button className="shrink-0 rounded bg-black px-2 py-1 text-xs font-medium text-white hover:bg-gray-800">
+                Ask Omni
+              </button>
 
-            {/* Close button */}
-            <button
-              onClick={handleClose}
-              className="shrink-0 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-              title="Close search"
-            >
-              <CloseIcon />
-            </button>
-          </div>
-        </div>
-      )}
+              {/* Close button */}
+              <button
+                onClick={handleClose}
+                className="shrink-0 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                title="Close search"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
