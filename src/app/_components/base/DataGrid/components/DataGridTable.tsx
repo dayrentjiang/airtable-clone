@@ -88,11 +88,18 @@ export function DataGridTable({
                       <td
                         key={`${rowData.id}-rownum`}
                         className={`relative border-r border-b border-gray-200 ${
-                          columnSelected ? "bg-blue-50" : ""
+                          columnSelected
+                            ? "bg-blue-50"
+                            : rowSelected
+                              ? "bg-blue-50"
+                              : "bg-white"
                         }`}
                         style={{
                           width: column.getSize(),
                           maxWidth: column.getSize(),
+                          position: "sticky",
+                          left: 0,
+                          zIndex: 25,
                         }}
                       >
                         <RowNumberCell
@@ -108,7 +115,9 @@ export function DataGridTable({
                   // Data columns
                   const columnId = column.id;
                   const cellValue = rowData.data[columnId] ?? null;
-                  const columnMeta = column.columnDef.meta as { type?: "TEXT" | "NUMBER" } | undefined;
+                  const columnMeta = column.columnDef.meta as
+                    | { type?: "TEXT" | "NUMBER" }
+                    | undefined;
                   const columnType = columnMeta?.type ?? "TEXT";
 
                   return (

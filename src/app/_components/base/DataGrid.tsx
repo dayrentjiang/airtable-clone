@@ -105,7 +105,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       search: search || undefined,
       enabled: isConfigLoaded,
     },
-    tableContainerRef
+    tableContainerRef,
   );
 
   // Track if we've received the first data response
@@ -136,10 +136,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   const highlightFilters = completeFilters;
   const highlightSorts = sorts;
 
-  const columns = useTableColumns(
-    table?.columns,
-    hiddenFields,
-  );
+  const columns = useTableColumns(table?.columns, hiddenFields);
 
   // -------------------------------------------------------------------------
   // CALCULATE SEARCH MATCH COUNT
@@ -311,7 +308,9 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   return (
     <WindowedRowsProvider value={{ addOptimisticRow, invalidate, totalCount }}>
       {/* Empty state - only show after we've confirmed there's no data */}
-      {totalCount === 0 && rowsByIndex.size === 0 && hasReceivedDataRef.current ? (
+      {totalCount === 0 &&
+      rowsByIndex.size === 0 &&
+      hasReceivedDataRef.current ? (
         <div className="flex h-full flex-col items-center justify-center">
           <div className="text-center">
             <p className="text-gray-500">No data yet</p>
@@ -328,51 +327,63 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
           </div>
         </div>
       ) : (
-      <div
-        ref={tableContainerRef}
-        className="h-full overflow-auto"
-        style={{ contain: "strict" }}
-      >
-        <div className="flex pb-30">
-          <DataGridTable
-            table={tableInstance}
-            tableId={tableId}
-            viewId={viewId}
-            virtualRows={virtualRows}
-            paddingTop={paddingTop}
-            paddingBottom={paddingBottom}
-            columnCount={columns.length}
-            tableWidth={tableWidth}
-            rowsByIndex={rowsByIndex}
-            totalCount={totalCount}
-            filters={highlightFilters}
-            sorts={highlightSorts}
-            searchTerm={highlightSearch}
-          />
-          <AddColumnButton tableId={tableId} />
+        <div className="relative h-full">
+          <div
+            ref={tableContainerRef}
+            className="h-full overflow-auto"
+            style={{ contain: "strict" }}
+          >
+            <div className="flex pb-30">
+              <DataGridTable
+                table={tableInstance}
+                tableId={tableId}
+                viewId={viewId}
+                virtualRows={virtualRows}
+                paddingTop={paddingTop}
+                paddingBottom={paddingBottom}
+                columnCount={columns.length}
+                tableWidth={tableWidth}
+                rowsByIndex={rowsByIndex}
+                totalCount={totalCount}
+                filters={highlightFilters}
+                sorts={highlightSorts}
+                searchTerm={highlightSearch}
+              />
+              <AddColumnButton tableId={tableId} />
+            </div>
+
+            {/* Global context menu for rows - rendered once at DataGrid level */}
+            {contextMenuState?.cellRef && (
+              <CellContextMenu
+                cellRef={contextMenuState.cellRef}
+                rowId={contextMenuState.rowId}
+                tableId={contextMenuState.tableId}
+                selectedRowIds={contextMenuState.selectedRowIds}
+                onClose={hideContextMenu}
+              />
+            )}
+
+            {/* Global context menu for columns - rendered once at DataGrid level */}
+            {columnContextMenuState?.headerRef && (
+              <ColumnHeaderContextMenu
+                headerRef={columnContextMenuState.headerRef}
+                columnId={columnContextMenuState.columnId}
+                tableId={columnContextMenuState.tableId}
+                onClose={hideColumnContextMenu}
+              />
+            )}
+          </div>
+
+          {/* Sticky bottom bar showing record count */}
+          <div className="absolute right-0 bottom-0 left-0 border-t border-gray-200 bg-gray-50 px-4 py-1">
+            <div
+              className="text-xs text-gray-600"
+              style={{ width: tableWidth }}
+            >
+              {totalCount} {totalCount === 1 ? "record" : "records"}
+            </div>
+          </div>
         </div>
-
-        {/* Global context menu for rows - rendered once at DataGrid level */}
-        {contextMenuState?.cellRef && (
-          <CellContextMenu
-            cellRef={contextMenuState.cellRef}
-            rowId={contextMenuState.rowId}
-            tableId={contextMenuState.tableId}
-            selectedRowIds={contextMenuState.selectedRowIds}
-            onClose={hideContextMenu}
-          />
-        )}
-
-        {/* Global context menu for columns - rendered once at DataGrid level */}
-        {columnContextMenuState?.headerRef && (
-          <ColumnHeaderContextMenu
-            headerRef={columnContextMenuState.headerRef}
-            columnId={columnContextMenuState.columnId}
-            tableId={columnContextMenuState.tableId}
-            onClose={hideColumnContextMenu}
-          />
-        )}
-      </div>
       )}
     </WindowedRowsProvider>
   );

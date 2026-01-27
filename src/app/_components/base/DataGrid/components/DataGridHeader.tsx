@@ -102,17 +102,28 @@ export function DataGridHeader({
                 style={{
                   width: header.getSize(),
                   maxWidth: header.getSize(),
+                  ...(columnIndex === 0 && {
+                    position: "sticky" as const,
+                    left: 0,
+                    zIndex: 30,
+                  }),
                 }}
               >
-                {/* Row number column (index 0) should always be empty */}
-                {columnIndex === 0
-                  ? null
-                  : header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
+                {/* Row number column (index 0) has a checkbox */}
+                {columnIndex === 0 ? (
+                  <div className="flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-100 text-blue-600 focus:ring-blue-500"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                ) : header.isPlaceholder ? null : (
+                  flexRender(
+                    header.column.columnDef.header,
+                    header.getContext(),
+                  )
+                )}
               </th>
             );
           })}
