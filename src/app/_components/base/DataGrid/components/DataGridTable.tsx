@@ -67,6 +67,7 @@ export function DataGridTable({
         {virtualRows.map((virtualRow) => {
           // Look up row data directly from the map using the virtual index
           // This is the source of truth for windowed data
+          // Note: rowsByIndex already includes optimistic updates from parent
           const rowData = rowsByIndex.get(virtualRow.index);
 
           // Row data exists - render with proper cell components

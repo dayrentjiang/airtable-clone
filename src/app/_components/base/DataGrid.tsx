@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useMemo, useState } from "react";
 import { useReactTable, getCoreRowModel } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { api } from "~/trpc/react";
@@ -23,6 +23,9 @@ import { ROW_HEIGHT, OVERSCAN_COUNT } from "./DataGrid/constants";
 export { SelectionProvider, useSelection } from "./DataGrid/hooks/useSelection";
 export { ContextMenuProvider } from "./DataGrid/hooks/useContextMenu";
 
+// Import useSelection for internal use
+import { useSelection } from "./DataGrid/hooks/useSelection";
+
 // Operators that don't require a value
 const NO_VALUE_OPERATORS = ["is_empty", "is_not_empty"];
 
@@ -39,6 +42,9 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     hideContextMenu,
     hideColumnContextMenu,
   } = useContextMenu();
+  
+  // Get selection context for keyboard shortcuts
+  const { selectedRowIds, editingCell, clearSelection } = useSelection();
 
   // Track if we've restored scroll position for this view
   const hasRestoredScrollRef = useRef(false);
@@ -65,6 +71,90 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       refetchOnWindowFocus: false,
     },
   );
+
+  // -------------------------------------------------------------------------
+  // CLEAR ROW VALUES MUTATION WITH OPTIMISTIC UI
+  // -------------------------------------------------------------------------
+  const utils = api.useUtils();
+  
+  // Track which rows are being cleared (for optimistic UI)
+  // Use a ref to accumulate all cleared rows across multiple deletions
+  const [clearingRowIds, setClearingRowIds] = useState<Set<string>>(new Set());
+  const allClearedRowIdsRef = useRef<Set<string>>(new Set());
+  
+  const clearRowValuesMutation = api.row.clearRowValues.useMutation({
+    onMutate: async ({ ids }) => {
+      // Cancel any outgoing refetches to prevent race conditions
+      await utils.row.infiniteWithView.cancel();
+      
+      // Add to accumulated set
+      ids.forEach(id => allClearedRowIdsRef.current.add(id));
+      
+      // Update state with all accumulated cleared rows
+      setClearingRowIds(new Set(allClearedRowIdsRef.current));
+      
+      // Don't invalidate here - let optimistic state handle the UI
+    },
+    onError: (_error, { ids }) => {
+      // Remove these specific rows from cleared set on error
+      ids.forEach(id => allClearedRowIdsRef.current.delete(id));
+      setClearingRowIds(new Set(allClearedRowIdsRef.current));
+      
+      // Invalidate to refetch correct data
+      void utils.row.infiniteWithView.invalidate();
+      invalidate();
+    },
+    onSettled: async () => {
+      // After mutation completes (success or error), invalidate to sync with server
+      await utils.row.infiniteWithView.invalidate();
+      invalidate();
+      
+      // The effect will clear clearingRowIds once it sees the data is actually cleared
+    },
+  });
+
+  // Store mutation in ref for use in event handlers
+  const clearRowValuesMutationRef = useRef(clearRowValuesMutation);
+  useEffect(() => {
+    clearRowValuesMutationRef.current = clearRowValuesMutation;
+  }, [clearRowValuesMutation]);
+
+  // -------------------------------------------------------------------------
+  // KEYBOARD HANDLER: Delete/Backspace to clear selected rows
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle if we have selected rows and not editing a cell
+      if (selectedRowIds.size === 0 || editingCell) return;
+
+      // Skip if user is typing in an input, textarea, or contenteditable element
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      // Handle Backspace or Delete key
+      if (e.key === "Backspace" || e.key === "Delete") {
+        e.preventDefault();
+        
+        // Convert Set to Array for mutation
+        const rowIds = Array.from(selectedRowIds);
+        
+        // Clear the row values using ref
+        clearRowValuesMutationRef.current.mutate({ ids: rowIds });
+        
+        // Clear selection after clearing values
+        clearSelection();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [selectedRowIds, editingCell, clearSelection]); // Remove clearRowValuesMutation from deps
 
   // -------------------------------------------------------------------------
   // FETCH ROWS WITH WINDOWED OFFSET-BASED PAGINATION
@@ -123,13 +213,75 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   }, [viewId]);
 
   // Convert rowsByIndex map to array for components that need it
+  // Apply optimistic updates for rows being cleared
   const rows = useMemo(() => {
     const arr: RowData[] = [];
     for (const [index, row] of rowsByIndex.entries()) {
-      arr[index] = row;
+      // If this row is being cleared optimistically, show it with empty data
+      if (clearingRowIds.has(row.id)) {
+        arr[index] = { ...row, data: {} };
+      } else {
+        arr[index] = row;
+      }
     }
     return arr;
-  }, [rowsByIndex]);
+  }, [rowsByIndex, clearingRowIds]);
+
+  // Create optimistically updated rowsByIndex map for rendering
+  const optimisticRowsByIndex = useMemo(() => {
+    // If no rows are being cleared, return original map
+    if (clearingRowIds.size === 0) {
+      return rowsByIndex;
+    }
+
+    // Create a new map with optimistic updates
+    const newMap = new Map<number, RowData>();
+    for (const [index, row] of rowsByIndex.entries()) {
+      if (clearingRowIds.has(row.id)) {
+        // Clear the data for this row
+        newMap.set(index, { ...row, data: {} });
+      } else {
+        newMap.set(index, row);
+      }
+    }
+    return newMap;
+  }, [rowsByIndex, clearingRowIds]);
+
+  // -------------------------------------------------------------------------
+  // AUTO-CLEAR OPTIMISTIC STATE WHEN DATA IS CONFIRMED CLEARED
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    if (clearingRowIds.size === 0) return;
+
+    // Build a map of visible row IDs for faster lookup
+    const visibleRowIds = new Map<string, RowData>();
+    for (const [_index, row] of rowsByIndex.entries()) {
+      visibleRowIds.set(row.id, row);
+    }
+
+    // Check which clearing rows are confirmed cleared
+    const confirmedCleared = new Set<string>();
+    
+    for (const rowId of clearingRowIds) {
+      const row = visibleRowIds.get(rowId);
+      
+      if (row) {
+        // Row is visible - check if data is empty
+        const hasData = Object.keys(row.data).length > 0;
+        if (!hasData) {
+          // This row is confirmed cleared
+          confirmedCleared.add(rowId);
+        }
+      }
+      // If row is not visible, we can't confirm it yet - keep in clearing state
+    }
+
+    // Remove confirmed cleared rows from the accumulated set
+    if (confirmedCleared.size > 0) {
+      confirmedCleared.forEach(id => allClearedRowIdsRef.current.delete(id));
+      setClearingRowIds(new Set(allClearedRowIdsRef.current));
+    }
+  }, [rowsByIndex, clearingRowIds]);
 
   // Build column definitions (filtered by hiddenFields from context)
   const highlightSearch = search;
@@ -343,7 +495,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
                 paddingBottom={paddingBottom}
                 columnCount={columns.length}
                 tableWidth={tableWidth}
-                rowsByIndex={rowsByIndex}
+                rowsByIndex={optimisticRowsByIndex}
                 totalCount={totalCount}
                 filters={highlightFilters}
                 sorts={highlightSorts}

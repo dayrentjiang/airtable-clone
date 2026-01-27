@@ -421,6 +421,49 @@ export const rowRouter = createTRPCRouter({
     }),
 
   /**
+   * CLEAR ROW VALUES
+   * Clears all data values from specified rows (sets data to empty object)
+   * Used when pressing Backspace/Delete on selected rows
+   */
+  clearRowValues: protectedProcedure
+    .input(
+      z.object({
+        ids: z.array(z.string()).min(1).max(1000), // Allow up to 1000 rows at once
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { ids } = input;
+
+      // Verify all rows exist and belong to user before clearing
+      const rows = await ctx.db.row.findMany({
+        where: { id: { in: ids } },
+        include: {
+          table: { include: { base: { include: { workspace: true } } } },
+        },
+      });
+
+      // Check if all rows belong to the user
+      const unauthorizedRow = rows.find(
+        (row) => row.table.base.workspace.userId !== ctx.session.user.id,
+      );
+
+      if (unauthorizedRow || rows.length !== ids.length) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "One or more rows not found or unauthorized",
+        });
+      }
+
+      // Clear data for all rows in a single update
+      const result = await ctx.db.row.updateMany({
+        where: { id: { in: ids } },
+        data: { data: {} as Prisma.InputJsonValue },
+      });
+
+      return { count: result.count };
+    }),
+
+  /**
    * BULK CREATE ROWS (optimized for large datasets)
    * Uses batch inserts and generates fake data with Faker.js
    */
