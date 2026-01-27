@@ -42,7 +42,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     hideContextMenu,
     hideColumnContextMenu,
   } = useContextMenu();
-  
+
   // Get selection context for keyboard shortcuts
   const { selectedRowIds, editingCell, clearSelection } = useSelection();
 
@@ -76,30 +76,30 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   // CLEAR ROW VALUES MUTATION WITH OPTIMISTIC UI
   // -------------------------------------------------------------------------
   const utils = api.useUtils();
-  
+
   // Track which rows are being cleared (for optimistic UI)
   // Use a ref to accumulate all cleared rows across multiple deletions
   const [clearingRowIds, setClearingRowIds] = useState<Set<string>>(new Set());
   const allClearedRowIdsRef = useRef<Set<string>>(new Set());
-  
+
   const clearRowValuesMutation = api.row.clearRowValues.useMutation({
     onMutate: async ({ ids }) => {
       // Cancel any outgoing refetches to prevent race conditions
       await utils.row.infiniteWithView.cancel();
-      
+
       // Add to accumulated set
-      ids.forEach(id => allClearedRowIdsRef.current.add(id));
-      
+      ids.forEach((id) => allClearedRowIdsRef.current.add(id));
+
       // Update state with all accumulated cleared rows
       setClearingRowIds(new Set(allClearedRowIdsRef.current));
-      
+
       // Don't invalidate here - let optimistic state handle the UI
     },
     onError: (_error, { ids }) => {
       // Remove these specific rows from cleared set on error
-      ids.forEach(id => allClearedRowIdsRef.current.delete(id));
+      ids.forEach((id) => allClearedRowIdsRef.current.delete(id));
       setClearingRowIds(new Set(allClearedRowIdsRef.current));
-      
+
       // Invalidate to refetch correct data
       void utils.row.infiniteWithView.invalidate();
       invalidate();
@@ -108,7 +108,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       // After mutation completes (success or error), invalidate to sync with server
       await utils.row.infiniteWithView.invalidate();
       invalidate();
-      
+
       // The effect will clear clearingRowIds once it sees the data is actually cleared
     },
   });
@@ -140,13 +140,13 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       // Handle Backspace or Delete key
       if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();
-        
+
         // Convert Set to Array for mutation
         const rowIds = Array.from(selectedRowIds);
-        
+
         // Clear the row values using ref
         clearRowValuesMutationRef.current.mutate({ ids: rowIds });
-        
+
         // Clear selection after clearing values
         clearSelection();
       }
@@ -261,10 +261,10 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
 
     // Check which clearing rows are confirmed cleared
     const confirmedCleared = new Set<string>();
-    
+
     for (const rowId of clearingRowIds) {
       const row = visibleRowIds.get(rowId);
-      
+
       if (row) {
         // Row is visible - check if data is empty
         const hasData = Object.keys(row.data).length > 0;
@@ -278,7 +278,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
 
     // Remove confirmed cleared rows from the accumulated set
     if (confirmedCleared.size > 0) {
-      confirmedCleared.forEach(id => allClearedRowIdsRef.current.delete(id));
+      confirmedCleared.forEach((id) => allClearedRowIdsRef.current.delete(id));
       setClearingRowIds(new Set(allClearedRowIdsRef.current));
     }
   }, [rowsByIndex, clearingRowIds]);
@@ -479,10 +479,10 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
           </div>
         </div>
       ) : (
-        <div className="relative h-full">
+        <div className="relative flex h-full flex-col">
           <div
             ref={tableContainerRef}
-            className="h-full overflow-auto"
+            className="flex-1 overflow-auto"
             style={{ contain: "strict" }}
           >
             <div className="flex pb-30">
@@ -527,7 +527,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
           </div>
 
           {/* Sticky bottom bar showing record count */}
-          <div className="absolute right-0 bottom-0 left-0 border-t border-gray-200 bg-gray-50 px-4 py-1">
+          <div className="border-t border-gray-200 bg-gray-50 px-4 py-1">
             <div
               className="text-xs text-gray-600"
               style={{ width: tableWidth }}
