@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { X, Type } from "lucide-react";
+import { Plus, Info } from "lucide-react";
+import { FieldTypeSelector, type FieldType } from "./FieldTypeSelector";
 
 interface TextColumnPanelProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface TextColumnPanelProps {
   onNameChange: (name: string) => void;
   onCancel: () => void;
   onCreate: () => void;
+  onTypeChange?: (type: FieldType) => void;
 }
 
 export function TextColumnPanel({
@@ -19,10 +21,12 @@ export function TextColumnPanel({
   onNameChange,
   onCancel,
   onCreate,
+  onTypeChange,
 }: TextColumnPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [position, setPosition] = useState<"left" | "right">("left");
+  const [selectedType, setSelectedType] = useState<FieldType>("TEXT");
 
   // Calculate position based on available space
   useEffect(() => {
@@ -81,54 +85,96 @@ export function TextColumnPanel({
   return (
     <div
       ref={panelRef}
-      className={`absolute top-5 z-50 mt-1 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg ${
+      className={`absolute top-5 z-50 mt-1 w-sm rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-lg ${
         position === "left" ? "right-0" : "left-0"
       }`}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-900">
-          Create Text Column
-        </h3>
-        <button
-          onClick={onCancel}
-          className="text-gray-400 hover:text-gray-600"
-        >
-          <X className="h-4 w-4" />
-        </button>
+      {/* Field name input - FUNCTIONAL */}
+      <div className="mb-1.5">
+        <input
+          ref={inputRef}
+          type="text"
+          value={columnName}
+          onChange={(e) => onNameChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Field name (optional)"
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 outline-none placeholder:text-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+        />
       </div>
 
-      <div className="mb-3">
-        <label className="mb-1.5 block text-xs font-medium text-gray-700">
-          Column Name
+      {/* Field type selector - FUNCTIONAL */}
+      <FieldTypeSelector
+        selectedType={selectedType}
+        onTypeChange={(type) => {
+          setSelectedType(type);
+          onTypeChange?.(type);
+        }}
+      />
+
+      {/* Helper text - NON-FUNCTIONAL */}
+      <p className="mb-4 text-xs text-gray-500 opacity-60">
+        {selectedType === "TEXT"
+          ? "Enter text, or prefill each new cell with a default value."
+          : "Enter a number, or prefill each new cell with a default value."}
+      </p>
+
+      {/* Default value section - NON-FUNCTIONAL */}
+      <div className="mb-4">
+        <label className="mb-1.5 block text-xs font-medium text-gray-700 opacity-60">
+          Default
         </label>
-        <div className="flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2">
-          <Type className="h-4 w-4 text-gray-500" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={columnName}
-            onChange={(e) => onNameChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Enter column name"
-            className="flex-1 border-none bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
-          />
+        <input
+          type="text"
+          placeholder="Enter default value (optional)"
+          disabled
+          className="w-full cursor-not-allowed rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-400 opacity-60 outline-none placeholder:text-gray-400"
+        />
+      </div>
+
+      {/* Action buttons */}
+      <div className="mb-4 flex justify-between gap-2 pt-4">
+        {/* Add description button - NON-FUNCTIONAL */}
+        <button
+          disabled
+          className="flex cursor-not-allowed items-center gap-1.5 px-3 py-1.5 text-xs text-gray-600 opacity-60"
+        >
+          <Plus className="h-4 w-4" />
+          Add description
+        </button>
+        <div>
+          <button
+            onClick={onCancel}
+            className="rounded-md px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onCreate}
+            disabled={!columnName.trim() || isCreating}
+            className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Create field
+          </button>
         </div>
       </div>
 
-      <div className="flex justify-end gap-2">
+      {/* Automate section - NON-FUNCTIONAL */}
+      <div className="flex items-center justify-between rounded-2xl bg-gray-50 px-2 py-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-3 w-3 items-center justify-center rounded-full bg-blue-600">
+            <span className="text-xs font-bold text-white">✦</span>
+          </div>
+          <span className="text-xs text-gray-700 opacity-60">
+            Automate this field with an agent
+          </span>
+          <Info className="h-3 w-3 text-gray-400 opacity-60" />
+        </div>
         <button
-          onClick={onCancel}
-          className="rounded-md px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100"
+          disabled
+          className="cursor-not-allowed rounded-md border border-gray-300 px-3 py-1 text-sm font-medium text-gray-700 opacity-60"
         >
-          Cancel
-        </button>
-        <button
-          onClick={onCreate}
-          disabled={!columnName.trim() || isCreating}
-          className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isCreating ? "Creating..." : "Create"}
+          Convert
         </button>
       </div>
     </div>
