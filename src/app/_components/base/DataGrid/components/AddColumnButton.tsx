@@ -23,6 +23,7 @@ import {
   Microscope,
   ShoppingCart,
   BookOpen,
+  ChevronRight,
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { useSelection } from "../hooks/useSelection";
@@ -66,7 +67,7 @@ const FIELD_SECTIONS: FieldSection[] = [
       {
         icon: Link2,
         label: "Link to another record",
-        iconRight: <ChevronDown className="h-3 w-3" />,
+        iconRight: <ChevronRight className="h-3 w-3" />,
         disabled: true,
       },
       { icon: Type, label: "Single line text", type: "TEXT" },
@@ -108,7 +109,7 @@ function FieldOption({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm ${
+      className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs ${
         disabled
           ? "cursor-not-allowed text-gray-400"
           : "cursor-pointer text-gray-700 hover:bg-blue-50"
@@ -300,42 +301,56 @@ export function AddColumnButton({ tableId }: AddColumnButtonProps) {
           {/* Type selection dropdown */}
           {isMenuOpen && (
             <div
-              className={`absolute top-5 z-50 mt-1 w-80 rounded-lg border border-gray-200 bg-white shadow-lg ${
+              className={`absolute top-5 z-50 mt-1 w-sm rounded-lg border border-gray-200 bg-white shadow-lg ${
                 menuPosition === "left" ? "right-0" : "left-0"
               }`}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Search bar */}
-              <div className="border-b border-gray-200 p-3">
-                <div className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5">
-                  <Search className="h-4 w-4 text-gray-400" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Find a field type"
-                    className="flex-1 border-none bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
-                  />
+              <div className="max-h-148 overflow-y-auto py-0">
+                {/* Search bar */}
+                <div className="border-b border-gray-200 p-2">
+                  <div className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2">
+                    <Search className="h-4 w-4 text-gray-400" />
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Find a field type"
+                      className="flex-1 border-none bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
+                    />
+                  </div>
                 </div>
-              </div>
+                {getFieldSectionsWithHandlers().map((section, index) => (
+                  <div key={section.title}>
+                    {/* Add divider before Standard fields */}
+                    {index > 0 && (
+                      <div className="my-2 border-t border-gray-200" />
+                    )}
 
-              <div className="max-h-96 overflow-y-auto py-2">
-                {getFieldSectionsWithHandlers().map((section) => (
-                  <div key={section.title} className="px-2 py-1">
-                    <div className="px-2 pt-2 pb-1 text-xs font-semibold text-gray-500 first:pt-0">
-                      {section.title}
+                    <div className="px-2 py-1">
+                      <div className="px-2 pt-2 pb-2 text-xs font-semibold text-gray-500 first:pt-0">
+                        {section.title}
+                      </div>
+                      <div
+                        className={
+                          section.title === "Field agents"
+                            ? "grid grid-cols-2 gap-1"
+                            : "flex flex-col gap-1.5"
+                        }
+                      >
+                        {section.fields.map((field) => (
+                          <FieldOption
+                            key={field.label}
+                            icon={field.icon}
+                            label={field.label}
+                            iconRight={field.iconRight}
+                            disabled={field.disabled}
+                            onClick={field.onClick}
+                          />
+                        ))}
+                      </div>
                     </div>
-                    {section.fields.map((field) => (
-                      <FieldOption
-                        key={field.label}
-                        icon={field.icon}
-                        label={field.label}
-                        iconRight={field.iconRight}
-                        disabled={field.disabled}
-                        onClick={field.onClick}
-                      />
-                    ))}
                   </div>
                 ))}
               </div>
