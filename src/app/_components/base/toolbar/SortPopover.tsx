@@ -16,6 +16,7 @@ import {
   Baseline,
 } from "lucide-react";
 import { Toggle } from "../../ui/Toggle";
+import { createPortal } from "react-dom";
 
 // ---------------------------------------------------------------------------
 // FIELD ICONS
@@ -309,6 +310,7 @@ interface SortPopoverProps {
 export function SortPopover({ tableId }: SortPopoverProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddSortPicker, setShowAddSortPicker] = useState(false);
+  const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
   const [autoSort, setAutoSort] = useState(true);
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -340,6 +342,17 @@ export function SortPopover({ tableId }: SortPopoverProps) {
   const filteredAvailableColumns = availableColumns.filter((col) =>
     col.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+
+  // Calculate popover position when opening
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPopoverPosition({
+        top: rect.bottom + 4,
+        left: rect.right - 420, // 420px = w-105
+      });
+    }
+  }, [isOpen]);
 
   // Close popover when clicking outside
   useEffect(() => {
@@ -437,104 +450,107 @@ export function SortPopover({ tableId }: SortPopoverProps) {
       </button>
 
       {/* Popover */}
-      {isOpen && (
-        <div
-          ref={popoverRef}
-          className="absolute top-full right-0 z-50 mt-1 w-105 rounded-lg border border-gray-200 bg-white shadow-lg"
-        >
-          {/* Header */}
-          <div className="px-2">
-            <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2.5">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-medium text-gray-600">
-                  Sort by
-                </span>
-                <CircleQuestionMark size={14} className="text-gray-400" />
-              </div>
-              <div>
-                <button className="flex h-4 w-4 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100"></button>
-              </div>
-            </div>
-
-            {/* Sort Rows */}
-            <div className="px-3 py-2">
-              {sorts.map((sort, index) => (
-                <SortRow
-                  key={index}
-                  sort={sort}
-                  index={index}
-                  columns={columns}
-                  isFirst={index === 0}
-                  onUpdate={updateSort}
-                  onRemove={removeSort}
-                />
-              ))}
-
-              {/* Add another sort button - only show if there are available columns */}
-              {availableColumns.length > 0 && (
-                <div className="relative mt-1">
-                  <button
-                    onClick={() => setShowAddSortPicker(!showAddSortPicker)}
-                    className="flex cursor-pointer items-center gap-1.5 rounded px-0 py-1.5 text-xs text-gray-600 hover:text-gray-900"
-                  >
-                    <Plus size={14} />
-                    <span>Add another sort</span>
-                  </button>
-
-                  {/* Dropdown picker for available columns */}
-                  {showAddSortPicker && (
-                    <div
-                      ref={addSortPickerRef}
-                      className="absolute top-full left-0 z-50 mt-1 w-96 rounded-lg border border-gray-200 bg-white shadow-lg"
-                    >
-                      {/* Search input */}
-                      <div className="border-b border-gray-200 p-2">
-                        <input
-                          type="text"
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          placeholder="Find a field"
-                          className="w-full rounded px-2 py-1.5 text-xs placeholder-gray-400 focus:outline-none"
-                          autoFocus
-                        />
-                      </div>
-
-                      {/* Column list */}
-                      <div className="max-h-60 overflow-y-auto py-1">
-                        {filteredAvailableColumns.map((col) => (
-                          <button
-                            key={col.id}
-                            onClick={() => handlePickColumn(col.id)}
-                            className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-xs text-gray-900 hover:bg-gray-100"
-                          >
-                            {getFieldIcon(col.type)}
-                            <span>{col.name}</span>
-                          </button>
-                        ))}
-                        {filteredAvailableColumns.length === 0 && (
-                          <div className="px-3 py-4 text-center text-xs text-gray-400">
-                            No fields found
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+      {isOpen &&
+        createPortal(
+          <div
+            ref={popoverRef}
+            className="fixed z-50 w-105 rounded-lg border border-gray-200 bg-white shadow-lg"
+            style={{ top: popoverPosition.top, left: popoverPosition.left }}
+          >
+            {/* Header */}
+            <div className="px-2">
+              <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-medium text-gray-600">
+                    Sort by
+                  </span>
+                  <CircleQuestionMark size={14} className="text-gray-400" />
                 </div>
-              )}
-            </div>
-          </div>
+                <div>
+                  <button className="flex h-4 w-4 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100"></button>
+                </div>
+              </div>
 
-          {/* Auto-sort toggle */}
-          <div className="border-t border-gray-200 bg-gray-100 px-3 py-3">
-            <div className="flex items-center gap-2">
-              <Toggle enabled={autoSort} onChange={setAutoSort} />
-              <span className="text-xs text-gray-700">
-                Automatically sort records
-              </span>
+              {/* Sort Rows */}
+              <div className="px-3 py-2">
+                {sorts.map((sort, index) => (
+                  <SortRow
+                    key={index}
+                    sort={sort}
+                    index={index}
+                    columns={columns}
+                    isFirst={index === 0}
+                    onUpdate={updateSort}
+                    onRemove={removeSort}
+                  />
+                ))}
+
+                {/* Add another sort button - only show if there are available columns */}
+                {availableColumns.length > 0 && (
+                  <div className="relative mt-1">
+                    <button
+                      onClick={() => setShowAddSortPicker(!showAddSortPicker)}
+                      className="flex cursor-pointer items-center gap-1.5 rounded px-0 py-1.5 text-xs text-gray-600 hover:text-gray-900"
+                    >
+                      <Plus size={14} />
+                      <span>Add another sort</span>
+                    </button>
+
+                    {/* Dropdown picker for available columns */}
+                    {showAddSortPicker && (
+                      <div
+                        ref={addSortPickerRef}
+                        className="absolute top-full left-0 z-50 mt-1 w-96 rounded-lg border border-gray-200 bg-white shadow-lg"
+                      >
+                        {/* Search input */}
+                        <div className="border-b border-gray-200 p-2">
+                          <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Find a field"
+                            className="w-full rounded px-2 py-1.5 text-xs placeholder-gray-400 focus:outline-none"
+                            autoFocus
+                          />
+                        </div>
+
+                        {/* Column list */}
+                        <div className="max-h-60 overflow-y-auto py-1">
+                          {filteredAvailableColumns.map((col) => (
+                            <button
+                              key={col.id}
+                              onClick={() => handlePickColumn(col.id)}
+                              className="flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-xs text-gray-900 hover:bg-gray-100"
+                            >
+                              {getFieldIcon(col.type)}
+                              <span>{col.name}</span>
+                            </button>
+                          ))}
+                          {filteredAvailableColumns.length === 0 && (
+                            <div className="px-3 py-4 text-center text-xs text-gray-400">
+                              No fields found
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+
+            {/* Auto-sort toggle */}
+            <div className="border-t border-gray-200 bg-gray-100 px-3 py-3">
+              <div className="flex items-center gap-2">
+                <Toggle enabled={autoSort} onChange={setAutoSort} />
+                <span className="text-xs text-gray-700">
+                  Automatically sort records
+                </span>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
