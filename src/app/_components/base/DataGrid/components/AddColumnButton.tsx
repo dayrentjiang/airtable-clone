@@ -160,7 +160,7 @@ export function AddColumnButton({ tableId }: AddColumnButtonProps) {
           {/* Type selection dropdown */}
           {isMenuOpen && (
             <div
-              className="absolute top-full left-0 z-50 mt-1 w-40 rounded-lg border border-gray-200 bg-white shadow-lg"
+              className="absolute top-full right-13 z-50 mt-1 w-40 rounded-lg border border-gray-200 bg-white shadow-lg"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="py-1">

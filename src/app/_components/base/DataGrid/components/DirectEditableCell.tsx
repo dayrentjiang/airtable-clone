@@ -39,7 +39,9 @@ export function DirectEditableCell({
   sorts,
 }: DirectEditableCellProps) {
   const [value, setValue] = useState(String(initialValue ?? ""));
-  const [displayValue, setDisplayValue] = useState<string | number | null>(initialValue);
+  const [displayValue, setDisplayValue] = useState<string | number | null>(
+    initialValue,
+  );
   const [validationError, setValidationError] = useState<string | null>(null);
   const previousValueRef = useRef<string | number | null>(initialValue);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -74,7 +76,10 @@ export function DirectEditableCell({
   // Sync with external value changes
   useEffect(() => {
     if (isEditing) return;
-    if (initialValue !== previousValueRef.current && initialValue !== displayValue) {
+    if (
+      initialValue !== previousValueRef.current &&
+      initialValue !== displayValue
+    ) {
       setValue(String(initialValue ?? ""));
       setDisplayValue(initialValue);
     }
@@ -87,7 +92,11 @@ export function DirectEditableCell({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
         return;
       }
 
@@ -168,7 +177,9 @@ export function DirectEditableCell({
     stopEditing();
   };
 
-  const handleSaveAndNavigate = (direction: "up" | "down" | "left" | "right") => {
+  const handleSaveAndNavigate = (
+    direction: "up" | "down" | "left" | "right",
+  ) => {
     hasSavedRef.current = true;
 
     let finalValue: string | number | null = value;
@@ -267,7 +278,12 @@ export function DirectEditableCell({
     e.preventDefault();
     e.stopPropagation();
     if (cellRef.current) {
-      showContextMenu(cellRef.current, rowId, tableId, Array.from(selectedRowIds));
+      showContextMenu(
+        cellRef.current,
+        rowId,
+        tableId,
+        Array.from(selectedRowIds),
+      );
     }
   };
 
@@ -276,14 +292,16 @@ export function DirectEditableCell({
   };
 
   const formattedDisplayValue =
-    displayValue === null || displayValue === undefined ? "" : String(displayValue);
+    displayValue === null || displayValue === undefined
+      ? ""
+      : String(displayValue);
 
   const highlightClass = getCellHighlightClass(
     displayValue,
     columnId,
     searchTerm ?? "",
     filters ?? [],
-    sorts ?? []
+    sorts ?? [],
   );
 
   // Editing state
@@ -314,7 +332,9 @@ export function DirectEditableCell({
             onKeyDown={handleInputKeyDown}
             onBlur={handleBlur}
             className="h-full w-full bg-white px-2 text-sm outline-none"
-            placeholder={columnType === "NUMBER" ? "Enter number..." : "Enter text..."}
+            placeholder={
+              columnType === "NUMBER" ? "Enter number..." : "Enter text..."
+            }
           />
           {validationError && (
             <div className="absolute top-full left-0 z-50 mt-1 rounded bg-red-50 px-2 py-1 text-xs whitespace-nowrap text-red-600 shadow-md">
@@ -335,7 +355,7 @@ export function DirectEditableCell({
         </div>
         <div
           ref={cellRef}
-          className={`absolute inset-0 flex items-center cursor-default overflow-hidden px-2 ${highlightClass}`}
+          className={`absolute inset-0 flex cursor-default items-center overflow-hidden px-2 ${highlightClass}`}
           onMouseDown={handleMouseDown}
           onDoubleClick={handleDoubleClick}
           onContextMenu={handleContextMenu}
@@ -355,7 +375,7 @@ export function DirectEditableCell({
       onMouseDown={handleMouseDown}
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
-      className={`absolute inset-0 flex items-center cursor-default overflow-hidden px-2 ${highlightClass}`}
+      className={`absolute inset-0 flex cursor-default items-center overflow-hidden px-2 ${highlightClass}`}
     >
       <span className="pointer-events-none block truncate text-sm text-gray-900">
         {formattedDisplayValue || <span className="text-gray-400"></span>}

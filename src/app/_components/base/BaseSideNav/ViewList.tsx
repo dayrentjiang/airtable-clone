@@ -33,7 +33,7 @@ export function ViewList({
   }
 
   return (
-    <>
+    <div>
       {views.map((view) => (
         <ViewItem
           key={view.id}
@@ -45,6 +45,6 @@ export function ViewList({
           onDelete={() => onViewDelete(view.id)}
         />
       ))}
-    </>
+    </div>
   );
 }

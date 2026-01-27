@@ -44,10 +44,10 @@ function ToolbarButton({ icon, label, onClick }: ToolbarButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-1 text-xs text-gray-600 hover:bg-gray-100 md:px-2"
+      className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded px-1.5 text-xs text-gray-600 hover:bg-gray-100 md:px-2"
     >
-      {icon}
-      <span className="hidden md:inline">{label}</span>
+      <span className="shrink-0">{icon}</span>
+      <span className="hidden truncate md:inline">{label}</span>
     </button>
   );
 }
@@ -70,6 +70,7 @@ export function ViewToolbar({
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [isEditing, setIsEditing] = useState(false);
   const [editingName, setEditingName] = useState("");
+  const [cachedViewName, setCachedViewName] = useState<string | null>(null);
   const viewSelectorRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
@@ -184,7 +185,16 @@ export function ViewToolbar({
   const ViewIcon = view?.type
     ? (VIEW_TYPE_ICONS[view.type] ?? Grid3X3)
     : Grid3X3;
-  const viewName = view?.name ?? "Grid view";
+
+  // Cache the view name to prevent jitter during view switches
+  const viewName = view?.name ?? cachedViewName ?? "Grid view";
+
+  // Update cached view name when view data loads
+  useEffect(() => {
+    if (view?.name) {
+      setCachedViewName(view.name);
+    }
+  }, [view?.name]);
 
   const bulkCreate = api.row.bulkCreate.useMutation({
     onSuccess: async (data) => {
@@ -301,18 +311,18 @@ export function ViewToolbar({
 
   return (
     <ToolbarPopoversProvider>
-      <div className="flex h-12 items-center justify-between border-b border-gray-200 bg-white px-3">
+      <div className="box-border flex h-12 max-h-12 min-h-12 shrink-0 items-center justify-between overflow-hidden border-b border-gray-200 bg-white px-3">
         {/* Left: Hamburger + View dropdown */}
-        <div className="flex items-center gap-1">
+        <div className="flex h-full items-center gap-1">
           <button
             onClick={onToggleSideNav}
-            className="cursor-pointer rounded p-1.5 text-gray-600 hover:bg-gray-100"
+            className="flex h-8 cursor-pointer items-center justify-center rounded p-1.5 text-gray-600 hover:bg-gray-100"
           >
-            <Menu size={16} />
+            <Menu size={16} className="shrink-0" />
           </button>
 
           {isEditing ? (
-            <div className="flex items-center gap-1.5 px-1.5 py-1.5 md:px-2.5">
+            <div className="flex h-8 items-center gap-1.5">
               <input
                 ref={editInputRef}
                 type="text"
@@ -327,7 +337,7 @@ export function ViewToolbar({
                   }
                 }}
                 onBlur={handleSaveRename}
-                className="0 w-42 rounded border border-gray-300 bg-white px-2 py-1 text-sm font-medium text-gray-800 outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-300"
+                className="h-8 w-42 rounded border border-gray-300 bg-white px-2 text-sm font-medium text-gray-800 outline-none focus:border-gray-400"
               />
             </div>
           ) : (
@@ -341,11 +351,11 @@ export function ViewToolbar({
                 setEditingName(viewName);
                 setIsEditing(true);
               }}
-              className="flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100 md:px-2.5"
+              className="flex h-8 cursor-pointer items-center gap-1.5 rounded px-1.5 text-sm font-medium text-gray-800 hover:bg-gray-100 md:px-2.5"
             >
-              <TableCellsSplit size={16} className="text-blue-600" />
-              <span className="hidden md:inline">{viewName}</span>
-              <ChevronDown size={14} />
+              <TableCellsSplit size={16} className="shrink-0 text-blue-600" />
+              <span className="hidden truncate md:inline">{viewName}</span>
+              <ChevronDown size={14} className="shrink-0" />
             </button>
           )}
 
@@ -360,7 +370,7 @@ export function ViewToolbar({
         </div>
 
         {/* Right: Toolbar actions */}
-        <div className="flex items-center gap-0.5">
+        <div className="flex h-full items-center gap-0.5">
           <ToolbarButton
             icon={<Database size={16} />}
             label={isCreating ? "Creating..." : "Create 100k rows"}
@@ -372,8 +382,8 @@ export function ViewToolbar({
           <SortPopover tableId={tableId} />
           <ToolbarButton icon={<PaintBucket size={16} />} label="Color" />
 
-          <button className="cursor-pointer rounded p-1.5 text-gray-600 hover:bg-gray-100">
-            <GripHorizontal size={16} />
+          <button className="flex h-8 cursor-pointer items-center justify-center rounded p-1.5 text-gray-600 hover:bg-gray-100">
+            <GripHorizontal size={16} className="shrink-0" />
           </button>
 
           <ToolbarButton

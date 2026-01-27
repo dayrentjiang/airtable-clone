@@ -21,6 +21,7 @@ export function ViewItem({
     y: number;
   } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
 
   // Update optimistic name when the prop changes (server confirmed)
   useEffect(() => {
@@ -35,6 +36,23 @@ export function ViewItem({
       inputRef.current.select();
     }
   }, [isRenaming]);
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    if (!contextMenu) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(e.target as Node)
+      ) {
+        setContextMenu(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [contextMenu]);
 
   const displayName = optimisticName ?? viewName;
 
@@ -82,63 +100,65 @@ export function ViewItem({
 
   return (
     <>
-      <div
-        className={`group flex w-full items-center gap-2 rounded px-2.5 py-2 text-xs ${
-          isSelected
-            ? "bg-gray-100 font-medium text-gray-900"
-            : "text-gray-700 hover:bg-gray-100"
-        }`}
-      >
-        {isRenaming ? (
-          <>
-            <TableCellsSplit className="h-4 w-4 text-blue-600" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleRenameSubmit();
-                } else if (e.key === "Escape") {
-                  handleRenameCancel();
-                }
-              }}
-              onBlur={handleRenameSubmit}
-              className="flex-1 rounded border border-gray-300 px-1 py-0.5 text-xs focus:ring-1 focus:ring-gray-300 focus:outline-none"
-            />
-          </>
-        ) : (
-          <>
-            <button
-              onClick={onSelect}
-              onContextMenu={handleContextMenu}
-              className="flex flex-1 items-center gap-2 hover:cursor-pointer"
-            >
-              <TableCellsSplit className="h-4 w-4 text-blue-600 group-hover:hidden" />
-              <Star className="hidden h-4 w-4 text-gray-500 group-hover:block" />
-              <span>{displayName}</span>
-            </button>
-            <button
-              onClick={handleMoreClick}
-              className="hidden rounded p-1 text-gray-500 group-hover:block hover:bg-gray-200"
-            >
-              <MoreHorizontal className="h-3.5 w-3.5" />
-            </button>
-          </>
-        )}
-      </div>
+      {isRenaming ? (
+        <div className="flex h-8 w-full items-center gap-2 rounded px-2.5 text-xs">
+          <TableCellsSplit className="h-4 w-4 shrink-0 text-blue-600" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleRenameSubmit();
+              } else if (e.key === "Escape") {
+                handleRenameCancel();
+              }
+            }}
+            onBlur={handleRenameSubmit}
+            className="flex-1 rounded border border-gray-300 px-1 py-0.5 text-xs focus:ring-1 focus:ring-gray-300 focus:outline-none"
+          />
+        </div>
+      ) : (
+        <div
+          className={`group flex h-8 w-full cursor-pointer items-center gap-2 rounded px-2.5 text-xs ${
+            isSelected
+              ? "bg-gray-100 font-medium text-gray-900"
+              : "text-gray-700 hover:bg-gray-100"
+          }`}
+        >
+          <button
+            onClick={onSelect}
+            onContextMenu={handleContextMenu}
+            className="flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2"
+          >
+            <div className="relative h-4 w-4 shrink-0">
+              <TableCellsSplit className="absolute inset-0 h-4 w-4 text-blue-600 transition-opacity group-hover:opacity-0" />
+              <Star className="absolute inset-0 h-4 w-4 text-gray-500 opacity-0 transition-opacity group-hover:opacity-100" />
+            </div>
+            <span className="truncate">{displayName}</span>
+          </button>
+          <button
+            onClick={handleMoreClick}
+            className="shrink-0 cursor-pointer rounded p-0.5 text-gray-500 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-gray-200"
+          >
+            <MoreHorizontal className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       {contextMenu && !isRenaming && (
-        <ViewContextMenu
-          viewId={viewId}
-          viewName={viewName}
-          x={contextMenu.x}
-          y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
-          onRename={handleRenameStart}
-          onDelete={onDelete}
-        />
+        <div ref={contextMenuRef}>
+          <ViewContextMenu
+            viewId={viewId}
+            viewName={viewName}
+            x={contextMenu.x}
+            y={contextMenu.y}
+            onClose={() => setContextMenu(null)}
+            onRename={handleRenameStart}
+            onDelete={onDelete}
+          />
+        </div>
       )}
     </>
   );
