@@ -81,7 +81,8 @@ export const baseRouter = createTRPCRouter({
         });
       }
 
-      // Create base with default table, columns, and sample rows
+      // Create base with default table, columns, view, and one empty row
+      // This follows the same behavior as creating a new table
       const base = await ctx.db.base.create({
         data: {
           name: input.name,
@@ -108,6 +109,19 @@ export const baseRouter = createTRPCRouter({
                   },
                 ],
               },
+              views: {
+                create: {
+                  name: "Grid view",
+                  type: "GRID",
+                  order: 0,
+                  config: {
+                    filters: [],
+                    sorts: [],
+                    hiddenFields: [],
+                    fieldOrder: [],
+                  },
+                },
+              },
             },
           },
         },
@@ -115,58 +129,24 @@ export const baseRouter = createTRPCRouter({
           tables: {
             include: {
               columns: true,
+              views: true,
             },
           },
         },
       });
 
-      // Get the created table and columns
+      // Get the created table
       const table = base.tables[0];
-      const columns = table?.columns ?? [];
 
-      // Create column ID map for sample data
-      const nameCol = columns.find((c) => c.name === "Name");
-      const notesCol = columns.find((c) => c.name === "Notes");
-      const statusCol = columns.find((c) => c.name === "Status");
-
-      // Create 3 sample rows with helpful data
-      if (table && nameCol && notesCol && statusCol) {
-        const sampleRows = [
-          {
+      // Create a default empty row (matching table creation behavior)
+      if (table) {
+        await ctx.db.row.create({
+          data: {
             id: generateRowId(),
             tableId: table.id,
             order: 0,
-            data: {
-              [nameCol.id]: "Task 1",
-              [notesCol.id]: "Click any cell to edit its content",
-              [statusCol.id]: "Todo",
-            },
+            data: {},
           },
-          {
-            id: generateRowId(),
-            tableId: table.id,
-            order: 1,
-            data: {
-              [nameCol.id]: "Task 2",
-              [notesCol.id]: "Use the + button below to add more rows",
-              [statusCol.id]: "In Progress",
-            },
-          },
-          {
-            id: generateRowId(),
-            tableId: table.id,
-            order: 2,
-            data: {
-              [nameCol.id]: "Task 3",
-              [notesCol.id]: "Customize your columns from the toolbar",
-              [statusCol.id]: "Done",
-            },
-          },
-        ];
-
-        // Insert sample rows
-        await ctx.db.row.createMany({
-          data: sampleRows,
         });
       }
 
