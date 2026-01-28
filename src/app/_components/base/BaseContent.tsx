@@ -18,12 +18,15 @@ import { api } from "~/trpc/react";
 interface BaseContentProps {
   baseId: string;
   userInitial: string;
+  initialTableId?: string;
+  initialViewId?: string;
 }
 
 // Component that waits for view config to load before rendering toolbar and grid
 // BaseSideNav should stay outside to remain visible during view switches
 function ViewConfigContent({
   onToggleSideNav,
+  baseId,
   tableId,
   viewId,
   isSideNavOpen,
@@ -33,6 +36,7 @@ function ViewConfigContent({
   onViewSelect,
 }: {
   onToggleSideNav: () => void;
+  baseId: string;
   tableId: string;
   viewId: string;
   isSideNavOpen: boolean;
@@ -68,6 +72,7 @@ function ViewConfigContent({
         <div className="flex flex-1 overflow-hidden">
           {isSideNavOpen && (
             <BaseSideNav
+              baseId={baseId}
               tableId={tableId}
               selectedViewId={activeViewId}
               onViewSelect={setActiveViewId}
@@ -96,6 +101,7 @@ function ViewConfigContent({
       <div className="flex flex-1 overflow-hidden">
         {isSideNavOpen && (
           <BaseSideNav
+            baseId={baseId}
             tableId={tableId}
             selectedViewId={activeViewId}
             onViewSelect={setActiveViewId}
@@ -454,6 +460,7 @@ function BaseContentInner({
           <ViewConfigProvider key={activeViewId} viewId={activeViewId}>
             <ViewConfigContent
               onToggleSideNav={toggleSideNav}
+              baseId={baseId}
               tableId={activeTableId}
               viewId={activeViewId}
               isSideNavOpen={isSideNavOpen}
@@ -479,10 +486,32 @@ function BaseContentInner({
   );
 }
 
-export function BaseContent({ baseId, userInitial }: BaseContentProps) {
-  // Default to first table if available
-  const [activeTableId, setActiveTableId] = useState<string | null>(null);
-  const [activeViewId, setActiveViewId] = useState<string | null>(null);
+export function BaseContent({
+  baseId,
+  userInitial,
+  initialTableId,
+  initialViewId,
+}: BaseContentProps) {
+  // Use URL params if provided, otherwise use local state
+  const [activeTableId, setActiveTableId] = useState<string | null>(
+    initialTableId ?? null,
+  );
+  const [activeViewId, setActiveViewId] = useState<string | null>(
+    initialViewId ?? null,
+  );
+
+  // Update state when URL params change (e.g., navigation from search)
+  useEffect(() => {
+    if (initialTableId && initialTableId !== activeTableId) {
+      setActiveTableId(initialTableId);
+    }
+  }, [initialTableId]);
+
+  useEffect(() => {
+    if (initialViewId && initialViewId !== activeViewId) {
+      setActiveViewId(initialViewId);
+    }
+  }, [initialViewId]);
 
   // Fetch table to get the column count
   const { data: table } = api.table.getById.useQuery(

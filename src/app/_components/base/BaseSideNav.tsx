@@ -7,8 +7,10 @@ import type { BaseSideNavProps } from "./BaseSideNav/types";
 import { CreateViewDropdown } from "./BaseSideNav/CreateViewDropdown";
 import { CreateViewModal } from "./BaseSideNav/CreateViewModal";
 import { ViewList } from "./BaseSideNav/ViewList";
+import { ViewSearchResults } from "./BaseSideNav/ViewSearchResults";
 
 export function BaseSideNav({
+  baseId,
   tableId,
   selectedViewId,
   onViewSelect,
@@ -181,10 +183,25 @@ export function BaseSideNav({
     deleteView.mutate({ id: viewId });
   };
 
-  // Filter views based on search query
-  const filteredViews = views?.filter((view) =>
-    view.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  // Use global search when searching, otherwise filter local views
+  const { data: globalSearchResults, isLoading: isSearchLoading } =
+    api.view.searchGlobal.useQuery(
+      {
+        query: searchQuery,
+        currentTableId: tableId ?? undefined,
+      },
+      {
+        enabled: !!searchQuery && searchQuery.length > 0,
+        staleTime: 1000, // Cache for 1 second
+      },
+    );
+
+  // Filter views based on search query (local or global)
+  const filteredViews = searchQuery
+    ? globalSearchResults?.currentTableViews
+    : views?.filter((view) =>
+        view.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
 
   const handleSearchToggle = () => {
     setIsSearching(true);
@@ -252,7 +269,7 @@ export function BaseSideNav({
               </button>
             </div>
           ) : (
-            <button
+            <div
               onClick={handleSearchToggle}
               className={`${searchContainerStyles} border-transparent text-xs text-gray-700 hover:cursor-text`}
             >
@@ -267,20 +284,31 @@ export function BaseSideNav({
               >
                 <Settings className="h-3.5 w-3.5" />
               </button>
-            </button>
+            </div>
           )}
         </div>
 
         {/* Views list */}
         <div className="mt-3 space-y-0">
-          <ViewList
-            views={filteredViews}
-            isLoading={isLoading}
-            selectedViewId={selectedViewId}
-            onViewSelect={onViewSelect}
-            onViewRename={handleViewRename}
-            onViewDelete={handleViewDelete}
-          />
+          {searchQuery ? (
+            <ViewSearchResults
+              baseId={baseId}
+              currentTableViews={globalSearchResults?.currentTableViews}
+              otherTableViews={globalSearchResults?.otherTableViews}
+              onViewSelect={onViewSelect}
+              selectedViewId={selectedViewId ?? undefined}
+              isLoading={isSearchLoading}
+            />
+          ) : (
+            <ViewList
+              views={filteredViews}
+              isLoading={isLoading}
+              selectedViewId={selectedViewId}
+              onViewSelect={onViewSelect}
+              onViewRename={handleViewRename}
+              onViewDelete={handleViewDelete}
+            />
+          )}
         </div>
       </div>
 

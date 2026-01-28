@@ -34,9 +34,7 @@ export function BaseTopNav({ baseName, onBaseNameClick }: BaseTopNavProps) {
           className="flex min-w-0 items-center gap-2 rounded px-1 py-2 hover:cursor-pointer md:px-2"
         >
           <BaseIcon />
-          <span className="truncate font-bold text-gray-800">
-            {baseName}
-          </span>
+          <span className="truncate font-bold text-gray-800">{baseName}</span>
           <ChevronDown size={14} className="shrink-0" />
         </button>
       </div>
