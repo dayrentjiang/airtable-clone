@@ -28,8 +28,8 @@ interface UserMenuProps {
 }
 
 export function UserMenu({
-  userName = "Dayrent Tjiang",
-  userEmail = "dayrentjiang@gmail.com",
+  userName,
+  userEmail,
   userInitial = "D",
   open,
   onClose,

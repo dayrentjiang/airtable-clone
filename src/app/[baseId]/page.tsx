@@ -21,6 +21,8 @@ export default async function BasePage({
   const { table, view } = await searchParams;
 
   const userInitial = session.user?.name?.[0]?.toUpperCase() ?? "U";
+  const userName = session.user?.name ?? undefined;
+  const userEmail = session.user?.email ?? undefined;
 
   return (
     <div className="flex h-screen flex-col bg-white">
@@ -28,6 +30,8 @@ export default async function BasePage({
       <BaseContent
         baseId={baseId}
         userInitial={userInitial}
+        userName={userName}
+        userEmail={userEmail}
         initialTableId={table}
         initialViewId={view}
       />

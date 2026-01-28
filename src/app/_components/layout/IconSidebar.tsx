@@ -15,8 +15,8 @@ interface IconSidebarProps {
 
 export function IconSidebar({ 
   userInitial = "D",
-  userName = "Dayrent Tjiang",
-  userEmail = "dayrentjiang@gmail.com"
+  userName,
+  userEmail,
 }: IconSidebarProps) {
   const router = useRouter();
   const [isHoveringLogo, setIsHoveringLogo] = useState(false);

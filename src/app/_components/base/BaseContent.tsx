@@ -18,6 +18,8 @@ import { api } from "~/trpc/react";
 interface BaseContentProps {
   baseId: string;
   userInitial: string;
+  userName?: string;
+  userEmail?: string;
   initialTableId?: string;
   initialViewId?: string;
 }
@@ -139,6 +141,8 @@ function ViewConfigContent({
 function BaseContentInner({
   baseId,
   userInitial,
+  userName,
+  userEmail,
   activeTableId,
   activeViewId,
   setActiveTableId,
@@ -464,7 +468,11 @@ function BaseContentInner({
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Icon sidebar - far left */}
-      <IconSidebar userInitial={userInitial} />
+      <IconSidebar 
+        userInitial={userInitial}
+        userName={userName}
+        userEmail={userEmail}
+      />
 
       {/* Main content area */}
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -521,6 +529,8 @@ function BaseContentInner({
 export function BaseContent({
   baseId,
   userInitial,
+  userName,
+  userEmail,
   initialTableId,
   initialViewId,
 }: BaseContentProps) {
@@ -583,6 +593,8 @@ export function BaseContent({
         <BaseContentInner
           baseId={baseId}
           userInitial={userInitial}
+          userName={userName}
+          userEmail={userEmail}
           activeTableId={activeTableId}
           activeViewId={activeViewId}
           setActiveTableId={setActiveTableId}
