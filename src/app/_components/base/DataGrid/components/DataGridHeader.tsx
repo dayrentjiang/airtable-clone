@@ -60,7 +60,7 @@ export function DataGridHeader({
   };
 
   return (
-    <thead className="sticky top-0 z-10 bg-gray-50">
+    <thead className="sticky top-0 z-20 bg-gray-50">
       {headerGroups.map((headerGroup) => (
         <tr key={headerGroup.id}>
           {headerGroup.headers.map((header, columnIndex) => {
@@ -125,7 +125,7 @@ export function DataGridHeader({
                   ...(columnIndex === 0 && {
                     position: "sticky" as const,
                     left: 0,
-                    zIndex: 30,
+                    zIndex: 40,
                   }),
                 }}
               >

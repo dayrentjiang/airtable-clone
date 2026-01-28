@@ -2,6 +2,8 @@
 
 import type { Session } from "next-auth";
 import Image from "next/image";
+import { useState, useRef } from "react";
+import { UserMenu } from "../ui/UserMenu";
 
 function Logo() {
   return (
@@ -22,6 +24,10 @@ interface TopNavProps {
 
 export function TopNav({ session, onMenuClick }: TopNavProps) {
   const userInitial = session?.user?.name?.[0]?.toUpperCase() ?? "U";
+  const userName = session?.user?.name ?? "User";
+  const userEmail = session?.user?.email ?? "";
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const avatarButtonRef = useRef<HTMLButtonElement>(null);
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-gray-200 bg-white px-4">
@@ -103,10 +109,24 @@ export function TopNav({ session, onMenuClick }: TopNavProps) {
         </button>
 
         {/* Avatar */}
-        <button className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-medium text-white">
+        <button 
+          ref={avatarButtonRef}
+          onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-medium text-white hover:bg-blue-700"
+        >
           {userInitial}
         </button>
       </div>
+
+      {/* User Menu */}
+      <UserMenu
+        userName={userName}
+        userEmail={userEmail}
+        userInitial={userInitial}
+        open={isUserMenuOpen}
+        onClose={() => setIsUserMenuOpen(false)}
+        anchorEl={avatarButtonRef.current}
+      />
     </header>
   );
 }

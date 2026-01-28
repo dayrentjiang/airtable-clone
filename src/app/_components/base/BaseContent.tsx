@@ -18,12 +18,17 @@ import { api } from "~/trpc/react";
 interface BaseContentProps {
   baseId: string;
   userInitial: string;
+  userName?: string;
+  userEmail?: string;
+  initialTableId?: string;
+  initialViewId?: string;
 }
 
 // Component that waits for view config to load before rendering toolbar and grid
 // BaseSideNav should stay outside to remain visible during view switches
 function ViewConfigContent({
   onToggleSideNav,
+  baseId,
   tableId,
   viewId,
   isSideNavOpen,
@@ -31,8 +36,11 @@ function ViewConfigContent({
   activeViewId,
   setActiveViewId,
   onViewSelect,
+  setActiveTableId,
+  skipViewResetRef,
 }: {
   onToggleSideNav: () => void;
+  baseId: string;
   tableId: string;
   viewId: string;
   isSideNavOpen: boolean;
@@ -40,8 +48,19 @@ function ViewConfigContent({
   activeViewId: string | null;
   setActiveViewId: (id: string | null) => void;
   onViewSelect: (viewId: string) => void;
+  setActiveTableId: (id: string) => void;
+  skipViewResetRef: React.MutableRefObject<boolean>;
 }) {
   const { isConfigLoaded } = useViewConfig();
+
+  // Handler for selecting a view from a different table
+  const handleTableAndViewSelect = (tableId: string, viewId: string) => {
+    console.log('[handleTableAndViewSelect] Called with:', { tableId, viewId });
+    // Set flag to skip the view reset when table changes
+    skipViewResetRef.current = true;
+    setActiveTableId(tableId);
+    setActiveViewId(viewId);
+  };
 
   // Fetch table with columns - toolbar needs column names for filter/sort summaries
   // This ensures we don't render "Filter" then "Filter by Name" flash
@@ -68,9 +87,11 @@ function ViewConfigContent({
         <div className="flex flex-1 overflow-hidden">
           {isSideNavOpen && (
             <BaseSideNav
+              baseId={baseId}
               tableId={tableId}
               selectedViewId={activeViewId}
               onViewSelect={setActiveViewId}
+              onTableAndViewSelect={handleTableAndViewSelect}
             />
           )}
           {/* Loading message */}
@@ -96,9 +117,11 @@ function ViewConfigContent({
       <div className="flex flex-1 overflow-hidden">
         {isSideNavOpen && (
           <BaseSideNav
+            baseId={baseId}
             tableId={tableId}
             selectedViewId={activeViewId}
             onViewSelect={setActiveViewId}
+            onTableAndViewSelect={handleTableAndViewSelect}
           />
         )}
 
@@ -118,6 +141,8 @@ function ViewConfigContent({
 function BaseContentInner({
   baseId,
   userInitial,
+  userName,
+  userEmail,
   activeTableId,
   activeViewId,
   setActiveTableId,
@@ -137,9 +162,21 @@ function BaseContentInner({
   >(null);
   const dataGridRef = useRef<HTMLDivElement>(null);
   const { clearSelection } = useSelection();
+  
+  // Track when we're doing a combined table+view selection to prevent view reset
+  const skipViewResetRef = useRef(false);
 
   // Get TRPC utils for cache invalidation
   const utils = api.useUtils();
+
+  // Fetch base data
+  const { data: base } = api.base.getById.useQuery(
+    { id: baseId },
+    {
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+    },
+  );
 
   // Fetch tables for this base dynamically
   const { data: tables = [] } = api.table.getAllByBase.useQuery(
@@ -214,8 +251,20 @@ function BaseContentInner({
     }
   }, [views, activeViewId, setActiveViewId]);
 
-  // Reset view when table changes
+  // Reset view when table changes (but not on initial mount or combined table+view selection)
+  const isInitialMount = useRef(true);
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    
+    // Skip reset if this is a combined table+view selection
+    if (skipViewResetRef.current) {
+      skipViewResetRef.current = false;
+      return;
+    }
+    
     setActiveViewId(null);
   }, [activeTableId, setActiveViewId]);
 
@@ -428,12 +477,16 @@ function BaseContentInner({
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Icon sidebar - far left */}
-      <IconSidebar userInitial={userInitial} />
+      <IconSidebar 
+        userInitial={userInitial}
+        userName={userName}
+        userEmail={userEmail}
+      />
 
       {/* Main content area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Base Top Nav - Data/Automations/Interfaces/Forms tabs */}
-        <BaseTopNav baseName="Untitled Base" />
+        <BaseTopNav baseName={base?.name ?? "Untitled Base"} baseId={baseId} />
 
         {/* Table bar */}
         <TableBar
@@ -454,6 +507,7 @@ function BaseContentInner({
           <ViewConfigProvider key={activeViewId} viewId={activeViewId}>
             <ViewConfigContent
               onToggleSideNav={toggleSideNav}
+              baseId={baseId}
               tableId={activeTableId}
               viewId={activeViewId}
               isSideNavOpen={isSideNavOpen}
@@ -461,6 +515,8 @@ function BaseContentInner({
               activeViewId={activeViewId}
               setActiveViewId={setActiveViewId}
               onViewSelect={setActiveViewId}
+              setActiveTableId={setActiveTableId}
+              skipViewResetRef={skipViewResetRef}
             />
           </ViewConfigProvider>
         ) : (
@@ -479,10 +535,34 @@ function BaseContentInner({
   );
 }
 
-export function BaseContent({ baseId, userInitial }: BaseContentProps) {
-  // Default to first table if available
-  const [activeTableId, setActiveTableId] = useState<string | null>(null);
-  const [activeViewId, setActiveViewId] = useState<string | null>(null);
+export function BaseContent({
+  baseId,
+  userInitial,
+  userName,
+  userEmail,
+  initialTableId,
+  initialViewId,
+}: BaseContentProps) {
+  // Use URL params if provided, otherwise use local state
+  const [activeTableId, setActiveTableId] = useState<string | null>(
+    initialTableId ?? null,
+  );
+  const [activeViewId, setActiveViewId] = useState<string | null>(
+    initialViewId ?? null,
+  );
+
+  // Update state when URL params change (e.g., navigation from search)
+  useEffect(() => {
+    if (initialTableId && initialTableId !== activeTableId) {
+      setActiveTableId(initialTableId);
+    }
+  }, [initialTableId]);
+
+  useEffect(() => {
+    if (initialViewId && initialViewId !== activeViewId) {
+      setActiveViewId(initialViewId);
+    }
+  }, [initialViewId]);
 
   // Fetch table to get the column count
   const { data: table } = api.table.getById.useQuery(
@@ -522,6 +602,8 @@ export function BaseContent({ baseId, userInitial }: BaseContentProps) {
         <BaseContentInner
           baseId={baseId}
           userInitial={userInitial}
+          userName={userName}
+          userEmail={userEmail}
           activeTableId={activeTableId}
           activeViewId={activeViewId}
           setActiveTableId={setActiveTableId}

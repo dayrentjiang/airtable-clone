@@ -7,11 +7,14 @@ import type { BaseSideNavProps } from "./BaseSideNav/types";
 import { CreateViewDropdown } from "./BaseSideNav/CreateViewDropdown";
 import { CreateViewModal } from "./BaseSideNav/CreateViewModal";
 import { ViewList } from "./BaseSideNav/ViewList";
+import { ViewSearchResults } from "./BaseSideNav/ViewSearchResults";
 
 export function BaseSideNav({
+  baseId,
   tableId,
   selectedViewId,
   onViewSelect,
+  onTableAndViewSelect,
 }: BaseSideNavProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -181,10 +184,25 @@ export function BaseSideNav({
     deleteView.mutate({ id: viewId });
   };
 
-  // Filter views based on search query
-  const filteredViews = views?.filter((view) =>
-    view.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  // Use global search when searching, otherwise filter local views
+  const { data: globalSearchResults, isLoading: isSearchLoading } =
+    api.view.searchGlobal.useQuery(
+      {
+        query: searchQuery,
+        currentTableId: tableId ?? undefined,
+      },
+      {
+        enabled: !!searchQuery && searchQuery.length > 0,
+        staleTime: 1000, // Cache for 1 second
+      },
+    );
+
+  // Filter views based on search query (local or global)
+  const filteredViews = searchQuery
+    ? globalSearchResults?.currentTableViews
+    : views?.filter((view) =>
+        view.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
 
   const handleSearchToggle = () => {
     setIsSearching(true);
@@ -201,10 +219,19 @@ export function BaseSideNav({
     setIsSearching(false);
   };
 
+  // Shared styles for search container - define once, use everywhere
+  const searchContainerStyles =
+    "flex flex-1 items-center gap-2 rounded border-2 px-2.5 py-1";
+  const searchIconStyles = "h-3 w-3 shrink-0 text-gray-700";
+  const settingsButtonStyles =
+    "shrink-0 rounded p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700";
+  const clearButtonStyles =
+    "shrink-0 text-sm leading-none text-gray-500 hover:text-gray-700";
+
   return (
     <aside className="flex w-70 flex-col border-r border-gray-200 bg-gray-50/50">
       {/* Top section */}
-      <div className="flex-1 p-3">
+      <div className="flex-1 px-2 py-2.5">
         {/* Create new */}
         <CreateViewDropdown
           isOpen={isDropdownOpen}
@@ -214,10 +241,10 @@ export function BaseSideNav({
         />
 
         {/* Find a view */}
-        <div className="mt-2 flex items-center justify-between">
+        <div className="mt-2 flex items-center gap-2">
           {isSearching ? (
-            <div className="flex flex-1 items-center gap-2 rounded px-2.5 py-2">
-              <Search className="h-3 w-3 text-gray-700" />
+            <div className={`${searchContainerStyles} border-blue-700`}>
+              <Search className={searchIconStyles} />
               <input
                 ref={searchInputRef}
                 type="text"
@@ -230,41 +257,60 @@ export function BaseSideNav({
                   }
                 }}
                 placeholder="Find a view"
-                className="flex-1 bg-transparent text-xs text-gray-700 outline-none placeholder:text-gray-500"
+                className="min-w-0 flex-1 bg-transparent text-xs text-gray-700 outline-none placeholder:text-gray-500"
               />
-              {searchQuery && (
-                <button
-                  onClick={handleSearchClear}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ×
-                </button>
-              )}
+              <button
+                onClick={handleSearchClear}
+                className={`${clearButtonStyles} ${!searchQuery ? "pointer-events-none invisible" : ""}`}
+              >
+                ×
+              </button>
+              <button className={settingsButtonStyles}>
+                <Settings className="h-3.5 w-3.5" />
+              </button>
             </div>
           ) : (
-            <button
+            <div
               onClick={handleSearchToggle}
-              className="flex items-center gap-2 rounded px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-100"
+              className={`${searchContainerStyles} border-transparent text-xs text-gray-700 hover:cursor-text`}
             >
-              <Search className="h-3 w-3" />
+              <Search className={searchIconStyles} />
               <span>Find a view</span>
-            </button>
+              <button
+                className={`${settingsButtonStyles} ml-auto`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Handle settings click
+                }}
+              >
+                <Settings className="h-3.5 w-3.5" />
+              </button>
+            </div>
           )}
-          <button className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-            <Settings className="h-4 w-4" />
-          </button>
         </div>
 
         {/* Views list */}
         <div className="mt-3 space-y-0">
-          <ViewList
-            views={filteredViews}
-            isLoading={isLoading}
-            selectedViewId={selectedViewId}
-            onViewSelect={onViewSelect}
-            onViewRename={handleViewRename}
-            onViewDelete={handleViewDelete}
-          />
+          {searchQuery ? (
+            <ViewSearchResults
+              baseId={baseId}
+              currentTableViews={globalSearchResults?.currentTableViews}
+              otherTableViews={globalSearchResults?.otherTableViews}
+              onViewSelect={onViewSelect}
+              onTableAndViewSelect={onTableAndViewSelect}
+              selectedViewId={selectedViewId ?? undefined}
+              isLoading={isSearchLoading}
+            />
+          ) : (
+            <ViewList
+              views={filteredViews}
+              isLoading={isLoading}
+              selectedViewId={selectedViewId}
+              onViewSelect={onViewSelect}
+              onViewRename={handleViewRename}
+              onViewDelete={handleViewDelete}
+            />
+          )}
         </div>
       </div>
 

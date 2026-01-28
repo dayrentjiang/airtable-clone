@@ -1,106 +1,10 @@
 "use client";
 
 import { useState } from "react";
-
-// Icons
-function HomeIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-      <polyline points="9 22 9 12 15 12 15 22" />
-    </svg>
-  );
-}
-
-function StarIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-    </svg>
-  );
-}
-
-function SharedIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}
-
-function WorkspaceIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <rect x="3" y="3" width="7" height="7" />
-      <rect x="14" y="3" width="7" height="7" />
-      <rect x="14" y="14" width="7" height="7" />
-      <rect x="3" y="14" width="7" height="7" />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
-}
-
-function ChevronIcon({ expanded }: { expanded: boolean }) {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      className={`transition-transform ${expanded ? "rotate-90" : ""}`}
-    >
-      <polyline points="9 18 15 12 9 6" />
-    </svg>
-  );
-}
+import { useRouter } from "next/navigation";
+import { CreateBaseModal } from "../ui/CreateBaseModal";
+import { api } from "~/trpc/react";
+import { Home, Star, Users, Grid3x3, Plus, ChevronRight } from "lucide-react";
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -133,7 +37,10 @@ function NavItem({
       >
         {expandable && (
           <span className="text-gray-400">
-            <ChevronIcon expanded={expanded ?? false} />
+            <ChevronRight
+              size={14}
+              className={`transition-transform ${expanded ? "rotate-90" : ""}`}
+            />
           </span>
         )}
         <span className="text-gray-600">{icon}</span>
@@ -146,12 +53,12 @@ function NavItem({
             }}
             className="rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-gray-200"
           >
-            <PlusIcon />
+            <Plus size={14} />
           </button>
         )}
         {expandable && !onAdd && (
           <span className="text-gray-400 opacity-0 group-hover:opacity-100">
-            <ChevronIcon expanded={false} />
+            <ChevronRight size={14} />
           </span>
         )}
       </div>
@@ -163,17 +70,45 @@ function NavItem({
 export function SideNav() {
   const [starredExpanded, setStarredExpanded] = useState(true);
   const [workspacesExpanded, setWorkspacesExpanded] = useState(true);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const router = useRouter();
+
+  const utils = api.useUtils();
+
+  // Get all workspaces to find a default one
+  const { data: workspaces } = api.workspace.getAll.useQuery();
+  const defaultWorkspaceId = workspaces?.[0]?.id ?? "default";
+
+  const createBaseMutation = api.base.create.useMutation({
+    onSuccess: (newBase) => {
+      // Close modal
+      setIsCreateModalOpen(false);
+
+      // Navigate to the new base
+      router.push(`/${newBase.id}`);
+
+      // Invalidate bases query to refresh the list
+      void utils.base.getAll.invalidate();
+    },
+  });
+
+  const handleCreateBlankBase = () => {
+    createBaseMutation.mutate({
+      workspaceId: defaultWorkspaceId,
+      name: "Untitled Base",
+    });
+  };
 
   return (
-    <nav className="flex h-full w-64 flex-col border-r border-gray-200 bg-white">
+    <nav className="flex h-full w-76 flex-col border-r border-gray-200 bg-white">
       {/* Main nav items */}
       <div className="flex-1 overflow-y-auto px-2 py-4">
         {/* Home */}
-        <NavItem icon={<HomeIcon />} label="Home" active />
+        <NavItem icon={<Home size={18} />} label="Home" active />
 
         {/* Starred */}
         <NavItem
-          icon={<StarIcon />}
+          icon={<Star size={18} />}
           label="Starred"
           expandable
           expanded={starredExpanded}
@@ -185,11 +120,11 @@ export function SideNav() {
         </NavItem>
 
         {/* Shared */}
-        <NavItem icon={<SharedIcon />} label="Shared" />
+        <NavItem icon={<Users size={18} />} label="Shared" />
 
         {/* Workspaces */}
         <NavItem
-          icon={<WorkspaceIcon />}
+          icon={<Grid3x3 size={18} />}
           label="Workspaces"
           expandable
           expanded={workspacesExpanded}
@@ -205,11 +140,21 @@ export function SideNav() {
 
       {/* Create button */}
       <div className="p-3">
-        <button className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-yellow-500">
-          <PlusIcon />
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+        >
+          <Plus size={16} />
           Create
         </button>
       </div>
+
+      {/* Create Base Modal */}
+      <CreateBaseModal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreateBlankBase={handleCreateBlankBase}
+      />
     </nav>
   );
 }

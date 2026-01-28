@@ -172,4 +172,63 @@ export const viewRouter = createTRPCRouter({
 
       return ctx.db.view.delete({ where: { id: input.id } });
     }),
+
+  /**
+   * SEARCH VIEWS GLOBALLY (across all tables in user's workspace)
+   */
+  searchGlobal: protectedProcedure
+    .input(
+      z.object({
+        query: z.string().min(1),
+        currentTableId: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      // Search for views across all tables the user owns
+      const views = await ctx.db.view.findMany({
+        where: {
+          name: {
+            contains: input.query,
+            mode: "insensitive",
+          },
+          table: {
+            base: {
+              workspace: {
+                userId: ctx.session.user.id,
+              },
+            },
+          },
+        },
+        include: {
+          table: {
+            select: {
+              id: true,
+              name: true,
+              baseId: true,
+            },
+          },
+        },
+        orderBy: [
+          // Prioritize views from current table
+          {
+            tableId: input.currentTableId ? "asc" : "asc",
+          },
+          { name: "asc" },
+        ],
+        take: 20, // Limit results
+      });
+
+      // Separate current table views from other table views
+      const currentTableViews = views.filter(
+        (v) => v.tableId === input.currentTableId,
+      );
+      const otherTableViews = views.filter(
+        (v) => v.tableId !== input.currentTableId,
+      );
+
+      return {
+        currentTableViews,
+        otherTableViews,
+      };
+    }),
 });

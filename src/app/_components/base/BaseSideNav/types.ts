@@ -19,9 +19,11 @@ export interface ExtendedViewType {
 }
 
 export interface BaseSideNavProps {
+  baseId: string;
   tableId: string | null;
   selectedViewId: string | null;
   onViewSelect: (viewId: string) => void;
+  onTableAndViewSelect?: (tableId: string, viewId: string) => void;
 }
 
 export interface ViewContextMenuProps {
