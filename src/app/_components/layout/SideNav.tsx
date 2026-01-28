@@ -37,8 +37,8 @@ function NavItem({
       >
         {expandable && (
           <span className="text-gray-400">
-            <ChevronRight 
-              size={14} 
+            <ChevronRight
+              size={14}
               className={`transition-transform ${expanded ? "rotate-90" : ""}`}
             />
           </span>
@@ -83,10 +83,10 @@ export function SideNav() {
     onSuccess: (newBase) => {
       // Close modal
       setIsCreateModalOpen(false);
-      
+
       // Navigate to the new base
       router.push(`/${newBase.id}`);
-      
+
       // Invalidate bases query to refresh the list
       void utils.base.getAll.invalidate();
     },
@@ -100,7 +100,7 @@ export function SideNav() {
   };
 
   return (
-    <nav className="flex h-full w-64 flex-col border-r border-gray-200 bg-white">
+    <nav className="flex h-full w-76 flex-col border-r border-gray-200 bg-white">
       {/* Main nav items */}
       <div className="flex-1 overflow-y-auto px-2 py-4">
         {/* Home */}
@@ -140,7 +140,7 @@ export function SideNav() {
 
       {/* Create button */}
       <div className="p-3">
-        <button 
+        <button
           onClick={() => setIsCreateModalOpen(true)}
           className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
         >
