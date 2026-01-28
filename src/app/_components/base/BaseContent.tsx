@@ -34,6 +34,8 @@ function ViewConfigContent({
   activeViewId,
   setActiveViewId,
   onViewSelect,
+  setActiveTableId,
+  skipViewResetRef,
 }: {
   onToggleSideNav: () => void;
   baseId: string;
@@ -44,8 +46,19 @@ function ViewConfigContent({
   activeViewId: string | null;
   setActiveViewId: (id: string | null) => void;
   onViewSelect: (viewId: string) => void;
+  setActiveTableId: (id: string) => void;
+  skipViewResetRef: React.MutableRefObject<boolean>;
 }) {
   const { isConfigLoaded } = useViewConfig();
+
+  // Handler for selecting a view from a different table
+  const handleTableAndViewSelect = (tableId: string, viewId: string) => {
+    console.log('[handleTableAndViewSelect] Called with:', { tableId, viewId });
+    // Set flag to skip the view reset when table changes
+    skipViewResetRef.current = true;
+    setActiveTableId(tableId);
+    setActiveViewId(viewId);
+  };
 
   // Fetch table with columns - toolbar needs column names for filter/sort summaries
   // This ensures we don't render "Filter" then "Filter by Name" flash
@@ -76,6 +89,7 @@ function ViewConfigContent({
               tableId={tableId}
               selectedViewId={activeViewId}
               onViewSelect={setActiveViewId}
+              onTableAndViewSelect={handleTableAndViewSelect}
             />
           )}
           {/* Loading message */}
@@ -105,6 +119,7 @@ function ViewConfigContent({
             tableId={tableId}
             selectedViewId={activeViewId}
             onViewSelect={setActiveViewId}
+            onTableAndViewSelect={handleTableAndViewSelect}
           />
         )}
 
@@ -143,6 +158,9 @@ function BaseContentInner({
   >(null);
   const dataGridRef = useRef<HTMLDivElement>(null);
   const { clearSelection } = useSelection();
+  
+  // Track when we're doing a combined table+view selection to prevent view reset
+  const skipViewResetRef = useRef(false);
 
   // Get TRPC utils for cache invalidation
   const utils = api.useUtils();
@@ -220,8 +238,20 @@ function BaseContentInner({
     }
   }, [views, activeViewId, setActiveViewId]);
 
-  // Reset view when table changes
+  // Reset view when table changes (but not on initial mount or combined table+view selection)
+  const isInitialMount = useRef(true);
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    
+    // Skip reset if this is a combined table+view selection
+    if (skipViewResetRef.current) {
+      skipViewResetRef.current = false;
+      return;
+    }
+    
     setActiveViewId(null);
   }, [activeTableId, setActiveViewId]);
 
@@ -468,6 +498,8 @@ function BaseContentInner({
               activeViewId={activeViewId}
               setActiveViewId={setActiveViewId}
               onViewSelect={setActiveViewId}
+              setActiveTableId={setActiveTableId}
+              skipViewResetRef={skipViewResetRef}
             />
           </ViewConfigProvider>
         ) : (

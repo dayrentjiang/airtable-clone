@@ -20,6 +20,7 @@ interface ViewSearchResultsProps {
   currentTableViews?: SearchResult[];
   otherTableViews?: SearchResult[];
   onViewSelect?: (viewId: string) => void;
+  onTableAndViewSelect?: (tableId: string, viewId: string) => void;
   selectedViewId?: string;
   isLoading?: boolean;
 }
@@ -29,18 +30,33 @@ export function ViewSearchResults({
   currentTableViews = [],
   otherTableViews = [],
   onViewSelect,
+  onTableAndViewSelect,
   selectedViewId,
   isLoading = false,
 }: ViewSearchResultsProps) {
   const router = useRouter();
 
   const handleViewClick = (view: SearchResult) => {
+    console.log('[ViewSearchResults] handleViewClick called with:', view);
+    console.log('[ViewSearchResults] currentTableViews:', currentTableViews);
+    console.log('[ViewSearchResults] onTableAndViewSelect:', onTableAndViewSelect);
+    
     // If it's in the current table, just select it
     if (onViewSelect && currentTableViews.some((v) => v.id === view.id)) {
+      console.log('[ViewSearchResults] View is in current table, calling onViewSelect');
       onViewSelect(view.id);
     } else {
       // Navigate to the different table/view
-      router.push(`/${baseId}?table=${view.tableId}&view=${view.id}`);
+      console.log('[ViewSearchResults] View is in different table');
+      if (onTableAndViewSelect) {
+        console.log('[ViewSearchResults] Calling onTableAndViewSelect');
+        // Use the callback to update both table and view
+        onTableAndViewSelect(view.tableId, view.id);
+      } else {
+        console.log('[ViewSearchResults] Fallback to router.push');
+        // Fallback to router navigation
+        router.push(`/${baseId}?table=${view.tableId}&view=${view.id}`);
+      }
     }
   };
 

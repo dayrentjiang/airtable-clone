@@ -14,6 +14,7 @@ export function BaseSideNav({
   tableId,
   selectedViewId,
   onViewSelect,
+  onTableAndViewSelect,
 }: BaseSideNavProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -296,6 +297,7 @@ export function BaseSideNav({
               currentTableViews={globalSearchResults?.currentTableViews}
               otherTableViews={globalSearchResults?.otherTableViews}
               onViewSelect={onViewSelect}
+              onTableAndViewSelect={onTableAndViewSelect}
               selectedViewId={selectedViewId ?? undefined}
               isLoading={isSearchLoading}
             />
