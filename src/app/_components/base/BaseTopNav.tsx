@@ -1,10 +1,14 @@
 "use client";
 
+import { useState, useRef } from "react";
 import Image from "next/image";
 import { ChevronDown, History, ExternalLink } from "lucide-react";
+import { RenameBaseModal } from "./BaseTopNav/RenameBaseModal";
+import { api } from "~/trpc/react";
 
 interface BaseTopNavProps {
   baseName: string;
+  baseId: string;
   onBaseNameClick?: () => void;
 }
 
@@ -24,13 +28,59 @@ function BaseIcon() {
 
 const tabs = ["Data", "Automations", "Interfaces", "Forms"] as const;
 
-export function BaseTopNav({ baseName, onBaseNameClick }: BaseTopNavProps) {
+export function BaseTopNav({ baseName, baseId, onBaseNameClick }: BaseTopNavProps) {
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const baseNameButtonRef = useRef<HTMLButtonElement>(null);
+  const utils = api.useUtils();
+
+  const updateBaseMutation = api.base.update.useMutation({
+    onMutate: async (newBase) => {
+      // Cancel any outgoing refetches
+      await utils.base.getById.cancel({ id: baseId });
+
+      // Snapshot the previous value
+      const previousBase = utils.base.getById.getData({ id: baseId });
+
+      // Optimistically update to the new value
+      utils.base.getById.setData({ id: baseId }, (old) => {
+        if (!old) return old;
+        return { ...old, name: newBase.name };
+      });
+
+      // Return a context with the previous value
+      return { previousBase };
+    },
+    onError: (err, newBase, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousBase) {
+        utils.base.getById.setData({ id: baseId }, context.previousBase);
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we have the latest data
+      void utils.base.getById.invalidate({ id: baseId });
+    },
+  });
+
+  const handleDoubleClick = () => {
+    setIsRenameModalOpen(true);
+  };
+
+  const handleRename = (newName: string) => {
+    updateBaseMutation.mutate({
+      id: baseId,
+      name: newName,
+    });
+  };
+
   return (
     <header className="flex h-14 items-center border-b border-gray-200 bg-white px-2 md:px-4">
       {/* Left: Base icon + name */}
       <div className="flex min-w-0 flex-1 items-center">
         <button
+          ref={baseNameButtonRef}
           onClick={onBaseNameClick}
+          onDoubleClick={handleDoubleClick}
           className="flex min-w-0 items-center gap-2 rounded px-1 py-2 hover:cursor-pointer md:px-2"
         >
           <BaseIcon />
@@ -83,6 +133,15 @@ export function BaseTopNav({ baseName, onBaseNameClick }: BaseTopNavProps) {
           </button>
         </div>
       </div>
+
+      {/* Rename Base Modal */}
+      <RenameBaseModal
+        open={isRenameModalOpen}
+        onClose={() => setIsRenameModalOpen(false)}
+        baseName={baseName}
+        onRename={handleRename}
+        anchorEl={baseNameButtonRef.current}
+      />
     </header>
   );
 }

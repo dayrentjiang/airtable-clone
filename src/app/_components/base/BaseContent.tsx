@@ -169,6 +169,15 @@ function BaseContentInner({
   // Get TRPC utils for cache invalidation
   const utils = api.useUtils();
 
+  // Fetch base data
+  const { data: base } = api.base.getById.useQuery(
+    { id: baseId },
+    {
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+    },
+  );
+
   // Fetch tables for this base dynamically
   const { data: tables = [] } = api.table.getAllByBase.useQuery(
     { baseId },
@@ -477,7 +486,7 @@ function BaseContentInner({
       {/* Main content area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Base Top Nav - Data/Automations/Interfaces/Forms tabs */}
-        <BaseTopNav baseName="Untitled Base" />
+        <BaseTopNav baseName={base?.name ?? "Untitled Base"} baseId={baseId} />
 
         {/* Table bar */}
         <TableBar

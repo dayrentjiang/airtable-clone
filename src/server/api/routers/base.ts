@@ -154,6 +154,38 @@ export const baseRouter = createTRPCRouter({
     }),
 
   // ============================================
+  // UPDATE BASE NAME
+  // ============================================
+  // Frontend: const updateBase = trpc.base.update.useMutation();
+  //           updateBase.mutate({ id: "xxx", name: "New Name" });
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const base = await ctx.db.base.findFirst({
+        where: {
+          id: input.id,
+          workspace: {
+            userId: ctx.session.user.id,
+          },
+        },
+      });
+
+      if (!base) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Base not found" });
+      }
+
+      return ctx.db.base.update({
+        where: { id: input.id },
+        data: { name: input.name },
+      });
+    }),
+
+  // ============================================
   // DELETE A BASE
   // ============================================
   // Frontend: const deleteBase = trpc.base.delete.useMutation();
