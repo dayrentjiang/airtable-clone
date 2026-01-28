@@ -508,6 +508,17 @@ export function HomeContent() {
         {/* Only show content when not initializing */}
         {!isInitializing && (
           <>
+            {/* Empty state - show when no bases exist */}
+            {grouped.today.length === 0 &&
+              grouped.pastWeek.length === 0 &&
+              grouped.older.length === 0 && (
+                <div className="mt-32 flex items-center justify-center">
+                  <p className="text-sm text-gray-500">
+                    All records are filtered
+                  </p>
+                </div>
+              )}
+
             {/* Today section */}
             {grouped.today.length > 0 && (
               <div className="mt-6">

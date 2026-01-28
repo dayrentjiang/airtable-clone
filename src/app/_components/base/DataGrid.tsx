@@ -198,20 +198,6 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     tableContainerRef,
   );
 
-  // Track if we've received the first data response
-  // This prevents the "No data yet" flash before data loads
-  const hasReceivedDataRef = useRef(false);
-  useEffect(() => {
-    if (totalCount >= 0 && (rowsByIndex.size > 0 || !rowsLoading)) {
-      hasReceivedDataRef.current = true;
-    }
-  }, [totalCount, rowsByIndex.size, rowsLoading]);
-
-  // Reset flag when view changes
-  useEffect(() => {
-    hasReceivedDataRef.current = false;
-  }, [viewId]);
-
   // Convert rowsByIndex map to array for components that need it
   // Apply optimistic updates for rows being cleared
   const rows = useMemo(() => {
@@ -484,16 +470,14 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
             <AddColumnButton tableId={tableId} />
           </div>
           
-          {/* Empty state overlay - show after we've confirmed there's no data */}
-          {totalCount === 0 &&
-            rowsByIndex.size === 0 &&
-            hasReceivedDataRef.current && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80">
-                <div className="text-center">
-                  <p className="text-gray-500">All records are filtered</p>
-                </div>
+          {/* Empty state overlay - show when there are 0 records */}
+          {totalCount === 0 && !rowsLoading && !tableLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80">
+              <div className="text-center">
+                <p className="text-sm text-gray-500">All records are filtered</p>
               </div>
-            )}
+            </div>
+          )}
 
           {/* Global context menu for rows - rendered once at DataGrid level */}
           {contextMenuState?.cellRef && (
