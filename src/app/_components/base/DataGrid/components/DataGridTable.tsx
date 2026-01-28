@@ -6,6 +6,7 @@ import { DataGridHeader } from "./DataGridHeader";
 import { AddRowButton } from "./AddRowButton";
 import { RowNumberCell } from "./RowNumberCell";
 import { DirectEditableCell } from "./DirectEditableCell";
+import { SkeletonRow } from "./SkeletonRow";
 import type { RowData } from "../hooks/useTableColumns";
 import { useSelection } from "../hooks/useSelection";
 import type { Filter, Sort } from "~/server/lib/types";
@@ -152,18 +153,15 @@ export function DataGridTable({
             );
           }
 
-          // No data yet - render empty placeholder row
+          // No data yet - render skeleton loading row
           return (
-            <tr
+            <SkeletonRow
               key={`loading-${virtualRow.index}`}
-              className="relative"
-              style={{ height: `${virtualRow.size}px` }}
-            >
-              <td
-                colSpan={columnCount}
-                className="border-r border-b border-gray-200"
-              />
-            </tr>
+              columnCount={columnCount}
+              rowHeight={virtualRow.size}
+              columns={columns}
+              index={virtualRow.index}
+            />
           );
         })}
 
