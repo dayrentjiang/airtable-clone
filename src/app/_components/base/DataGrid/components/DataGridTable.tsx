@@ -102,7 +102,7 @@ export function DataGridTable({
                           maxWidth: column.getSize(),
                           position: "sticky",
                           left: 0,
-                          zIndex: 25,
+                          zIndex: 10,
                         }}
                       >
                         <RowNumberCell

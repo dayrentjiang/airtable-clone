@@ -29,7 +29,7 @@ export function SkeletonRow({ columnCount, rowHeight, columns, index }: Skeleton
                 maxWidth: column.getSize(),
                 position: "sticky",
                 left: 0,
-                zIndex: 25,
+                zIndex: 10,
               }}
             >
               <div className="flex h-full items-center justify-center">
