@@ -1,21 +1,30 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, HelpCircle, Bell } from "lucide-react";
 import { Tooltip } from "../ui/Tooltip";
+import { UserMenu } from "../ui/UserMenu";
 
 interface IconSidebarProps {
   userInitial?: string;
+  userName?: string;
+  userEmail?: string;
 }
 
-export function IconSidebar({ userInitial = "D" }: IconSidebarProps) {
+export function IconSidebar({ 
+  userInitial = "D",
+  userName = "Dayrent Tjiang",
+  userEmail = "dayrentjiang@gmail.com"
+}: IconSidebarProps) {
   const router = useRouter();
   const [isHoveringLogo, setIsHoveringLogo] = useState(false);
   const [isHoveringHelp, setIsHoveringHelp] = useState(false);
   const [isHoveringBell, setIsHoveringBell] = useState(false);
   const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const avatarButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleBackToHome = () => {
     router.push("/");
@@ -90,14 +99,26 @@ export function IconSidebar({ userInitial = "D" }: IconSidebarProps) {
           />
         </button>
         <button
+          ref={avatarButtonRef}
           className="relative mt-2 flex h-6 w-6 items-center justify-center rounded-full bg-yellow-500 text-sm font-semibold text-white hover:cursor-pointer hover:bg-yellow-600"
           onMouseEnter={() => setIsHoveringAvatar(true)}
           onMouseLeave={() => setIsHoveringAvatar(false)}
+          onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
         >
           {userInitial}
-          <Tooltip text="Account" visible={isHoveringAvatar} position="right" />
+          <Tooltip text="Account" visible={isHoveringAvatar && !isUserMenuOpen} position="right" />
         </button>
       </div>
+
+      {/* User Menu */}
+      <UserMenu
+        userName={userName}
+        userEmail={userEmail}
+        userInitial={userInitial}
+        open={isUserMenuOpen}
+        onClose={() => setIsUserMenuOpen(false)}
+        anchorEl={avatarButtonRef.current}
+      />
     </aside>
   );
 }
