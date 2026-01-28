@@ -56,11 +56,16 @@ export function AddRowButton({ tableId }: AddRowButtonProps) {
   return (
     <button
       onClick={handleAddRow}
-      className="flex w-full items-center border-b border-gray-200 py-2 text-left text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+      className="relative flex w-full items-center border-b border-gray-200 py-2 text-left text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-50"
     >
       <div
-        className="flex items-center justify-center"
-        style={{ width: "66px" }}
+        className="flex items-center justify-center bg-white"
+        style={{
+          width: "66px",
+          position: "sticky",
+          left: 0,
+          zIndex: 25,
+        }}
       >
         <Plus className="h-4 w-4" />
       </div>
