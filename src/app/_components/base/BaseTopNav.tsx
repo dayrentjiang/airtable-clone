@@ -28,7 +28,11 @@ function BaseIcon() {
 
 const tabs = ["Data", "Automations", "Interfaces", "Forms"] as const;
 
-export function BaseTopNav({ baseName, baseId, onBaseNameClick }: BaseTopNavProps) {
+export function BaseTopNav({
+  baseName,
+  baseId,
+  onBaseNameClick,
+}: BaseTopNavProps) {
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const baseNameButtonRef = useRef<HTMLButtonElement>(null);
   const utils = api.useUtils();
@@ -144,7 +148,6 @@ export function BaseTopNav({ baseName, baseId, onBaseNameClick }: BaseTopNavProp
         baseName={baseName}
         onRename={handleRename}
         anchorEl={baseNameButtonRef.current}
-        existingBaseNames={allBases?.map((base) => base.name) ?? []}
       />
     </header>
   );

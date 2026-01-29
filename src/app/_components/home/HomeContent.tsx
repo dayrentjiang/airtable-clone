@@ -171,7 +171,7 @@ export function HomeContent() {
             {grouped.today.length > 0 && (
               <div className="mt-6">
                 <h3 className="text-sm font-medium text-gray-500">Today</h3>
-                <div className="mt-3 grid min-h-24 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
+                <div className="mt-3 grid min-h-24 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {grouped.today.map((base) => (
                     <BaseCard
                       key={base.id}
@@ -191,7 +191,7 @@ export function HomeContent() {
                 <h3 className="text-sm font-medium text-gray-500">
                   Past 7 days
                 </h3>
-                <div className="mt-3 grid min-h-24 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
+                <div className="mt-3 grid min-h-24 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {grouped.pastWeek.map((base) => (
                     <BaseCard
                       key={base.id}
@@ -209,7 +209,7 @@ export function HomeContent() {
             {grouped.older.length > 0 && (
               <div className="mt-8">
                 <h3 className="text-sm font-medium text-gray-500">Older</h3>
-                <div className="mt-3 grid min-h-24 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
+                <div className="mt-3 grid min-h-24 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {grouped.older.map((base) => (
                     <BaseCard
                       key={base.id}

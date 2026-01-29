@@ -46,12 +46,6 @@ export function BaseCard({ name, baseId, updatedAt, onClick }: BaseCardProps) {
   const { data: allBases } = api.base.getAll.useQuery();
 
   // Check if the name is duplicate (case-insensitive, excluding current name)
-  const isDuplicate =
-    allBases?.some(
-      (base) =>
-        base.name.toLowerCase() !== name.toLowerCase() &&
-        base.name.toLowerCase() === editedName.trim().toLowerCase(),
-    ) ?? false;
 
   const updateBaseMutation = api.base.update.useMutation({
     // Optimistic update - update UI immediately before server responds
@@ -141,10 +135,6 @@ export function BaseCard({ name, baseId, updatedAt, onClick }: BaseCardProps) {
 
   const handleRenameSubmit = () => {
     const trimmedName = editedName.trim();
-    if (isDuplicate) {
-      setShowWarning(true);
-      return;
-    }
     if (trimmedName && trimmedName !== name) {
       updateBaseMutation.mutate({ id: baseId, name: trimmedName });
     } else {
@@ -202,9 +192,6 @@ export function BaseCard({ name, baseId, updatedAt, onClick }: BaseCardProps) {
                   className="w-full rounded border-2 border-blue-500 px-2 py-0.5 text-xs font-bold text-gray-800 outline-none"
                   onClick={(e) => e.stopPropagation()}
                 />
-                {showWarning && isDuplicate && (
-                  <Warning message="Please enter a unique base name" />
-                )}
               </div>
             ) : (
               <p className="truncate text-xs font-bold text-gray-800">{name}</p>
