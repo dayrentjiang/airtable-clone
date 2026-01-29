@@ -400,6 +400,7 @@ export function AddColumnButton({ tableId }: AddColumnButtonProps) {
             onNameChange={setColumnName}
             onCancel={handleCancel}
             onCreate={handleCreateColumn}
+            onTypeChange={(type) => setSelectedType(type)}
             existingColumnNames={tableData?.columns.map((col) => col.name) ?? []}
             currentColumnName=""
           />
@@ -411,6 +412,7 @@ export function AddColumnButton({ tableId }: AddColumnButtonProps) {
             onNameChange={setColumnName}
             onCancel={handleCancel}
             onCreate={handleCreateColumn}
+            onTypeChange={(type) => setSelectedType(type)}
             existingColumnNames={tableData?.columns.map((col) => col.name) ?? []}
             currentColumnName=""
           />
