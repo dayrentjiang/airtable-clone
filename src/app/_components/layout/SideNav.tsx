@@ -4,7 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CreateBaseModal } from "../ui/CreateBaseModal";
 import { api } from "~/trpc/react";
-import { Home, Star, Users, Grid3x3, Plus, ChevronRight } from "lucide-react";
+import {
+  Home,
+  Star,
+  Grid3x3,
+  Plus,
+  ChevronRight,
+  LayoutGrid,
+  ShoppingBag,
+  Upload,
+  Share2,
+} from "lucide-react";
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -15,6 +25,7 @@ interface NavItemProps {
   onToggle?: () => void;
   onAdd?: () => void;
   children?: React.ReactNode;
+  textSize?: "sm" | "xs";
 }
 
 function NavItem({
@@ -26,39 +37,40 @@ function NavItem({
   onToggle,
   onAdd,
   children,
+  textSize = "sm",
 }: NavItemProps) {
+  const textSizeClass = textSize === "xs" ? "text-xs" : "text-sm";
+  const paddingClass = textSize === "xs" ? "py-2" : "py-3";
+
   return (
     <div>
       <div
-        className={`group flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm ${
-          active ? "bg-gray-200 font-medium" : "hover:bg-gray-100"
+        className={`group flex cursor-pointer items-center gap-2 rounded-xs px-3 ${paddingClass} ${textSizeClass} ${
+          active ? "bg-gray-100 font-medium" : "hover:bg-gray-100"
         }`}
         onClick={onToggle}
       >
-        {expandable && (
-          <span className="text-gray-400">
-            <ChevronRight
-              size={14}
-              className={`transition-transform ${expanded ? "rotate-90" : ""}`}
-            />
-          </span>
-        )}
         <span className="text-gray-600">{icon}</span>
-        <span className="flex-1 text-gray-700">{label}</span>
+        <span className={`flex-1 ${textSizeClass} font-semibold text-gray-700`}>
+          {label}
+        </span>
         {onAdd && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onAdd();
             }}
-            className="rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-gray-200"
+            className="rounded p-0.5 hover:bg-gray-200"
           >
-            <Plus size={14} />
+            <Plus size={16} />
           </button>
         )}
-        {expandable && !onAdd && (
-          <span className="text-gray-400 opacity-0 group-hover:opacity-100">
-            <ChevronRight size={14} />
+        {expandable && (
+          <span className="text-gray-400">
+            <ChevronRight
+              size={14}
+              className={`transition-transform ${expanded ? "rotate-90" : ""}`}
+            />
           </span>
         )}
       </div>
@@ -102,7 +114,7 @@ export function SideNav() {
   return (
     <nav className="flex h-full w-76 flex-col border-r border-gray-200 bg-white">
       {/* Main nav items */}
-      <div className="flex-1 overflow-y-auto px-2 py-4">
+      <div className="flex-1 overflow-y-auto px-3 py-3">
         {/* Home */}
         <NavItem icon={<Home size={18} />} label="Home" active />
 
@@ -114,13 +126,14 @@ export function SideNav() {
           expanded={starredExpanded}
           onToggle={() => setStarredExpanded(!starredExpanded)}
         >
-          <div className="cursor-pointer rounded py-1 pl-2 text-sm text-gray-600 hover:bg-gray-100">
-            My First Workspace
+          <div className="flex cursor-pointer items-center gap-2 rounded py-1.5 text-xs text-gray-600 hover:bg-gray-100">
+            <Grid3x3 size={16} className="text-gray-400" />
+            <span>My First Workspace</span>
           </div>
         </NavItem>
 
         {/* Shared */}
-        <NavItem icon={<Users size={18} />} label="Shared" />
+        <NavItem icon={<Share2 size={18} />} label="Shared" />
 
         {/* Workspaces */}
         <NavItem
@@ -132,17 +145,29 @@ export function SideNav() {
           onAdd={() => console.log("Add workspace")}
         >
           {/* Workspace items will be loaded from API */}
-          <div className="py-1 pl-2 text-sm text-gray-500 italic">
-            No workspaces yet
-          </div>
         </NavItem>
       </div>
 
+      {/* Bottom section - Templates, Marketplace, Import */}
+      <div className="border-t border-gray-200 px-2 py-2">
+        <NavItem
+          icon={<LayoutGrid size={16} />}
+          label="Templates and apps"
+          textSize="xs"
+        />
+        <NavItem
+          icon={<ShoppingBag size={16} />}
+          label="Marketplace"
+          textSize="xs"
+        />
+        <NavItem icon={<Upload size={16} />} label="Import" textSize="xs" />
+      </div>
+
       {/* Create button */}
-      <div className="p-3">
+      <div className="border-t border-gray-200 p-3">
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+          className="flex w-full items-center justify-center gap-1 rounded-md bg-blue-500 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:cursor-pointer"
         >
           <Plus size={16} />
           Create

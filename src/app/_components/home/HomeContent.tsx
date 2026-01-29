@@ -3,63 +3,17 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { api } from "~/trpc/react";
-import { Star, MoreHorizontal } from "lucide-react";
+import {
+  Star,
+  MoreHorizontal,
+  Grid2X2,
+  CheckSquare,
+  LayoutGrid,
+} from "lucide-react";
 import { BaseOptionsMenu } from "./BaseOptionsMenu";
 import { DeleteBaseModal } from "./DeleteBaseModal";
 
 // Template card icons
-function ResourceIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}
-
-function BugIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <path d="M9 12l2 2 4-4" />
-    </svg>
-  );
-}
-
-function SprintIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <rect x="3" y="3" width="7" height="7" />
-      <rect x="14" y="3" width="7" height="7" />
-      <rect x="14" y="14" width="7" height="7" />
-      <rect x="3" y="14" width="7" height="7" />
-    </svg>
-  );
-}
-
 function ListIcon() {
   return (
     <svg
@@ -110,27 +64,6 @@ function ChevronDownIcon() {
     >
       <polyline points="6 9 12 15 18 9" />
     </svg>
-  );
-}
-
-// Template card component
-function TemplateCard({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="flex cursor-pointer flex-col gap-2 rounded-lg border border-gray-200 bg-white p-4 hover:border-gray-300 hover:shadow-sm">
-      <div className="flex items-center gap-2 text-gray-700">
-        {icon}
-        <span className="font-medium">{title}</span>
-      </div>
-      <p className="text-sm text-gray-500">{description}</p>
-    </div>
   );
 }
 
@@ -279,7 +212,7 @@ function BaseCard({
           onClick={isRenaming ? undefined : onClick}
           className="flex flex-1 items-center gap-4"
         >
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-teal-700 text-xs font-medium text-white">
+          <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-lg bg-teal-700 text-xs font-medium text-white">
             {initials}
           </div>
           <div className="flex-1 overflow-hidden">
@@ -474,9 +407,55 @@ export function HomeContent() {
     isLoading || (bases?.length === 0 && ensureDefaultMutation.isPending);
 
   return (
-    <div className="p-8">
+    <div className="px-12 py-8">
       {/* Title */}
       <h1 className="text-2xl font-bold text-gray-900">Home</h1>
+
+      {/* Start building section */}
+      <section className="mt-4">
+        <h2 className="text-xl font-semibold text-gray-900">Start building</h2>
+        <p className="mt-1 text-sm text-gray-600">
+          Create apps instantly with AI
+        </p>
+
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[
+            {
+              icon: Grid2X2,
+              title: "Resource Planner",
+              description:
+                "Allocate engineers to projects and balance team workloads.",
+            },
+            {
+              icon: CheckSquare,
+              title: "Bug Tracker",
+              description: "Log, prioritize, and resolve bugs across projects.",
+            },
+            {
+              icon: LayoutGrid,
+              title: "Sprint Tracker",
+              description:
+                "Plan and manage agile sprints with tasks and progress tracking.",
+            },
+          ].map((template) => {
+            const Icon = template.icon;
+            return (
+              <button
+                key={template.title}
+                className="flex flex-col items-start gap-2 rounded-lg border border-gray-200 bg-white p-4 text-left transition-all hover:border-gray-300 hover:shadow-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <Icon size={18} className="text-gray-600" />
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    {template.title}
+                  </h3>
+                </div>
+                <p className="text-xs text-gray-600">{template.description}</p>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {/* Opened anytime section */}
       <section className="mt-10">
@@ -523,7 +502,7 @@ export function HomeContent() {
             {grouped.today.length > 0 && (
               <div className="mt-6">
                 <h3 className="text-sm font-medium text-gray-500">Today</h3>
-                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                <div className="mt-3 grid min-h-20 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
                   {grouped.today.map((base) => (
                     <BaseCard
                       key={base.id}
@@ -543,7 +522,7 @@ export function HomeContent() {
                 <h3 className="text-sm font-medium text-gray-500">
                   Past 7 days
                 </h3>
-                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                <div className="mt-3 grid min-h-20 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
                   {grouped.pastWeek.map((base) => (
                     <BaseCard
                       key={base.id}
@@ -561,7 +540,7 @@ export function HomeContent() {
             {grouped.older.length > 0 && (
               <div className="mt-8">
                 <h3 className="text-sm font-medium text-gray-500">Older</h3>
-                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                <div className="mt-3 grid min-h-20 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
                   {grouped.older.map((base) => (
                     <BaseCard
                       key={base.id}
