@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from "react";
 import { Plus, Info } from "lucide-react";
 import { FieldTypeSelector, type FieldType } from "./FieldTypeSelector";
+import { Warning } from "~/app/_components/ui/Warning";
 
 interface TextColumnPanelProps {
   isOpen: boolean;
@@ -14,6 +15,8 @@ interface TextColumnPanelProps {
   onTypeChange?: (type: FieldType) => void;
   isEditMode?: boolean;
   disablePositioning?: boolean;
+  existingColumnNames?: string[];
+  currentColumnName?: string;
 }
 
 export function TextColumnPanel({
@@ -26,11 +29,21 @@ export function TextColumnPanel({
   onTypeChange,
   isEditMode = false,
   disablePositioning = false,
+  existingColumnNames = [],
+  currentColumnName = "",
 }: TextColumnPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [position, setPosition] = useState<"left" | "right">("left");
   const [selectedType, setSelectedType] = useState<FieldType>("TEXT");
+  const [showWarning, setShowWarning] = useState(false);
+
+  // Check if the name is duplicate (case-insensitive, excluding current name)
+  const isDuplicate = existingColumnNames.some(
+    (existingName) =>
+      existingName.toLowerCase() !== currentColumnName.toLowerCase() &&
+      existingName.toLowerCase() === columnName.trim().toLowerCase(),
+  );
 
   // Calculate position based on available space
   useEffect(() => {
@@ -73,12 +86,21 @@ export function TextColumnPanel({
   useEffect(() => {
     if (isOpen && inputRef.current) {
       inputRef.current.focus();
+      setShowWarning(false);
     }
   }, [isOpen]);
 
+  const handleCreate = () => {
+    if (isDuplicate) {
+      setShowWarning(true);
+      return;
+    }
+    onCreate();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      onCreate();
+      handleCreate();
     } else if (e.key === "Escape") {
       onCancel();
     }
@@ -98,11 +120,17 @@ export function TextColumnPanel({
           ref={inputRef}
           type="text"
           value={columnName}
-          onChange={(e) => onNameChange(e.target.value)}
+          onChange={(e) => {
+            onNameChange(e.target.value);
+            setShowWarning(false);
+          }}
           onKeyDown={handleKeyDown}
           placeholder="Field name (optional)"
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 outline-none placeholder:text-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
         />
+        {showWarning && isDuplicate && (
+          <Warning message="Please enter a unique column name" />
+        )}
       </div>
 
       {/* Field type selector - FUNCTIONAL */}
@@ -153,7 +181,7 @@ export function TextColumnPanel({
             Cancel
           </button>
           <button
-            onClick={onCreate}
+            onClick={handleCreate}
             disabled={!columnName.trim() || isCreating}
             className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >

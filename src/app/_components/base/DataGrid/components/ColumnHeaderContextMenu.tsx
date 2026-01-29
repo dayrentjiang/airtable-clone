@@ -380,6 +380,8 @@ export function ColumnHeaderContextMenu({
           onTypeChange={handleTypeChange}
           isEditMode={true}
           disablePositioning={true}
+          existingColumnNames={tableData?.columns.map((col) => col.name) ?? []}
+          currentColumnName={column?.name ?? ""}
         />
       ) : (
         <NumberColumnPanel
@@ -392,6 +394,8 @@ export function ColumnHeaderContextMenu({
           onTypeChange={handleTypeChange}
           isEditMode={true}
           disablePositioning={true}
+          existingColumnNames={tableData?.columns.map((col) => col.name) ?? []}
+          currentColumnName={column?.name ?? ""}
         />
       )}
     </div>

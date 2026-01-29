@@ -139,6 +139,9 @@ export function AddColumnButton({ tableId }: AddColumnButtonProps) {
   const utils = api.useUtils();
   const { clearSelection } = useSelection();
 
+  // Fetch table data to get existing column names
+  const { data: tableData } = api.table.getById.useQuery({ id: tableId });
+
   // Calculate menu position based on available space
   useEffect(() => {
     if (isMenuOpen && buttonRef.current) {
@@ -364,6 +367,8 @@ export function AddColumnButton({ tableId }: AddColumnButtonProps) {
             onNameChange={setColumnName}
             onCancel={handleCancel}
             onCreate={handleCreateColumn}
+            existingColumnNames={tableData?.columns.map((col) => col.name) ?? []}
+            currentColumnName=""
           />
 
           <NumberColumnPanel
@@ -373,6 +378,8 @@ export function AddColumnButton({ tableId }: AddColumnButtonProps) {
             onNameChange={setColumnName}
             onCancel={handleCancel}
             onCreate={handleCreateColumn}
+            existingColumnNames={tableData?.columns.map((col) => col.name) ?? []}
+            currentColumnName=""
           />
         </div>
       </div>
