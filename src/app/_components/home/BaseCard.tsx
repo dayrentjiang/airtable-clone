@@ -5,6 +5,7 @@ import { Star, MoreHorizontal } from "lucide-react";
 import { api } from "~/trpc/react";
 import { BaseOptionsMenu } from "./BaseOptionsMenu";
 import { DeleteBaseModal } from "./DeleteBaseModal";
+import { Warning } from "../ui/Warning";
 
 interface BaseCardProps {
   name: string;
@@ -34,11 +35,23 @@ export function BaseCard({ name, baseId, updatedAt, onClick }: BaseCardProps) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editedName, setEditedName] = useState(name);
+  const [showWarning, setShowWarning] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const utils = api.useUtils();
+
+  // Fetch all bases to get existing names for validation
+  const { data: allBases } = api.base.getAll.useQuery();
+
+  // Check if the name is duplicate (case-insensitive, excluding current name)
+  const isDuplicate =
+    allBases?.some(
+      (base) =>
+        base.name.toLowerCase() !== name.toLowerCase() &&
+        base.name.toLowerCase() === editedName.trim().toLowerCase(),
+    ) ?? false;
 
   const updateBaseMutation = api.base.update.useMutation({
     // Optimistic update - update UI immediately before server responds
@@ -114,6 +127,7 @@ export function BaseCard({ name, baseId, updatedAt, onClick }: BaseCardProps) {
   const handleRenameStart = () => {
     setIsRenaming(true);
     setEditedName(name);
+    setShowWarning(false);
   };
 
   const handleDeleteStart = () => {
@@ -127,11 +141,16 @@ export function BaseCard({ name, baseId, updatedAt, onClick }: BaseCardProps) {
 
   const handleRenameSubmit = () => {
     const trimmedName = editedName.trim();
+    if (isDuplicate) {
+      setShowWarning(true);
+      return;
+    }
     if (trimmedName && trimmedName !== name) {
       updateBaseMutation.mutate({ id: baseId, name: trimmedName });
     } else {
       setIsRenaming(false);
       setEditedName(name);
+      setShowWarning(false);
     }
   };
 
@@ -141,6 +160,7 @@ export function BaseCard({ name, baseId, updatedAt, onClick }: BaseCardProps) {
     } else if (e.key === "Escape") {
       setIsRenaming(false);
       setEditedName(name);
+      setShowWarning(false);
     }
   };
 
@@ -168,16 +188,24 @@ export function BaseCard({ name, baseId, updatedAt, onClick }: BaseCardProps) {
           </div>
           <div className="flex-1 overflow-hidden">
             {isRenaming ? (
-              <input
-                ref={inputRef}
-                type="text"
-                value={editedName}
-                onChange={(e) => setEditedName(e.target.value)}
-                onBlur={handleRenameSubmit}
-                onKeyDown={handleKeyDown}
-                className="w-full rounded border-2 border-blue-500 px-2 py-0.5 text-xs font-bold text-gray-800 outline-none"
-                onClick={(e) => e.stopPropagation()}
-              />
+              <div>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={editedName}
+                  onChange={(e) => {
+                    setEditedName(e.target.value);
+                    setShowWarning(false);
+                  }}
+                  onBlur={handleRenameSubmit}
+                  onKeyDown={handleKeyDown}
+                  className="w-full rounded border-2 border-blue-500 px-2 py-0.5 text-xs font-bold text-gray-800 outline-none"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                {showWarning && isDuplicate && (
+                  <Warning message="Please enter a unique base name" />
+                )}
+              </div>
             ) : (
               <p className="truncate text-xs font-bold text-gray-800">{name}</p>
             )}

@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { Star, ChevronRight } from "lucide-react";
+import { Warning } from "../../ui/Warning";
 
 interface RenameBaseModalProps {
   open: boolean;
@@ -9,6 +10,7 @@ interface RenameBaseModalProps {
   baseName: string;
   onRename: (newName: string) => void;
   anchorEl?: HTMLElement | null;
+  existingBaseNames?: string[];
 }
 
 export function RenameBaseModal({
@@ -17,11 +19,20 @@ export function RenameBaseModal({
   baseName,
   onRename,
   anchorEl,
+  existingBaseNames = [],
 }: RenameBaseModalProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [newName, setNewName] = useState(baseName);
+  const [showWarning, setShowWarning] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+  // Check if the name is duplicate (case-insensitive, excluding current name)
+  const isDuplicate = existingBaseNames.some(
+    (existingName) =>
+      existingName.toLowerCase() !== baseName.toLowerCase() &&
+      existingName.toLowerCase() === newName.trim().toLowerCase(),
+  );
 
   useEffect(() => {
     if (open && anchorEl) {
@@ -36,6 +47,7 @@ export function RenameBaseModal({
   useEffect(() => {
     if (open) {
       setNewName(baseName);
+      setShowWarning(false);
       // Focus and select the text in the input
       setTimeout(() => {
         inputRef.current?.focus();
@@ -83,6 +95,10 @@ export function RenameBaseModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isDuplicate) {
+      setShowWarning(true);
+      return;
+    }
     if (newName.trim() && newName !== baseName) {
       onRename(newName.trim());
     }
@@ -91,6 +107,10 @@ export function RenameBaseModal({
 
   const handleBlur = () => {
     // Auto-submit on blur if name changed
+    if (isDuplicate) {
+      setShowWarning(true);
+      return;
+    }
     if (newName.trim() && newName !== baseName) {
       onRename(newName.trim());
     }
@@ -117,11 +137,17 @@ export function RenameBaseModal({
               ref={inputRef}
               type="text"
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              onChange={(e) => {
+                setNewName(e.target.value);
+                setShowWarning(false);
+              }}
               onBlur={handleBlur}
               className="w-full rounded-md border border-blue-500 px-3 py-2 text-base font-medium text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter base name"
             />
+            {showWarning && isDuplicate && (
+              <Warning message="Please enter a unique base name" />
+            )}
           </div>
 
           {/* Menu Items */}

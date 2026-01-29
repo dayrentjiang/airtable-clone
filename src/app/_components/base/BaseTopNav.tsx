@@ -33,6 +33,9 @@ export function BaseTopNav({ baseName, baseId, onBaseNameClick }: BaseTopNavProp
   const baseNameButtonRef = useRef<HTMLButtonElement>(null);
   const utils = api.useUtils();
 
+  // Fetch all bases to get existing names for validation
+  const { data: allBases } = api.base.getAll.useQuery();
+
   const updateBaseMutation = api.base.update.useMutation({
     onMutate: async (newBase) => {
       // Cancel any outgoing refetches
@@ -141,6 +144,7 @@ export function BaseTopNav({ baseName, baseId, onBaseNameClick }: BaseTopNavProp
         baseName={baseName}
         onRename={handleRename}
         anchorEl={baseNameButtonRef.current}
+        existingBaseNames={allBases?.map((base) => base.name) ?? []}
       />
     </header>
   );
