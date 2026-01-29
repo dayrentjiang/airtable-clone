@@ -38,6 +38,7 @@ interface ColumnHeaderContextMenuProps {
   columnId: string;
   tableId: string;
   onClose: () => void;
+  initiallyOpenEditPanel?: boolean;
 }
 
 export function ColumnHeaderContextMenu({
@@ -45,11 +46,12 @@ export function ColumnHeaderContextMenu({
   columnId,
   tableId,
   onClose,
+  initiallyOpenEditPanel = false,
 }: ColumnHeaderContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const editPanelRef = useRef<HTMLDivElement>(null);
   const utils = api.useUtils();
-  const [showEditPanel, setShowEditPanel] = useState(false);
+  const [showEditPanel, setShowEditPanel] = useState(initiallyOpenEditPanel);
   const [columnName, setColumnName] = useState("");
   const [columnType, setColumnType] = useState<"TEXT" | "NUMBER">("TEXT");
   const [menuPosition, setMenuPosition] = useState({ left: 0, top: 0 });
@@ -218,6 +220,33 @@ export function ColumnHeaderContextMenu({
       setMenuPosition({ left: adjustedX, top: adjustedY });
     }
   }, [targetHeader]);
+
+  // Calculate position for edit panel when opened directly (via double-click)
+  useEffect(() => {
+    if (showEditPanel && targetHeader && menuPosition.left === 0 && menuPosition.top === 0) {
+      const headerRect = targetHeader.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      
+      // Approximate panel width (w-sm = 640px)
+      const panelWidth = 640;
+      
+      // Default: position below the header, aligned to left
+      let adjustedX = headerRect.left;
+      let adjustedY = headerRect.bottom + 5;
+
+      // If panel would go off right edge, align to right of header
+      if (adjustedX + panelWidth > viewportWidth) {
+        adjustedX = headerRect.right - panelWidth;
+      }
+
+      // If still off screen to the left, position inside the viewport
+      if (adjustedX < 10) {
+        adjustedX = 10;
+      }
+
+      setMenuPosition({ left: adjustedX, top: adjustedY });
+    }
+  }, [showEditPanel, targetHeader, menuPosition]);
 
   // Define menu items
   const menuItems: MenuItemType[] = [

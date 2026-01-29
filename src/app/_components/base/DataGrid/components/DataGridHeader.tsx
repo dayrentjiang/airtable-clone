@@ -160,7 +160,16 @@ export function DataGridHeader({
                     />
                   </div>
                 ) : header.isPlaceholder ? null : (
-                  <div className="flex items-center justify-between gap-2">
+                  <div 
+                    className="flex items-center justify-between gap-2"
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      const headerElement = headerRefs.current.get(columnId);
+                      if (headerElement) {
+                        showColumnContextMenu(headerElement, columnId, tableId, true);
+                      }
+                    }}
+                  >
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-gray-600">
                         {(

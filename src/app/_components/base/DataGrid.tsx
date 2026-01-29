@@ -552,6 +552,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
               columnId={columnContextMenuState.columnId}
               tableId={columnContextMenuState.tableId}
               onClose={hideColumnContextMenu}
+              initiallyOpenEditPanel={columnContextMenuState.openEditPanel}
             />
           )}
         </div>
