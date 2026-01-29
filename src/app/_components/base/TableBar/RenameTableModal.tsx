@@ -23,6 +23,7 @@ export function RenameTableModal({
 }: RenameTableModalProps) {
   const [name, setName] = useState(currentName);
   const [recordName] = useState("Record");
+  const [showWarning, setShowWarning] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -43,6 +44,7 @@ export function RenameTableModal({
     );
     if (isOpen) {
       setName(currentName);
+      setShowWarning(false);
       setTimeout(() => {
         inputRef.current?.focus();
         inputRef.current?.select();
@@ -89,6 +91,8 @@ export function RenameTableModal({
     if (name.trim() && !isDuplicate) {
       onSave(name.trim());
       onClose();
+    } else if (isDuplicate) {
+      setShowWarning(true);
     }
   };
 
@@ -133,12 +137,15 @@ export function RenameTableModal({
             ref={inputRef}
             type="text"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              setShowWarning(false);
+            }}
             onKeyDown={handleKeyDown}
             className="w-full rounded-md border-2 border-blue-500 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-600"
             placeholder="Table name"
           />
-          {isDuplicate && (
+          {showWarning && isDuplicate && (
             <Warning message="Please enter a unique table name" />
           )}
         </div>
@@ -188,7 +195,7 @@ export function RenameTableModal({
         <button
           type="button"
           onClick={handleSave}
-          disabled={!name.trim() || isDuplicate}
+          disabled={!name.trim()}
           className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
         >
           Save
