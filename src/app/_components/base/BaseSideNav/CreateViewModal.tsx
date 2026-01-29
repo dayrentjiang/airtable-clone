@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Users, User, Lock } from "lucide-react";
+import { Warning } from "../../ui/Warning";
 
 interface CreateViewModalProps {
   viewName: string;
@@ -9,6 +10,7 @@ interface CreateViewModalProps {
   onCancel: () => void;
   onCreate: () => void;
   isCreating: boolean;
+  existingViewNames?: string[];
 }
 
 export function CreateViewModal({
@@ -17,11 +19,19 @@ export function CreateViewModal({
   onCancel,
   onCreate,
   isCreating,
+  existingViewNames = [],
 }: CreateViewModalProps) {
   const [editPermission, setEditPermission] = useState<
     "collaborative" | "personal" | "locked"
   >("collaborative");
+  const [showWarning, setShowWarning] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Check if the name is duplicate (case-insensitive)
+  const isDuplicate = existingViewNames.some(
+    (existingName) =>
+      existingName.toLowerCase() === viewName.trim().toLowerCase(),
+  );
 
   useEffect(() => {
     if (inputRef.current) {
@@ -29,6 +39,14 @@ export function CreateViewModal({
       inputRef.current.select();
     }
   }, []);
+
+  const handleCreate = () => {
+    if (viewName.trim() && !isDuplicate) {
+      onCreate();
+    } else if (isDuplicate) {
+      setShowWarning(true);
+    }
+  };
 
   return (
     <>
@@ -44,10 +62,13 @@ export function CreateViewModal({
               ref={inputRef}
               type="text"
               value={viewName}
-              onChange={(e) => onViewNameChange(e.target.value)}
+              onChange={(e) => {
+                onViewNameChange(e.target.value);
+                setShowWarning(false);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && viewName.trim()) {
-                  onCreate();
+                  handleCreate();
                 } else if (e.key === "Escape") {
                   onCancel();
                 }
@@ -55,6 +76,9 @@ export function CreateViewModal({
               className="w-full rounded-md border border-gray-300 px-3 py-2.5 text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
               placeholder="Enter view name"
             />
+            {showWarning && isDuplicate && (
+              <Warning message="Please enter a unique view name" />
+            )}
           </div>
 
           {/* Who can edit section */}
@@ -128,7 +152,7 @@ export function CreateViewModal({
               Cancel
             </button>
             <button
-              onClick={onCreate}
+              onClick={handleCreate}
               disabled={!viewName.trim() || isCreating}
               className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >

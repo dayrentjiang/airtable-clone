@@ -385,6 +385,11 @@ export function DirectEditableCell({
             {formattedDisplayValue || <span className="text-gray-400"></span>}
           </span>
         </div>
+        {validationError && (
+          <div className="animate-in fade-in slide-in-from-top-1 absolute top-full left-0 z-50 mt-1 rounded bg-gray-200 px-2 py-1 text-xs font-medium whitespace-nowrap text-gray-700 shadow-lg duration-200">
+            {validationError}
+          </div>
+        )}
       </>
     );
   }

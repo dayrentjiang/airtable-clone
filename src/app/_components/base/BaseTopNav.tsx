@@ -16,11 +16,11 @@ function BaseIcon() {
   return (
     <div className="flex h-8 w-8 items-center justify-center rounded bg-teal-600">
       <Image
-        src="/images/airtable_black.webp"
+        src="/images/airtable_bw_logo.png"
         alt="Airtable"
         width={20}
         height={20}
-        className="h-5 w-5"
+        className="h-8 w-8"
       />
     </div>
   );
@@ -28,7 +28,11 @@ function BaseIcon() {
 
 const tabs = ["Data", "Automations", "Interfaces", "Forms"] as const;
 
-export function BaseTopNav({ baseName, baseId, onBaseNameClick }: BaseTopNavProps) {
+export function BaseTopNav({
+  baseName,
+  baseId,
+  onBaseNameClick,
+}: BaseTopNavProps) {
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const baseNameButtonRef = useRef<HTMLButtonElement>(null);
   const utils = api.useUtils();

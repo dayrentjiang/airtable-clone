@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { HelpCircle, ChevronDown } from "lucide-react";
+import { Warning } from "../../ui/Warning";
 
 interface RenameTableModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface RenameTableModalProps {
   onSave: (name: string) => void;
   currentName: string;
   anchorRef: React.RefObject<HTMLElement | null>;
+  existingTableNames?: string[];
 }
 
 export function RenameTableModal({
@@ -17,11 +19,20 @@ export function RenameTableModal({
   onSave,
   currentName,
   anchorRef,
+  existingTableNames = [],
 }: RenameTableModalProps) {
   const [name, setName] = useState(currentName);
   const [recordName] = useState("Record");
+  const [showWarning, setShowWarning] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Check if the name is duplicate (case-insensitive, excluding current name)
+  const isDuplicate = existingTableNames.some(
+    (existingName) =>
+      existingName.toLowerCase() !== currentName.toLowerCase() &&
+      existingName.toLowerCase() === name.trim().toLowerCase(),
+  );
 
   // Reset state when dropdown opens
   useEffect(() => {
@@ -33,6 +44,7 @@ export function RenameTableModal({
     );
     if (isOpen) {
       setName(currentName);
+      setShowWarning(false);
       setTimeout(() => {
         inputRef.current?.focus();
         inputRef.current?.select();
@@ -76,9 +88,11 @@ export function RenameTableModal({
   }, [isOpen, onClose]);
 
   const handleSave = () => {
-    if (name.trim()) {
+    if (name.trim() && !isDuplicate) {
       onSave(name.trim());
       onClose();
+    } else if (isDuplicate) {
+      setShowWarning(true);
     }
   };
 
@@ -123,11 +137,17 @@ export function RenameTableModal({
             ref={inputRef}
             type="text"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              setShowWarning(false);
+            }}
             onKeyDown={handleKeyDown}
             className="w-full rounded-md border-2 border-blue-500 px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-600"
             placeholder="Table name"
           />
+          {showWarning && isDuplicate && (
+            <Warning message="Please enter a unique table name" />
+          )}
         </div>
 
         {/* Record name section */}

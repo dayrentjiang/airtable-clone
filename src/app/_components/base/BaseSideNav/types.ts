@@ -43,4 +43,5 @@ export interface ViewItemProps {
   onSelect: () => void;
   onRename: (newName: string) => void;
   onDelete: () => void;
+  existingViewNames?: string[];
 }

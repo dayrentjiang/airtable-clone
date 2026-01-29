@@ -139,6 +139,9 @@ export function AddColumnButton({ tableId }: AddColumnButtonProps) {
   const utils = api.useUtils();
   const { clearSelection } = useSelection();
 
+  // Fetch table data to get existing column names
+  const { data: tableData } = api.table.getById.useQuery({ id: tableId });
+
   // Calculate menu position based on available space
   useEffect(() => {
     if (isMenuOpen && buttonRef.current) {
@@ -263,10 +266,43 @@ export function AddColumnButton({ tableId }: AddColumnButtonProps) {
   };
 
   const handleCreateColumn = () => {
-    if (columnName.trim() && selectedType) {
+    if (selectedType) {
+      let finalName = columnName.trim();
+      
+      // Generate smart name if empty
+      if (!finalName) {
+        const baseName = selectedType === "TEXT" ? "Label" : "Number";
+        
+        // Check if base name (without number) exists
+        const baseNameExists = tableData?.columns.some(
+          (col) => col.name.toLowerCase() === baseName.toLowerCase()
+        );
+        
+        if (!baseNameExists) {
+          // Use base name without number for the first one
+          finalName = baseName;
+        } else {
+          // Find the highest number in existing "Label X" or "Number X" names
+          let highestNumber = 1; // Start from 1 since base name exists
+          const regex = new RegExp(`^${baseName} (\\d+)$`, 'i');
+          tableData?.columns.forEach((col) => {
+            const match = regex.exec(col.name);
+            if (match?.[1]) {
+              const num = parseInt(match[1], 10);
+              if (num > highestNumber) {
+                highestNumber = num;
+              }
+            }
+          });
+          
+          // Use highest number + 1
+          finalName = `${baseName} ${highestNumber + 1}`;
+        }
+      }
+      
       createColumnMutation.mutate({
         tableId,
-        name: columnName.trim(),
+        name: finalName,
         type: selectedType,
       });
     }
@@ -364,6 +400,9 @@ export function AddColumnButton({ tableId }: AddColumnButtonProps) {
             onNameChange={setColumnName}
             onCancel={handleCancel}
             onCreate={handleCreateColumn}
+            onTypeChange={(type) => setSelectedType(type)}
+            existingColumnNames={tableData?.columns.map((col) => col.name) ?? []}
+            currentColumnName=""
           />
 
           <NumberColumnPanel
@@ -373,6 +412,9 @@ export function AddColumnButton({ tableId }: AddColumnButtonProps) {
             onNameChange={setColumnName}
             onCancel={handleCancel}
             onCreate={handleCreateColumn}
+            onTypeChange={(type) => setSelectedType(type)}
+            existingColumnNames={tableData?.columns.map((col) => col.name) ?? []}
+            currentColumnName=""
           />
         </div>
       </div>

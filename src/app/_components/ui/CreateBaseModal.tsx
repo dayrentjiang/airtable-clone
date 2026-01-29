@@ -77,48 +77,62 @@ export function CreateBaseModal({
           {/* Build with Omni - Disabled */}
           <button
             disabled
-            className="group relative flex cursor-not-allowed flex-col items-start rounded-lg border-2 border-gray-200 bg-linear-to-br from-pink-50 to-purple-50 p-8 text-left opacity-60 transition-all"
+            className="group relative flex cursor-not-allowed flex-col items-start rounded-lg border-2 border-gray-200 bg-linear-to-br from-pink-50 to-purple-50 p-0 text-left opacity-60 transition-all"
           >
-            {/* Placeholder for image */}
-            <div className="mb-6 flex h-48 w-full items-center justify-center rounded-lg bg-linear-to-br from-pink-200 to-purple-300">
-              <div className="text-center">
-                <div className="mb-2 text-6xl">🤖</div>
-                <div className="text-sm text-purple-700">AI Illustration</div>
-              </div>
+            {/* Image */}
+            <div className="h-40 w-full overflow-hidden rounded-t-lg">
+              <img
+                src="/images/Omni_2x.png"
+                alt="Build with Omni"
+                className="h-full w-full object-cover"
+              />
             </div>
 
-            <div className="mb-2 flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Build an app with Omni
-              </h3>
-              <span className="rounded-md bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                New
-              </span>
+            {/* Separator */}
+            <div className="w-full border-t border-gray-200"></div>
+
+            {/* Content */}
+            <div className="bg-white p-6">
+              <div className="mb-2 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Build an app with Omni
+                </h3>
+                <span className="rounded-md bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                  New
+                </span>
+              </div>
+              <p className="text-sm text-gray-600">
+                Use AI to build a custom app tailored to your workflow.
+              </p>
             </div>
-            <p className="text-sm text-gray-600">
-              Use AI to build a custom app tailored to your workflow.
-            </p>
           </button>
 
           {/* Build on your own - Active */}
           <button
             onClick={onCreateBlankBase}
-            className="group relative flex flex-col items-start rounded-lg border-2 border-gray-200 bg-linear-to-br from-blue-50 to-indigo-50 p-8 text-left transition-all hover:border-blue-400 hover:shadow-lg"
+            className="group relative flex flex-col items-start rounded-lg border-2 border-gray-200 bg-linear-to-br from-blue-50 to-indigo-50 p-0 text-left transition-all hover:cursor-pointer hover:shadow-2xl hover:shadow-lg"
           >
-            {/* Placeholder for image */}
-            <div className="mb-6 flex h-48 w-full items-center justify-center rounded-lg bg-linear-to-br from-blue-200 to-indigo-300">
-              <div className="text-center">
-                <div className="mb-2 text-6xl">📊</div>
-                <div className="text-sm text-blue-700">App Illustration</div>
-              </div>
+            {/* Image */}
+            <div className="h-40 w-full overflow-hidden rounded-t-lg">
+              <img
+                src="/images/start-with-data.png"
+                alt="Build on your own"
+                className="h-full w-full object-cover"
+              />
             </div>
 
-            <h3 className="mb-2 text-lg font-semibold text-gray-900">
-              Build an app on your own
-            </h3>
-            <p className="text-sm text-gray-600">
-              Start with a blank app and build your ideal workflow.
-            </p>
+            {/* Separator */}
+            <div className="w-full border-t border-gray-200"></div>
+
+            {/* Content */}
+            <div className="bg-white p-6">
+              <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                Build an app on your own
+              </h3>
+              <p className="text-sm text-gray-600">
+                Start with a blank app and build your ideal workflow.
+              </p>
+            </div>
           </button>
         </div>
       </div>

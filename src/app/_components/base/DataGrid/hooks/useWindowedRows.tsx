@@ -26,15 +26,27 @@ interface UseWindowedRowsOptions {
  */
 export function useWindowedRows(
   options: UseWindowedRowsOptions,
-  scrollContainerRef: React.RefObject<HTMLDivElement | null>
+  scrollContainerRef: React.RefObject<HTMLDivElement | null>,
 ) {
-  const { tableId, viewId, filters = [], sorts = [], search, enabled = true } = options;
+  const {
+    tableId,
+    viewId,
+    filters = [],
+    sorts = [],
+    search,
+    enabled = true,
+  } = options;
+
+  // Get utils for invalidating queries
+  const utils = api.useUtils();
 
   // Current offset to fetch
   const [currentOffset, setCurrentOffset] = useState(0);
 
   // Store all loaded rows by their ACTUAL index in the dataset
-  const [rowsByIndex, setRowsByIndex] = useState<Map<number, RowData>>(new Map());
+  const [rowsByIndex, setRowsByIndex] = useState<Map<number, RowData>>(
+    new Map(),
+  );
 
   // Track total count
   const [totalCount, setTotalCount] = useState(0);
@@ -44,18 +56,38 @@ export function useWindowedRows(
 
   // Track query params to detect changes
   const prevParamsRef = useRef<string>("");
-  const currentParams = JSON.stringify({ tableId, viewId, filters, sorts, search });
+  const currentParams = JSON.stringify({
+    tableId,
+    viewId,
+    filters,
+    sorts,
+    search,
+  });
 
   // Reset state when params change
   useEffect(() => {
-    if (prevParamsRef.current !== currentParams && prevParamsRef.current !== "") {
+    if (
+      prevParamsRef.current !== currentParams &&
+      prevParamsRef.current !== ""
+    ) {
+      // Invalidate all cached queries for this table to prevent stale data
+      void utils.row.infiniteWithView.invalidate({ tableId, viewId });
+
+      // Scroll to top immediately when filters/sorts change
+      const container = scrollContainerRef.current;
+      if (container) {
+        container.scrollTop = 0;
+      }
+
       setRowsByIndex(new Map());
       setCurrentOffset(0);
       setTotalCount(0);
       setResetKey((k) => k + 1);
+      dataOffsetRef.current = null;
+      dataParamsRef.current = "";
     }
     prevParamsRef.current = currentParams;
-  }, [currentParams]);
+  }, [currentParams, scrollContainerRef, utils, tableId, viewId]);
 
   // Fetch data for current offset
   const { data, isLoading, isFetching } = api.row.infiniteWithView.useQuery(
@@ -73,15 +105,26 @@ export function useWindowedRows(
       staleTime: 30000,
       gcTime: 60000,
       refetchOnWindowFocus: false,
-    }
+    },
   );
 
   // Track which offset the current data corresponds to
   const dataOffsetRef = useRef<number | null>(null);
 
+  // Track the params that the current data corresponds to
+  const dataParamsRef = useRef<string>("");
+
   // Update rowsByIndex when data arrives
   useEffect(() => {
     if (data?.items && data.items.length > 0) {
+      // Validate data matches current params to prevent stale data
+      if (dataParamsRef.current === "") {
+        dataParamsRef.current = currentParams;
+      } else if (dataParamsRef.current !== currentParams) {
+        // Params changed but we're receiving old data - ignore it
+        return;
+      }
+
       // Get the offset that was used for this query
       const queryOffset = data.offset ?? currentOffset;
 
@@ -94,7 +137,6 @@ export function useWindowedRows(
       setRowsByIndex((prev) => {
         const newMap = new Map(prev);
         (data.items as RowData[]).forEach((row, i) => {
-          // Store each row at its ACTUAL index in the dataset
           newMap.set(queryOffset + i, row);
         });
         return newMap;
@@ -104,7 +146,7 @@ export function useWindowedRows(
         setTotalCount(data.totalCount);
       }
     }
-  }, [data, currentOffset, resetKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data, currentOffset, resetKey, currentParams, rowsByIndex.size]);
 
   // Calculate offset from scroll position - with throttling
   const lastScrollUpdateRef = useRef(0);
@@ -124,21 +166,28 @@ export function useWindowedRows(
 
     // Check if we have data for the visible range
     let hasAllVisibleData = true;
-    for (let i = startRow; i <= Math.min(endRow, totalCount - 1); i++) {
-      if (!rowsByIndex.has(i)) {
-        hasAllVisibleData = false;
-        break;
+    if (totalCount > 0) {
+      for (let i = startRow; i <= Math.min(endRow, totalCount - 1); i++) {
+        if (!rowsByIndex.has(i)) {
+          hasAllVisibleData = false;
+          break;
+        }
       }
+    } else {
+      // No data loaded yet, need to fetch
+      hasAllVisibleData = false;
     }
 
     // If we don't have the visible data, calculate which window to fetch
-    if (!hasAllVisibleData && totalCount > 0) {
+    if (!hasAllVisibleData) {
       // Find the first missing row
       let firstMissing = startRow;
-      for (let i = startRow; i <= endRow; i++) {
-        if (!rowsByIndex.has(i)) {
-          firstMissing = i;
-          break;
+      if (totalCount > 0) {
+        for (let i = startRow; i <= endRow; i++) {
+          if (!rowsByIndex.has(i)) {
+            firstMissing = i;
+            break;
+          }
         }
       }
 
@@ -190,20 +239,31 @@ export function useWindowedRows(
     };
   }, [scrollContainerRef, handleScroll, updateOffsetFromScroll]);
 
-  // Function to add a row optimistically
-  const addOptimisticRow = useCallback((row: RowData) => {
-    setRowsByIndex((prev) => {
-      const newMap = new Map(prev);
-      // Add at the end (use totalCount as the new index)
-      const newIndex = totalCount;
-      newMap.set(newIndex, row);
-      return newMap;
-    });
-    setTotalCount((prev) => prev + 1);
+  // Force update when resetKey changes (filters/sorts change)
+  // This ensures data loads even if user doesn't scroll after changing filters
+  useEffect(() => {
+    if (resetKey > 0) {
+      updateOffsetFromScroll();
+    }
+  }, [resetKey, updateOffsetFromScroll]);
 
-    // Return the index where the row was added
-    return totalCount;
-  }, [totalCount]);
+  // Function to add a row optimistically
+  const addOptimisticRow = useCallback(
+    (row: RowData) => {
+      setRowsByIndex((prev) => {
+        const newMap = new Map(prev);
+        // Add at the end (use totalCount as the new index)
+        const newIndex = totalCount;
+        newMap.set(newIndex, row);
+        return newMap;
+      });
+      setTotalCount((prev) => prev + 1);
+
+      // Return the index where the row was added
+      return totalCount;
+    },
+    [totalCount],
+  );
 
   // Function to invalidate and refetch data
   const invalidate = useCallback(() => {

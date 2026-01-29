@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { TableCellsSplit, Star, MoreHorizontal } from "lucide-react";
 import type { ViewItemProps } from "./types";
 import { ViewContextMenu } from "./ViewContextMenu";
+import { Warning } from "../../ui/Warning";
 
 export function ViewItem({
   viewId,
@@ -12,16 +13,25 @@ export function ViewItem({
   onSelect,
   onRename,
   onDelete,
+  existingViewNames = [],
 }: ViewItemProps) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(viewName);
   const [optimisticName, setOptimisticName] = useState<string | null>(null);
+  const [showWarning, setShowWarning] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
   } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
+
+  // Check if the name is duplicate (case-insensitive, excluding current name)
+  const isDuplicate = existingViewNames.some(
+    (existingName) =>
+      existingName.toLowerCase() !== viewName.toLowerCase() &&
+      existingName.toLowerCase() === renameValue.trim().toLowerCase(),
+  );
 
   // Update optimistic name when the prop changes (server confirmed)
   useEffect(() => {
@@ -59,17 +69,20 @@ export function ViewItem({
   const handleRenameStart = () => {
     setRenameValue(displayName);
     setIsRenaming(true);
+    setShowWarning(false);
     setContextMenu(null);
   };
 
   const handleRenameSubmit = () => {
-    if (renameValue.trim() && renameValue !== viewName) {
+    if (renameValue.trim() && renameValue !== viewName && !isDuplicate) {
       // Set optimistic name immediately for instant feedback
       setOptimisticName(renameValue.trim());
       // Close the rename UI
       setIsRenaming(false);
       // Call the mutation with optimistic update
       onRename(renameValue.trim());
+    } else if (isDuplicate) {
+      setShowWarning(true);
     } else {
       setIsRenaming(false);
     }
@@ -101,23 +114,33 @@ export function ViewItem({
   return (
     <>
       {isRenaming ? (
-        <div className="flex h-8 w-full items-center gap-2 rounded px-2.5 text-xs">
-          <TableCellsSplit className="h-4 w-4 shrink-0 text-blue-600" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={renameValue}
-            onChange={(e) => setRenameValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleRenameSubmit();
-              } else if (e.key === "Escape") {
-                handleRenameCancel();
-              }
-            }}
-            onBlur={handleRenameSubmit}
-            className="flex-1 rounded border border-gray-300 px-1 py-0.5 text-xs focus:ring-1 focus:ring-gray-300 focus:outline-none"
-          />
+        <div className="flex flex-col">
+          <div className="flex h-8 w-full items-center gap-2 rounded px-2.5 text-xs">
+            <TableCellsSplit className="h-4 w-4 shrink-0 text-blue-600" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={renameValue}
+              onChange={(e) => {
+                setRenameValue(e.target.value);
+                setShowWarning(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleRenameSubmit();
+                } else if (e.key === "Escape") {
+                  handleRenameCancel();
+                }
+              }}
+              onBlur={handleRenameSubmit}
+              className="flex-1 rounded border border-gray-300 px-1 py-0.5 text-xs focus:ring-1 focus:ring-gray-300 focus:outline-none"
+            />
+          </div>
+          {showWarning && isDuplicate && (
+            <div className="px-2.5">
+              <Warning message="Please enter a unique view name" />
+            </div>
+          )}
         </div>
       ) : (
         <div

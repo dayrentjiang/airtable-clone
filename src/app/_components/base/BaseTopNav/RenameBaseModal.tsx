@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { Star, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 interface RenameBaseModalProps {
   open: boolean;
@@ -9,6 +9,7 @@ interface RenameBaseModalProps {
   baseName: string;
   onRename: (newName: string) => void;
   anchorEl?: HTMLElement | null;
+  existingBaseNames?: string[];
 }
 
 export function RenameBaseModal({
@@ -21,7 +22,10 @@ export function RenameBaseModal({
   const popoverRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [newName, setNewName] = useState(baseName);
-  const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const [position, setPosition] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
 
   useEffect(() => {
     if (open && anchorEl) {
@@ -117,9 +121,11 @@ export function RenameBaseModal({
               ref={inputRef}
               type="text"
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              onChange={(e) => {
+                setNewName(e.target.value);
+              }}
               onBlur={handleBlur}
-              className="w-full rounded-md border border-blue-500 px-3 py-2 text-base font-medium text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-blue-500 px-3 py-2 text-base font-medium text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
               placeholder="Enter base name"
             />
           </div>

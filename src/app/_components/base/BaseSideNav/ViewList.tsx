@@ -45,6 +45,7 @@ export function ViewList({
           onSelect={() => onViewSelect(view.id)}
           onRename={(newName) => onViewRename(view.id, newName)}
           onDelete={() => onViewDelete(view.id)}
+          existingViewNames={views.map((v) => v.name)}
         />
       ))}
     </div>

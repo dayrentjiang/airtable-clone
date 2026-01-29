@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Tooltip } from "../../ui/Tooltip";
 import { RenameTableModal } from "./RenameTableModal";
+import type { TableType } from "./types";
 
 interface AddTableButtonProps {
   onAddTable: (name: string) => void;
@@ -23,6 +24,7 @@ interface AddTableButtonProps {
   newTableName: string | null;
   onClearNewTable?: () => void;
   newTableTabRef?: React.RefObject<HTMLDivElement | null>;
+  tables: TableType[];
 }
 
 export function AddTableButton({
@@ -32,6 +34,7 @@ export function AddTableButton({
   newTableName,
   onClearNewTable,
   newTableTabRef,
+  tables,
 }: AddTableButtonProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
@@ -87,8 +90,28 @@ export function AddTableButton({
 
   const handleStartFromScratch = () => {
     setIsDropdownOpen(false);
-    // Create the table immediately with a default name
-    onAddTable("New Table");
+
+    // Generate smart table name based on existing tables
+    const baseName = "Table";
+    
+    // Find the highest number in existing "Table X" names
+    let highestNumber = 0;
+    const regex = /^Table (\d+)$/i;
+    tables.forEach((table) => {
+      const match = regex.exec(table.name);
+      if (match?.[1]) {
+        const num = parseInt(match[1], 10);
+        if (num > highestNumber) {
+          highestNumber = num;
+        }
+      }
+    });
+    
+    // Use highest number + 1
+    const finalName = `${baseName} ${highestNumber + 1}`;
+
+    // Create the table with dynamic name
+    onAddTable(finalName);
     // Modal will open automatically via useEffect when newTableId changes
   };
 
@@ -248,6 +271,7 @@ export function AddTableButton({
           }}
           currentName={newTableName ?? "Table 1"}
           anchorRef={newTableTabRef ?? buttonRef}
+          existingTableNames={tables.map((table) => table.name)}
         />
       )}
     </div>

@@ -19,6 +19,7 @@ interface ColumnContextMenuState {
   headerRef: HTMLElement | null;
   columnId: string;
   tableId: string;
+  openEditPanel?: boolean;
 }
 
 interface ContextMenuContextValue {
@@ -34,6 +35,7 @@ interface ContextMenuContextValue {
     headerRef: HTMLElement,
     columnId: string,
     tableId: string,
+    openEditPanel?: boolean,
   ) => void;
   hideContextMenu: () => void;
   hideColumnContextMenu: () => void;
@@ -66,8 +68,8 @@ export function ContextMenuProvider({ children }: ContextMenuProviderProps) {
   );
 
   const showColumnContextMenu = useCallback(
-    (headerRef: HTMLElement, columnId: string, tableId: string) => {
-      setColumnContextMenuState({ headerRef, columnId, tableId });
+    (headerRef: HTMLElement, columnId: string, tableId: string, openEditPanel = false) => {
+      setColumnContextMenuState({ headerRef, columnId, tableId, openEditPanel });
       // Close row context menu if open
       setContextMenuState(null);
     },
