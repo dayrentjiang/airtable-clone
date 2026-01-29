@@ -336,8 +336,65 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
         : undefined, // Measure actual heights for better accuracy (except Firefox due to performance)
   });
 
+  // Force virtualizer to recalculate when filters/sorts change
+  const filtersKey = useMemo(
+    () => JSON.stringify(completeFilters),
+    [completeFilters],
+  );
+  const sortsKey = useMemo(() => JSON.stringify(sorts), [sorts]);
+
+  useEffect(() => {
+    // Force a complete recalculation
+    rowVirtualizer.measure();
+
+    // Force a micro-scroll to trigger virtualizer update if at top
+    if (tableContainerRef.current) {
+      const currentScroll = tableContainerRef.current.scrollTop;
+      if (currentScroll === 0) {
+        tableContainerRef.current.scrollTop = 1;
+        setTimeout(() => {
+          if (tableContainerRef.current) {
+            tableContainerRef.current.scrollTop = 0;
+          }
+        }, 0);
+      }
+    }
+  }, [filtersKey, sortsKey, rowVirtualizer, virtualRowCount, rowsByIndex.size]);
+
   const virtualRows = rowVirtualizer.getVirtualItems();
   const totalSize = rowVirtualizer.getTotalSize();
+
+  // Track previous rowsByIndex size to detect when data arrives after filter/sort
+  const prevRowsByIndexSizeRef = useRef(0);
+  useEffect(() => {
+    const currentSize = rowsByIndex.size;
+    const prevSize = prevRowsByIndexSizeRef.current;
+
+    // If we went from 0 to having data, force virtualizer update
+    if (prevSize === 0 && currentSize > 0) {
+      // Force re-measure
+      rowVirtualizer.measure();
+
+      // Force re-render by triggering a micro-scroll
+      if (
+        tableContainerRef.current &&
+        tableContainerRef.current.scrollTop === 0
+      ) {
+        requestAnimationFrame(() => {
+          if (tableContainerRef.current) {
+            tableContainerRef.current.scrollTop = 0.1;
+            requestAnimationFrame(() => {
+              if (tableContainerRef.current) {
+                tableContainerRef.current.scrollTop = 0;
+              }
+            });
+          }
+        });
+      }
+    }
+
+    prevRowsByIndexSizeRef.current = currentSize;
+  }, [rowsByIndex.size, virtualRowCount, rowVirtualizer]);
 
   // NOTE: rowsByIndex now comes from useWindowedRows hook
   // No scroll clamping needed - windowed fetching handles any scroll position
@@ -469,12 +526,14 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
             />
             <AddColumnButton tableId={tableId} />
           </div>
-          
+
           {/* Empty state overlay - show when there are 0 records */}
           {totalCount === 0 && !rowsLoading && !tableLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80">
               <div className="text-center">
-                <p className="text-sm text-gray-500">All records are filtered</p>
+                <p className="text-sm text-gray-500">
+                  All records are filtered
+                </p>
               </div>
             </div>
           )}
@@ -503,10 +562,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
 
         {/* Sticky bottom bar showing record count */}
         <div className="absolute right-0 bottom-0 left-0 border-t border-gray-200 bg-gray-50 px-4 py-1">
-          <div
-            className="text-xs text-gray-600"
-            style={{ width: tableWidth }}
-          >
+          <div className="text-xs text-gray-600" style={{ width: tableWidth }}>
             {totalCount} {totalCount === 1 ? "record" : "records"}
           </div>
         </div>
