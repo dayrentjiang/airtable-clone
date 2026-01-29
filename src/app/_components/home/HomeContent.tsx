@@ -442,7 +442,7 @@ export function HomeContent() {
             return (
               <button
                 key={template.title}
-                className="flex flex-col items-start gap-2 rounded-lg border border-gray-200 bg-white p-4 text-left transition-all hover:border-gray-300 hover:shadow-sm"
+                className="flex flex-col items-start gap-2 rounded-lg border border-gray-200 bg-white p-4 text-left transition-all hover:cursor-pointer hover:border-gray-300 hover:shadow-sm"
               >
                 <div className="flex items-center gap-2">
                   <Icon size={18} className="text-gray-600" />
@@ -502,7 +502,7 @@ export function HomeContent() {
             {grouped.today.length > 0 && (
               <div className="mt-6">
                 <h3 className="text-sm font-medium text-gray-500">Today</h3>
-                <div className="mt-3 grid min-h-20 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+                <div className="mt-3 grid min-h-22 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
                   {grouped.today.map((base) => (
                     <BaseCard
                       key={base.id}
@@ -522,7 +522,7 @@ export function HomeContent() {
                 <h3 className="text-sm font-medium text-gray-500">
                   Past 7 days
                 </h3>
-                <div className="mt-3 grid min-h-20 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+                <div className="mt-3 grid min-h-22 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
                   {grouped.pastWeek.map((base) => (
                     <BaseCard
                       key={base.id}
@@ -540,7 +540,7 @@ export function HomeContent() {
             {grouped.older.length > 0 && (
               <div className="mt-8">
                 <h3 className="text-sm font-medium text-gray-500">Older</h3>
-                <div className="mt-3 grid min-h-20 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+                <div className="mt-3 grid min-h-22 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
                   {grouped.older.map((base) => (
                     <BaseCard
                       key={base.id}

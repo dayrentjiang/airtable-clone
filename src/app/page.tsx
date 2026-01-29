@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "~/server/auth";
-import { TopNav } from "~/app/_components/layout/TopNav";
-import { SideNav } from "~/app/_components/layout/SideNav";
-import { IconSidebar } from "~/app/_components/layout/IconSidebar";
+import { HomeLayout } from "~/app/_components/layout/HomeLayout";
 import { HomeContent } from "~/app/_components/home/HomeContent";
 
 export default async function Home() {
@@ -17,16 +15,8 @@ export default async function Home() {
 
   // Show home content when authenticated
   return (
-    <div className="flex h-screen flex-col bg-gray-50">
-      <TopNav session={session} />
-
-      <div className="flex flex-1 overflow-hidden">
-        <SideNav />
-
-        <main className="flex-1 overflow-y-auto">
-          <HomeContent />
-        </main>
-      </div>
-    </div>
+    <HomeLayout session={session}>
+      <HomeContent />
+    </HomeLayout>
   );
 }
