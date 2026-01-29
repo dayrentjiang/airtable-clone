@@ -16,11 +16,11 @@ function BaseIcon() {
   return (
     <div className="flex h-8 w-8 items-center justify-center rounded bg-teal-600">
       <Image
-        src="/images/airtable_black.webp"
+        src="/images/airtable_bw_logo.png"
         alt="Airtable"
         width={20}
         height={20}
-        className="h-5 w-5"
+        className="h-8 w-8"
       />
     </div>
   );
