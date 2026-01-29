@@ -326,7 +326,7 @@ export function ViewToolbar({
 
   return (
     <ToolbarPopoversProvider>
-      <div className="box-border flex h-12 max-h-12 min-h-12 shrink-0 items-center justify-between overflow-hidden border-b border-gray-200 bg-white px-3">
+      <div className="box-border flex h-12 min-h-12 shrink-0 items-center justify-between overflow-hidden border-b border-gray-200 bg-white px-3">
         {/* Left: Hamburger + View dropdown */}
         <div className="flex h-full items-center gap-1">
           <button

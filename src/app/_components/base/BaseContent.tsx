@@ -55,7 +55,6 @@ function ViewConfigContent({
 
   // Handler for selecting a view from a different table
   const handleTableAndViewSelect = (tableId: string, viewId: string) => {
-    console.log('[handleTableAndViewSelect] Called with:', { tableId, viewId });
     // Set flag to skip the view reset when table changes
     skipViewResetRef.current = true;
     setActiveTableId(tableId);
@@ -82,7 +81,7 @@ function ViewConfigContent({
     return (
       <>
         {/* Empty toolbar to maintain layout */}
-        <div className="flex h-11 items-center border-b border-gray-200 bg-white" />
+        <div className="flex h-12 items-center border-b border-gray-200 bg-white" />
         {/* Content area with side nav */}
         <div className="flex flex-1 overflow-hidden">
           {isSideNavOpen && (
@@ -162,7 +161,7 @@ function BaseContentInner({
   >(null);
   const dataGridRef = useRef<HTMLDivElement>(null);
   const { clearSelection } = useSelection();
-  
+
   // Track when we're doing a combined table+view selection to prevent view reset
   const skipViewResetRef = useRef(false);
 
@@ -258,13 +257,13 @@ function BaseContentInner({
       isInitialMount.current = false;
       return;
     }
-    
+
     // Skip reset if this is a combined table+view selection
     if (skipViewResetRef.current) {
       skipViewResetRef.current = false;
       return;
     }
-    
+
     setActiveViewId(null);
   }, [activeTableId, setActiveViewId]);
 
@@ -477,7 +476,7 @@ function BaseContentInner({
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Icon sidebar - far left */}
-      <IconSidebar 
+      <IconSidebar
         userInitial={userInitial}
         userName={userName}
         userEmail={userEmail}
@@ -522,7 +521,7 @@ function BaseContentInner({
         ) : (
           <>
             {/* Minimal UI while no table/view selected */}
-            <div className="flex h-11 items-center border-b border-gray-200 bg-white" />
+            <div className="flex h-12 items-center border-b border-gray-200 bg-white" />
             <div className="flex flex-1 items-center justify-center text-gray-500">
               {activeTableId
                 ? "Loading view..."
