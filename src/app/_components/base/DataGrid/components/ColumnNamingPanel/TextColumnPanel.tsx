@@ -182,7 +182,7 @@ export function TextColumnPanel({
           </button>
           <button
             onClick={handleCreate}
-            disabled={!columnName.trim() || isCreating}
+            disabled={isCreating}
             className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isEditMode ? (isCreating ? "Saving..." : "Save") : "Create field"}

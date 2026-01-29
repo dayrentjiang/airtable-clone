@@ -266,10 +266,42 @@ export function AddColumnButton({ tableId }: AddColumnButtonProps) {
   };
 
   const handleCreateColumn = () => {
-    if (columnName.trim() && selectedType) {
+    if (selectedType) {
+      let finalName = columnName.trim();
+      
+      // Generate smart name if empty
+      if (!finalName) {
+        const baseName = selectedType === "TEXT" ? "Label" : "Number";
+        
+        // Check if base name (without number) exists
+        const baseNameExists = tableData?.columns.some(
+          (col) => col.name.toLowerCase() === baseName.toLowerCase()
+        );
+        
+        if (!baseNameExists) {
+          // Use base name without number for the first one
+          finalName = baseName;
+        } else {
+          // Find the highest number in existing "Label X" or "Number X" names
+          let highestNumber = 1; // Start from 1 since base name exists
+          tableData?.columns.forEach((col) => {
+            const match = col.name.match(new RegExp(`^${baseName} (\\d+)$`, 'i'));
+            if (match && match[1]) {
+              const num = parseInt(match[1], 10);
+              if (num > highestNumber) {
+                highestNumber = num;
+              }
+            }
+          });
+          
+          // Use highest number + 1
+          finalName = `${baseName} ${highestNumber + 1}`;
+        }
+      }
+      
       createColumnMutation.mutate({
         tableId,
-        name: columnName.trim(),
+        name: finalName,
         type: selectedType,
       });
     }

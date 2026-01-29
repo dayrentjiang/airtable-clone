@@ -91,11 +91,26 @@ export function AddTableButton({
   const handleStartFromScratch = () => {
     setIsDropdownOpen(false);
 
-    // Calculate next table number based on existing tables
-    const nextTableNumber = tables.length + 1;
+    // Generate smart table name based on existing tables
+    const baseName = "Table";
+    
+    // Find the highest number in existing "Table X" names
+    let highestNumber = 0;
+    tables.forEach((table) => {
+      const match = table.name.match(/^Table (\d+)$/i);
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        if (num > highestNumber) {
+          highestNumber = num;
+        }
+      }
+    });
+    
+    // Use highest number + 1
+    const finalName = `${baseName} ${highestNumber + 1}`;
 
     // Create the table with dynamic name
-    onAddTable(`Table ${nextTableNumber}`);
+    onAddTable(finalName);
     // Modal will open automatically via useEffect when newTableId changes
   };
 
