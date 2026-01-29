@@ -45,7 +45,7 @@ export function TopNav({ session, onMenuClick }: TopNavProps) {
 
       {/* Center: Search */}
       <div className="flex flex-1 justify-center px-4">
-        <button className="flex h-8 w-full max-w-sm items-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-gray-500 shadow-xl hover:cursor-pointer">
+        <button className="flex h-8 w-full max-w-sm items-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-gray-500 shadow-sm hover:cursor-pointer">
           <Search size={16} />
           <span className="text-sm">Search...</span>
           <span className="ml-auto rounded border border-gray-300 bg-white px-1.5 py-0.5 text-xs text-gray-400">

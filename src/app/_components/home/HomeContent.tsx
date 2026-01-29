@@ -4,345 +4,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { api } from "~/trpc/react";
 import {
-  Star,
-  MoreHorizontal,
   Grid2X2,
   CheckSquare,
   LayoutGrid,
+  List,
+  Grid3x3,
+  ChevronDown,
 } from "lucide-react";
-import { BaseOptionsMenu } from "./BaseOptionsMenu";
-import { DeleteBaseModal } from "./DeleteBaseModal";
-
-// Template card icons
-function ListIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <line x1="8" y1="6" x2="21" y2="6" />
-      <line x1="8" y1="12" x2="21" y2="12" />
-      <line x1="8" y1="18" x2="21" y2="18" />
-      <line x1="3" y1="6" x2="3.01" y2="6" />
-      <line x1="3" y1="12" x2="3.01" y2="12" />
-      <line x1="3" y1="18" x2="3.01" y2="18" />
-    </svg>
-  );
-}
-
-function GridIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <rect x="3" y="3" width="7" height="7" />
-      <rect x="14" y="3" width="7" height="7" />
-      <rect x="14" y="14" width="7" height="7" />
-      <rect x="3" y="14" width="7" height="7" />
-    </svg>
-  );
-}
-
-function ChevronDownIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-}
-
-// Base card component
-function BaseCard({
-  name,
-  baseId,
-  updatedAt,
-  onClick,
-}: {
-  name: string;
-  baseId: string;
-  updatedAt: Date;
-  onClick: () => void;
-}) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [editedName, setEditedName] = useState(name);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  const utils = api.useUtils();
-
-  const updateBaseMutation = api.base.update.useMutation({
-    // Optimistic update - update UI immediately before server responds
-    onMutate: async (newData) => {
-      // Cancel any outgoing refetches to avoid overwriting optimistic update
-      await utils.base.getAll.cancel();
-
-      // Snapshot the previous value
-      const previousBases = utils.base.getAll.getData();
-
-      // Optimistically update the cache
-      utils.base.getAll.setData(undefined, (old) => {
-        if (!old) return old;
-        return old.map((base) =>
-          base.id === newData.id ? { ...base, name: newData.name } : base,
-        );
-      });
-
-      // Return context with the previous data
-      return { previousBases };
-    },
-    // If mutation fails, roll back to previous value
-    onError: (err, newData, context) => {
-      if (context?.previousBases) {
-        utils.base.getAll.setData(undefined, context.previousBases);
-      }
-    },
-    // Always refetch after error or success to ensure sync with server
-    onSettled: () => {
-      void utils.base.getAll.invalidate();
-      setIsRenaming(false);
-    },
-  });
-
-  const deleteBaseMutation = api.base.delete.useMutation({
-    // Optimistic update - remove from UI immediately
-    onMutate: async (deletedData) => {
-      // Cancel any outgoing refetches
-      await utils.base.getAll.cancel();
-
-      // Snapshot the previous value
-      const previousBases = utils.base.getAll.getData();
-
-      // Optimistically update the cache
-      utils.base.getAll.setData(undefined, (old) => {
-        if (!old) return old;
-        return old.filter((base) => base.id !== deletedData.id);
-      });
-
-      // Return context with the previous data
-      return { previousBases };
-    },
-    // If mutation fails, roll back to previous value
-    onError: (err, deletedData, context) => {
-      if (context?.previousBases) {
-        utils.base.getAll.setData(undefined, context.previousBases);
-      }
-    },
-    // Always refetch after error or success to ensure sync with server
-    onSettled: () => {
-      void utils.base.getAll.invalidate();
-    },
-  });
-
-  // Focus input when entering rename mode
-  useEffect(() => {
-    if (isRenaming && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isRenaming]);
-
-  const handleRenameStart = () => {
-    setIsRenaming(true);
-    setEditedName(name);
-  };
-
-  const handleDeleteStart = () => {
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleDeleteConfirm = () => {
-    deleteBaseMutation.mutate({ id: baseId });
-    setIsDeleteModalOpen(false);
-  };
-
-  const handleRenameSubmit = () => {
-    const trimmedName = editedName.trim();
-    if (trimmedName && trimmedName !== name) {
-      updateBaseMutation.mutate({ id: baseId, name: trimmedName });
-    } else {
-      setIsRenaming(false);
-      setEditedName(name);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleRenameSubmit();
-    } else if (e.key === "Escape") {
-      setIsRenaming(false);
-      setEditedName(name);
-    }
-  };
-
-  const initials =
-    name
-      .split(" ")
-      .map((w) => w[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "UN";
-
-  return (
-    <>
-      <div
-        ref={cardRef}
-        className="group relative flex cursor-pointer items-center gap-4 rounded-lg border border-gray-200 bg-white p-4 hover:border-gray-300 hover:shadow-sm"
-      >
-        {/* Main content - clickable area */}
-        <div
-          onClick={isRenaming ? undefined : onClick}
-          className="flex flex-1 items-center gap-4"
-        >
-          <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-lg bg-teal-700 text-xs font-medium text-white">
-            {initials}
-          </div>
-          <div className="flex-1 overflow-hidden">
-            {isRenaming ? (
-              <input
-                ref={inputRef}
-                type="text"
-                value={editedName}
-                onChange={(e) => setEditedName(e.target.value)}
-                onBlur={handleRenameSubmit}
-                onKeyDown={handleKeyDown}
-                className="w-full rounded border-2 border-blue-500 px-2 py-0.5 text-xs font-bold text-gray-800 outline-none"
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <p className="truncate text-xs font-bold text-gray-800">{name}</p>
-            )}
-            {/* Show timestamp by default, show "Open data" on hover */}
-            {!isRenaming && (
-              <>
-                <p className="text-xs text-gray-500 group-hover:hidden">
-                  {formatRelativeTime(updatedAt)}
-                </p>
-                <p className="hidden items-center gap-1.5 text-xs text-gray-500 group-hover:flex">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="shrink-0"
-                  >
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    <line x1="9" y1="3" x2="9" y2="21" />
-                  </svg>
-                  <span>Open data</span>
-                </p>
-              </>
-            )}
-            {isRenaming && (
-              <p className="flex items-center gap-1.5 text-xs text-gray-500">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="shrink-0"
-                >
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <line x1="9" y1="3" x2="9" y2="21" />
-                </svg>
-                <span>Open data</span>
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Action buttons - appear on hover (hide during rename) */}
-        {!isRenaming && (
-          <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-            {/* Star button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                // TODO: Add star/favorite functionality
-                console.log("Star clicked");
-              }}
-              className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-yellow-500"
-              aria-label="Star base"
-            >
-              <Star size={18} />
-            </button>
-
-            {/* Three-dot menu button */}
-            <button
-              ref={menuButtonRef}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsMenuOpen(true);
-              }}
-              className="rounded p-1.5 text-gray-500 hover:bg-gray-100"
-              aria-label="More options"
-            >
-              <MoreHorizontal size={18} />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Options menu */}
-      <BaseOptionsMenu
-        baseId={baseId}
-        baseName={name}
-        isOpen={isMenuOpen}
-        onClose={() => setIsMenuOpen(false)}
-        onRename={handleRenameStart}
-        onDelete={handleDeleteStart}
-        triggerRef={menuButtonRef}
-      />
-
-      {/* Delete confirmation modal */}
-      <DeleteBaseModal
-        baseName={name}
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={handleDeleteConfirm}
-        triggerRef={cardRef}
-      />
-    </>
-  );
-}
-
-// Helper to format relative time
-function formatRelativeTime(date: Date): string {
-  const now = new Date();
-  const updated = new Date(date);
-  const diffMs = now.getTime() - updated.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "Opened just now";
-  if (diffMins < 60) return `Opened ${diffMins} minutes ago`;
-  if (diffHours < 24) return `Opened ${diffHours} hours ago`;
-  if (diffDays < 7) return `Opened ${diffDays} days ago`;
-  return `Opened on ${updated.toLocaleDateString()}`;
-}
+import { BaseCard } from "./BaseCard";
 
 // Group bases by time period
 type Base = { id: string; name: string; updatedAt: Date };
@@ -442,7 +111,7 @@ export function HomeContent() {
             return (
               <button
                 key={template.title}
-                className="flex flex-col items-start gap-2 rounded-lg border border-gray-200 bg-white p-4 text-left transition-all hover:cursor-pointer hover:border-gray-300 hover:shadow-sm"
+                className="flex flex-col items-start gap-2 rounded-lg border border-gray-200 bg-white p-4.5 text-left shadow-sm transition-all hover:cursor-pointer hover:border-gray-300 hover:shadow-sm"
               >
                 <div className="flex items-center gap-2">
                   <Icon size={18} className="text-gray-600" />
@@ -462,15 +131,15 @@ export function HomeContent() {
         <div className="flex items-center justify-between">
           <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900">
             Opened anytime
-            <ChevronDownIcon />
+            <ChevronDown size={16} />
           </button>
 
           <div className="flex items-center gap-1">
             <button className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-              <ListIcon />
+              <List size={18} />
             </button>
-            <button className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-              <GridIcon />
+            <button className="rounded-2xl bg-gray-200/80 p-1.5 text-gray-600">
+              <Grid3x3 size={18} />
             </button>
           </div>
         </div>
@@ -502,7 +171,7 @@ export function HomeContent() {
             {grouped.today.length > 0 && (
               <div className="mt-6">
                 <h3 className="text-sm font-medium text-gray-500">Today</h3>
-                <div className="mt-3 grid min-h-22 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
+                <div className="mt-3 grid min-h-24 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
                   {grouped.today.map((base) => (
                     <BaseCard
                       key={base.id}
@@ -522,7 +191,7 @@ export function HomeContent() {
                 <h3 className="text-sm font-medium text-gray-500">
                   Past 7 days
                 </h3>
-                <div className="mt-3 grid min-h-22 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
+                <div className="mt-3 grid min-h-24 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
                   {grouped.pastWeek.map((base) => (
                     <BaseCard
                       key={base.id}
@@ -540,7 +209,7 @@ export function HomeContent() {
             {grouped.older.length > 0 && (
               <div className="mt-8">
                 <h3 className="text-sm font-medium text-gray-500">Older</h3>
-                <div className="mt-3 grid min-h-22 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
+                <div className="mt-3 grid min-h-24 grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
                   {grouped.older.map((base) => (
                     <BaseCard
                       key={base.id}
