@@ -322,6 +322,7 @@ export function BaseSideNav({
           onCancel={handleCancelModal}
           onCreate={handleCreateView}
           isCreating={createView.isPending}
+          existingViewNames={views?.map((view) => view.name) ?? []}
         />
       )}
     </aside>

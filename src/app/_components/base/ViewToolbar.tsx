@@ -24,6 +24,7 @@ import { SortPopover } from "./toolbar/SortPopover";
 import { HideFieldsPopover } from "./toolbar/HideFieldsPopover";
 import { ToolbarPopoversProvider } from "./hooks/useToolbarPopovers";
 import { ViewMenu } from "./toolbar/ViewMenu";
+import { Warning } from "../ui/Warning";
 
 // Map view types to their icons
 const VIEW_TYPE_ICONS: Record<string, LucideIcon> = {
@@ -70,6 +71,7 @@ export function ViewToolbar({
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [isEditing, setIsEditing] = useState(false);
   const [editingName, setEditingName] = useState("");
+  const [showWarning, setShowWarning] = useState(false);
   const [cachedViewName, setCachedViewName] = useState<string | null>(null);
   const viewSelectorRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -189,6 +191,13 @@ export function ViewToolbar({
   // Cache the view name to prevent jitter during view switches
   const viewName = view?.name ?? cachedViewName ?? "Grid view";
 
+  // Check if the editing name is duplicate (case-insensitive, excluding current name)
+  const isDuplicate = views.some(
+    (v) =>
+      v.name.toLowerCase() !== viewName.toLowerCase() &&
+      v.name.toLowerCase() === editingName.trim().toLowerCase(),
+  );
+
   // Update cached view name when view data loads
   useEffect(() => {
     if (view?.name) {
@@ -233,6 +242,7 @@ export function ViewToolbar({
   const handleRename = () => {
     setIsMenuOpen(false);
     setEditingName(viewName);
+    setShowWarning(false);
     setIsEditing(true);
   };
 
@@ -240,6 +250,11 @@ export function ViewToolbar({
     if (!editingName.trim() || editingName === viewName) {
       setIsEditing(false);
       setEditingName("");
+      setShowWarning(false);
+      return;
+    }
+    if (isDuplicate) {
+      setShowWarning(true);
       return;
     }
     renameViewMutation.mutate({
@@ -322,23 +337,32 @@ export function ViewToolbar({
           </button>
 
           {isEditing ? (
-            <div className="flex h-8 items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <input
                 ref={editInputRef}
                 type="text"
                 value={editingName}
-                onChange={(e) => setEditingName(e.target.value)}
+                onChange={(e) => {
+                  setEditingName(e.target.value);
+                  setShowWarning(false);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     handleSaveRename();
                   } else if (e.key === "Escape") {
                     setIsEditing(false);
                     setEditingName("");
+                    setShowWarning(false);
                   }
                 }}
                 onBlur={handleSaveRename}
                 className="h-8 w-42 rounded border border-gray-300 bg-white px-2 text-sm font-medium text-gray-800 outline-none focus:border-gray-400"
               />
+              {showWarning && isDuplicate && (
+                <div className="whitespace-nowrap">
+                  <Warning message="Please enter a unique view name" />
+                </div>
+              )}
             </div>
           ) : (
             <button

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { ViewMenu } from "./ViewMenu";
+import { Warning } from "../../ui/Warning";
 
 // Map view types to their icons
 const VIEW_TYPE_ICONS: Record<string, LucideIcon> = {
@@ -49,6 +50,7 @@ export function ViewSelectorDropdown({
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [editingViewId, setEditingViewId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [showWarning, setShowWarning] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -94,12 +96,23 @@ export function ViewSelectorDropdown({
     view.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
+  // Check if the editing name is duplicate (case-insensitive, excluding current name)
+  const isDuplicate = views.some((view) => {
+    if (!editingViewId) return false;
+    const currentView = views.find((v) => v.id === editingViewId);
+    return (
+      view.name.toLowerCase() !== currentView?.name.toLowerCase() &&
+      view.name.toLowerCase() === editingName.trim().toLowerCase()
+    );
+  });
+
   // Reset search and focus input when dropdown opens
   useEffect(() => {
     if (isOpen) {
       setSearchQuery("");
       setMenuViewId(null);
       setEditingViewId(null);
+      setShowWarning(false);
       setTimeout(() => inputRef.current?.focus(), 0);
     }
   }, [isOpen]);
@@ -189,12 +202,17 @@ export function ViewSelectorDropdown({
     if (view) {
       setEditingViewId(menuViewId);
       setEditingName(view.name);
+      setShowWarning(false);
       setMenuViewId(null);
     }
   };
 
   const handleSaveRename = () => {
     if (!editingViewId || !editingName.trim()) return;
+    if (isDuplicate) {
+      setShowWarning(true);
+      return;
+    }
     renameViewMutation.mutate({
       id: editingViewId,
       name: editingName.trim(),
@@ -263,41 +281,45 @@ export function ViewSelectorDropdown({
             const ViewIcon = VIEW_TYPE_ICONS[view.type] ?? Grid3X3;
 
             return (
-              <div
-                key={view.id}
-                onClick={() => !isEditing && handleViewClick(view.id)}
-                className={`group flex w-full cursor-pointer items-center justify-between px-4 py-1.5 text-left text-sm font-semibold text-gray-700 hover:bg-gray-100 ${isActive ? "bg-gray-100" : ""}`}
-              >
-                <div className="flex items-center gap-2">
-                  {isActive ? (
-                    <Check className="h-4 w-4 text-gray-600" />
-                  ) : (
-                    <div className="h-4 w-4" />
-                  )}
-                  <ViewIcon className="h-4 w-4 text-gray-500" />
-                  {isEditing ? (
-                    <input
-                      ref={editInputRef}
-                      type="text"
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleSaveRename();
-                        } else if (e.key === "Escape") {
-                          setEditingViewId(null);
-                          setEditingName("");
-                        }
-                      }}
-                      onBlur={handleSaveRename}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-32 border-b border-blue-500 bg-transparent px-1 text-sm font-semibold text-gray-900 outline-none"
-                    />
-                  ) : (
-                    <span>{view.name}</span>
-                  )}
-                </div>
-                {!isEditing && (
+              <div key={view.id} className="flex flex-col">
+                <div
+                  onClick={() => !isEditing && handleViewClick(view.id)}
+                  className={`group flex w-full cursor-pointer items-center justify-between px-4 py-1.5 text-left text-sm font-semibold text-gray-700 hover:bg-gray-100 ${isActive ? "bg-gray-100" : ""}`}
+                >
+                  <div className="flex items-center gap-2">
+                    {isActive ? (
+                      <Check className="h-4 w-4 text-gray-600" />
+                    ) : (
+                      <div className="h-4 w-4" />
+                    )}
+                    <ViewIcon className="h-4 w-4 text-gray-500" />
+                    {isEditing ? (
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editingName}
+                        onChange={(e) => {
+                          setEditingName(e.target.value);
+                          setShowWarning(false);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleSaveRename();
+                          } else if (e.key === "Escape") {
+                            setEditingViewId(null);
+                            setEditingName("");
+                            setShowWarning(false);
+                          }
+                        }}
+                        onBlur={handleSaveRename}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-32 border-b border-blue-500 bg-transparent px-1 text-sm font-semibold text-gray-900 outline-none"
+                      />
+                    ) : (
+                      <span>{view.name}</span>
+                    )}
+                  </div>
+                  {!isEditing && (
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
                     <div
                       role="button"
@@ -331,6 +353,12 @@ export function ViewSelectorDropdown({
                     >
                       <MoreVertical className="h-4 w-4 text-gray-500" />
                     </div>
+                  </div>
+                )}
+                </div>
+                {isEditing && showWarning && isDuplicate && (
+                  <div className="px-4 pb-1">
+                    <Warning message="Please enter a unique view name" />
                   </div>
                 )}
               </div>
