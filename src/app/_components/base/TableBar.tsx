@@ -169,6 +169,7 @@ export function TableBar({
           newTableName={newTableName}
           onClearNewTable={onClearNewTable}
           newTableTabRef={newTableTabRef}
+          tables={tables}
         />
       </div>
 

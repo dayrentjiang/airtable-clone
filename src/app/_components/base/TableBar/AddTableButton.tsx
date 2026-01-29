@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Tooltip } from "../../ui/Tooltip";
 import { RenameTableModal } from "./RenameTableModal";
+import type { TableType } from "./types";
 
 interface AddTableButtonProps {
   onAddTable: (name: string) => void;
@@ -23,6 +24,7 @@ interface AddTableButtonProps {
   newTableName: string | null;
   onClearNewTable?: () => void;
   newTableTabRef?: React.RefObject<HTMLDivElement | null>;
+  tables: TableType[];
 }
 
 export function AddTableButton({
@@ -32,6 +34,7 @@ export function AddTableButton({
   newTableName,
   onClearNewTable,
   newTableTabRef,
+  tables,
 }: AddTableButtonProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
@@ -87,8 +90,12 @@ export function AddTableButton({
 
   const handleStartFromScratch = () => {
     setIsDropdownOpen(false);
-    // Create the table immediately with a default name
-    onAddTable("New Table");
+
+    // Calculate next table number based on existing tables
+    const nextTableNumber = tables.length + 1;
+
+    // Create the table with dynamic name
+    onAddTable(`Table ${nextTableNumber}`);
     // Modal will open automatically via useEffect when newTableId changes
   };
 
