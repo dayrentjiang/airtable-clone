@@ -3,5 +3,9 @@ interface WarningProps {
 }
 
 export function Warning({ message }: WarningProps) {
-  return <p className="mt-2 text-xs text-red-600">{message}</p>;
+  return (
+    <div className="items-cente mt-2 flex p-1 align-bottom">
+      <p className="mt-1 text-[10px] text-red-800">{message}</p>
+    </div>
+  );
 }
