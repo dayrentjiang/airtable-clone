@@ -223,16 +223,21 @@ export function ColumnHeaderContextMenu({
 
   // Calculate position for edit panel when opened directly (via double-click)
   useEffect(() => {
-    if (showEditPanel && targetHeader && menuPosition.left === 0 && menuPosition.top === 0) {
+    if (
+      showEditPanel &&
+      targetHeader &&
+      menuPosition.left === 0 &&
+      menuPosition.top === 0
+    ) {
       const headerRect = targetHeader.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
-      
+
       // Approximate panel width (w-sm = 640px)
       const panelWidth = 640;
-      
+
       // Default: position below the header, aligned to left
       let adjustedX = headerRect.left;
-      let adjustedY = headerRect.bottom + 5;
+      const adjustedY = headerRect.bottom + 5;
 
       // If panel would go off right edge, align to right of header
       if (adjustedX + panelWidth > viewportWidth) {
@@ -246,7 +251,7 @@ export function ColumnHeaderContextMenu({
 
       setMenuPosition({ left: adjustedX, top: adjustedY });
     }
-  }, [showEditPanel, targetHeader, menuPosition]);
+  }, [showEditPanel, targetHeader, menuPosition.left, menuPosition.top]);
 
   // Define menu items
   const menuItems: MenuItemType[] = [
