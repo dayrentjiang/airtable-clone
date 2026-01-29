@@ -197,6 +197,7 @@ export function TableBar({
         onSave={handleRenameTable}
         currentName={activeTable?.name ?? ""}
         anchorRef={activeTabRef}
+        existingTableNames={tables.map((table) => table.name)}
       />
 
       {/* Delete modal */}

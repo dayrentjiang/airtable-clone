@@ -255,6 +255,7 @@ export function AddTableButton({
           }}
           currentName={newTableName ?? "Table 1"}
           anchorRef={newTableTabRef ?? buttonRef}
+          existingTableNames={tables.map((table) => table.name)}
         />
       )}
     </div>
