@@ -214,6 +214,7 @@ function BaseContentInner({
         }
       } catch (e) {
         // Invalid JSON, ignore
+        console.error("Failed to parse stored table/view:", e);
       }
     }
 

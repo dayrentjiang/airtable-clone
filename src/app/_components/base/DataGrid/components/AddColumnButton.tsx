@@ -284,9 +284,10 @@ export function AddColumnButton({ tableId }: AddColumnButtonProps) {
         } else {
           // Find the highest number in existing "Label X" or "Number X" names
           let highestNumber = 1; // Start from 1 since base name exists
+          const regex = new RegExp(`^${baseName} (\\d+)$`, 'i');
           tableData?.columns.forEach((col) => {
-            const match = col.name.match(new RegExp(`^${baseName} (\\d+)$`, 'i'));
-            if (match && match[1]) {
+            const match = regex.exec(col.name);
+            if (match?.[1]) {
               const num = parseInt(match[1], 10);
               if (num > highestNumber) {
                 highestNumber = num;

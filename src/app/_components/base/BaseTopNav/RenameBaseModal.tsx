@@ -1,8 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { Star, ChevronRight } from "lucide-react";
-import { Warning } from "../../ui/Warning";
+import { ChevronRight } from "lucide-react";
 
 interface RenameBaseModalProps {
   open: boolean;

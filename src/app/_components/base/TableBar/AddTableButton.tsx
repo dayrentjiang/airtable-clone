@@ -96,9 +96,10 @@ export function AddTableButton({
     
     // Find the highest number in existing "Table X" names
     let highestNumber = 0;
+    const regex = /^Table (\d+)$/i;
     tables.forEach((table) => {
-      const match = table.name.match(/^Table (\d+)$/i);
-      if (match && match[1]) {
+      const match = regex.exec(table.name);
+      if (match?.[1]) {
         const num = parseInt(match[1], 10);
         if (num > highestNumber) {
           highestNumber = num;

@@ -6,7 +6,6 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { api } from "~/trpc/react";
 import { DataGridTable } from "./DataGrid/components/DataGridTable";
 import { AddColumnButton } from "./DataGrid/components/AddColumnButton";
-import { AddRowButton } from "./DataGrid/components/AddRowButton";
 import {
   useTableColumns,
   type RowData,
@@ -241,7 +240,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
 
     // Build a map of visible row IDs for faster lookup
     const visibleRowIds = new Map<string, RowData>();
-    for (const [_index, row] of rowsByIndex.entries()) {
+    for (const row of rowsByIndex.values()) {
       visibleRowIds.set(row.id, row);
     }
 
@@ -376,10 +375,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       rowVirtualizer.measure();
 
       // Force re-render by triggering a micro-scroll
-      if (
-        tableContainerRef.current &&
-        tableContainerRef.current.scrollTop === 0
-      ) {
+      if (tableContainerRef.current?.scrollTop === 0) {
         requestAnimationFrame(() => {
           if (tableContainerRef.current) {
             tableContainerRef.current.scrollTop = 0.1;
