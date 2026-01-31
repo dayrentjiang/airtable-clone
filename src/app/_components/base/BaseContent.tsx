@@ -487,7 +487,7 @@ function BaseContentInner({
       {/* Main content area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Base Top Nav - Data/Automations/Interfaces/Forms tabs */}
-        <BaseTopNav baseName={base?.name ?? "Untitled Base"} baseId={baseId} />
+        <BaseTopNav baseId={baseId} />
 
         {/* Table bar */}
         <TableBar

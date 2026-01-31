@@ -3,11 +3,11 @@
 import { useState, useRef } from "react";
 import Image from "next/image";
 import { ChevronDown, History, ExternalLink } from "lucide-react";
+import { useBaseContext } from "./hooks/useBaseContext";
 import { RenameBaseModal } from "./BaseTopNav/RenameBaseModal";
 import { api } from "~/trpc/react";
 
 interface BaseTopNavProps {
-  baseName: string;
   baseId: string;
   onBaseNameClick?: () => void;
 }
@@ -28,11 +28,11 @@ function BaseIcon() {
 
 const tabs = ["Data", "Automations", "Interfaces", "Forms"] as const;
 
-export function BaseTopNav({
-  baseName,
-  baseId,
-  onBaseNameClick,
-}: BaseTopNavProps) {
+export function BaseTopNav({ baseId, onBaseNameClick }: BaseTopNavProps) {
+  // Get base name from context instead of props
+  const { base } = useBaseContext();
+  const baseName = base?.name ?? "Untitled Base";
+
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const baseNameButtonRef = useRef<HTMLButtonElement>(null);
   const utils = api.useUtils();
