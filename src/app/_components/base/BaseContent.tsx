@@ -13,6 +13,7 @@ import {
 import { IconSidebar } from "../layout/IconSidebar";
 import { BaseTopNav } from "./BaseTopNav";
 import { ViewConfigProvider, useViewConfig } from "./hooks/useViewConfig";
+import { BaseContextProvider } from "./hooks/useBaseContext";
 import { api } from "~/trpc/react";
 
 interface BaseContentProps {
@@ -597,19 +598,27 @@ export function BaseContent({
   const totalRows = rowData?.totalCount ?? 100;
 
   return (
-    <SelectionProvider totalRows={totalRows} totalColumns={totalColumns}>
-      <ContextMenuProvider>
-        <BaseContentInner
-          baseId={baseId}
-          userInitial={userInitial}
-          userName={userName}
-          userEmail={userEmail}
-          activeTableId={activeTableId}
-          activeViewId={activeViewId}
-          setActiveTableId={setActiveTableId}
-          setActiveViewId={setActiveViewId}
-        />
-      </ContextMenuProvider>
-    </SelectionProvider>
+    // BaseContextProvider: Single source of truth for base/table/view state
+    // This runs in parallel with existing code - nothing breaks yet!
+    <BaseContextProvider
+      baseId={baseId}
+      initialTableId={activeTableId}
+      initialViewId={activeViewId}
+    >
+      <SelectionProvider totalRows={totalRows} totalColumns={totalColumns}>
+        <ContextMenuProvider>
+          <BaseContentInner
+            baseId={baseId}
+            userInitial={userInitial}
+            userName={userName}
+            userEmail={userEmail}
+            activeTableId={activeTableId}
+            activeViewId={activeViewId}
+            setActiveTableId={setActiveTableId}
+            setActiveViewId={setActiveViewId}
+          />
+        </ContextMenuProvider>
+      </SelectionProvider>
+    </BaseContextProvider>
   );
 }

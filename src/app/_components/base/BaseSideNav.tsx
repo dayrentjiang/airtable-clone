@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Search, Settings } from "lucide-react";
 import { api } from "~/trpc/react";
+import { useBaseContext } from "./hooks/useBaseContext";
 import type { BaseSideNavProps } from "./BaseSideNav/types";
 import { CreateViewDropdown } from "./BaseSideNav/CreateViewDropdown";
 import { CreateViewModal } from "./BaseSideNav/CreateViewModal";
@@ -16,6 +17,17 @@ export function BaseSideNav({
   onViewSelect,
   onTableAndViewSelect,
 }: BaseSideNavProps) {
+  // Get data from context instead of querying directly
+  // This eliminates the duplicate query - context already has the views!
+  const {
+    views,
+    isLoadingViews: isLoading,
+    createView: createViewFromContext,
+    renameView: renameViewFromContext,
+    deleteView: deleteViewFromContext,
+  } = useBaseContext();
+  
+  const [isCreatingView, setIsCreatingView] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingViewType, setPendingViewType] = useState<
@@ -26,7 +38,6 @@ export function BaseSideNav({
   const [isSearching, setIsSearching] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const utils = api.useUtils();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -49,98 +60,43 @@ export function BaseSideNav({
     }
   }, [isSearching]);
 
-  // Fetch views for the current table
-  const { data: views, isLoading } = api.view.getByTableId.useQuery(
-    { tableId: tableId! },
-    {
-      enabled: !!tableId,
-      refetchOnMount: true,
-      refetchOnWindowFocus: false,
-      staleTime: 0,
-      gcTime: 0,
-    },
-  );
-
-  // Create view mutation
-  const createView = api.view.create.useMutation({
-    onSuccess: (newView) => {
-      void utils.view.getByTableId.invalidate({ tableId: tableId! });
+  // Create view - now uses context method
+  const handleCreateView = async (
+    type: "GRID" | "CALENDAR" | "KANBAN" | "GALLERY" | "FORM",
+    name: string,
+  ) => {
+    if (!tableId) return;
+    
+    setIsCreatingView(true);
+    try {
+      const newView = await createViewFromContext(tableId, name, type);
       onViewSelect(newView.id);
       setIsDropdownOpen(false);
       setIsModalOpen(false);
       setPendingViewType(null);
       setViewName("");
-    },
-  });
+    } finally {
+      setIsCreatingView(false);
+    }
+  };
 
-  // Rename view mutation with optimistic update
-  const renameView = api.view.rename.useMutation({
-    onMutate: async (newData) => {
-      // Cancel any outgoing refetches
-      await utils.view.getByTableId.cancel({ tableId: tableId! });
-      await utils.view.getById.cancel({ id: newData.id });
+  // Rename view - now uses context method
+  const handleRenameView = (viewId: string, name: string) => {
+    renameViewFromContext(viewId, name);
+  };
 
-      // Snapshot the previous values
-      const previousViews = utils.view.getByTableId.getData({
-        tableId: tableId!,
-      });
-      const previousView = utils.view.getById.getData({ id: newData.id });
-
-      // Optimistically update the view list cache
-      if (previousViews) {
-        utils.view.getByTableId.setData({ tableId: tableId! }, (old) =>
-          old?.map((view) =>
-            view.id === newData.id ? { ...view, name: newData.name } : view,
-          ),
-        );
+  // Delete view - now uses context method
+  const handleDeleteView = (viewId: string) => {
+    deleteViewFromContext(viewId);
+    
+    // If deleted view was selected, select the first available view
+    if (viewId === selectedViewId && views && views.length > 1) {
+      const remainingView = views.find((v) => v.id !== viewId);
+      if (remainingView) {
+        onViewSelect(remainingView.id);
       }
-
-      // Optimistically update the individual view cache (for toolbar)
-      if (previousView) {
-        utils.view.getById.setData(
-          { id: newData.id },
-          {
-            ...previousView,
-            name: newData.name,
-          },
-        );
-      }
-
-      // Return a context object with the snapshotted values
-      return { previousViews, previousView };
-    },
-    onError: (err, newData, context) => {
-      // If the mutation fails, use the context returned from onMutate to roll back
-      if (context?.previousViews) {
-        utils.view.getByTableId.setData(
-          { tableId: tableId! },
-          context.previousViews,
-        );
-      }
-      if (context?.previousView) {
-        utils.view.getById.setData({ id: newData.id }, context.previousView);
-      }
-    },
-    onSettled: (_, __, variables) => {
-      // Always refetch after error or success to ensure data is in sync
-      void utils.view.getByTableId.invalidate({ tableId: tableId! });
-      void utils.view.getById.invalidate({ id: variables.id });
-    },
-  });
-
-  // Delete view mutation
-  const deleteView = api.view.delete.useMutation({
-    onSuccess: (_, variables) => {
-      void utils.view.getByTableId.invalidate({ tableId: tableId! });
-      // If deleted view was selected, select the first available view
-      if (variables.id === selectedViewId && views && views.length > 1) {
-        const remainingView = views.find((v) => v.id !== variables.id);
-        if (remainingView) {
-          onViewSelect(remainingView.id);
-        }
-      }
-    },
-  });
+    }
+  };
 
   const handleViewTypeClick = (
     type: "GRID" | "CALENDAR" | "KANBAN" | "GALLERY" | "FORM",
@@ -160,14 +116,9 @@ export function BaseSideNav({
     setIsModalOpen(true);
   };
 
-  const handleCreateView = () => {
+  const handleCreateViewClick = () => {
     if (!tableId || !pendingViewType || !viewName.trim()) return;
-
-    createView.mutate({
-      tableId,
-      name: viewName.trim(),
-      type: pendingViewType,
-    });
+    void handleCreateView(pendingViewType, viewName.trim());
   };
 
   const handleCancelModal = () => {
@@ -177,11 +128,11 @@ export function BaseSideNav({
   };
 
   const handleViewRename = (viewId: string, newName: string) => {
-    renameView.mutate({ id: viewId, name: newName });
+    handleRenameView(viewId, newName);
   };
 
   const handleViewDelete = (viewId: string) => {
-    deleteView.mutate({ id: viewId });
+    handleDeleteView(viewId);
   };
 
   // Use global search when searching, otherwise filter local views
@@ -320,8 +271,8 @@ export function BaseSideNav({
           viewName={viewName}
           onViewNameChange={setViewName}
           onCancel={handleCancelModal}
-          onCreate={handleCreateView}
-          isCreating={createView.isPending}
+          onCreate={handleCreateViewClick}
+          isCreating={isCreatingView}
           existingViewNames={views?.map((view) => view.name) ?? []}
         />
       )}
