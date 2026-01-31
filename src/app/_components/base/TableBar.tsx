@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
+import { useBaseContext } from "./hooks/useBaseContext";
 import { TableTab } from "./TableBar/TableTab";
 import { TableMenu } from "./TableBar/TableMenu";
 import { TableListDropdown } from "./TableBar/TableListDropdown";
@@ -11,28 +12,27 @@ import { AddTableButton } from "./TableBar/AddTableButton";
 import type { TableType } from "./TableBar/types";
 
 interface TableBarProps {
-  tables: TableType[];
-  activeTableId: string | null;
-  onTableSelect: (tableId: string) => void;
-  onAddTable: (name: string) => void;
-  onRenameTable?: (tableId: string, newName: string) => void;
-  onDeleteTable?: (tableId: string) => void;
   newTableId?: string | null;
   newTableName?: string | null;
   onClearNewTable?: () => void;
+  onAddTable?: (name: string) => Promise<void>;
 }
 
 export function TableBar({
-  tables,
-  activeTableId,
-  onTableSelect,
-  onAddTable,
-  onRenameTable,
-  onDeleteTable,
   newTableId = null,
   newTableName = null,
   onClearNewTable,
+  onAddTable,
 }: TableBarProps) {
+  // Get tables and operations from context
+  const {
+    tables,
+    activeTableId,
+    selectTable,
+    createTable,
+    renameTable,
+    deleteTable,
+  } = useBaseContext();
   // Dropdown states
   const [isTableMenuOpen, setIsTableMenuOpen] = useState(false);
   const [isTableListOpen, setIsTableListOpen] = useState(false);
@@ -99,8 +99,8 @@ export function TableBar({
   };
 
   const handleRenameTable = (newName: string) => {
-    if (activeTableId && onRenameTable) {
-      onRenameTable(activeTableId, newName);
+    if (activeTableId) {
+      renameTable(activeTableId, newName);
     }
   };
 
@@ -110,8 +110,18 @@ export function TableBar({
   };
 
   const handleDeleteTable = () => {
-    if (activeTableId && onDeleteTable) {
-      onDeleteTable(activeTableId);
+    if (activeTableId) {
+      deleteTable(activeTableId);
+    }
+  };
+
+  const handleAddTable = async (name: string) => {
+    // If parent provided a handler (BaseContentInner), use it to manage modal state
+    // Otherwise, just create the table via context
+    if (onAddTable) {
+      await onAddTable(name);
+    } else {
+      await createTable(name);
     }
   };
 
@@ -145,7 +155,7 @@ export function TableBar({
                 table={table}
                 isActive={isActive}
                 showDivider={showDivider}
-                onSelect={() => onTableSelect(table.id)}
+                onSelect={() => selectTable(table.id)}
                 onOpenMenu={handleOpenTableMenu}
               />
             </div>
@@ -163,8 +173,8 @@ export function TableBar({
 
         {/* Add table button */}
         <AddTableButton
-          onAddTable={onAddTable}
-          onRenameTable={onRenameTable}
+          onAddTable={handleAddTable}
+          onRenameTable={renameTable}
           newTableId={newTableId}
           newTableName={newTableName}
           onClearNewTable={onClearNewTable}
@@ -214,8 +224,8 @@ export function TableBar({
         onClose={() => setIsTableListOpen(false)}
         tables={tables}
         activeTableId={activeTableId}
-        onTableSelect={onTableSelect}
-        onAddTable={onAddTable}
+        onTableSelect={selectTable}
+        onAddTable={handleAddTable}
         anchorRef={tableListRef}
       />
     </div>

@@ -13,7 +13,7 @@ import {
 import { IconSidebar } from "../layout/IconSidebar";
 import { BaseTopNav } from "./BaseTopNav";
 import { ViewConfigProvider, useViewConfig } from "./hooks/useViewConfig";
-import { BaseContextProvider } from "./hooks/useBaseContext";
+import { BaseContextProvider, useBaseContext } from "./hooks/useBaseContext";
 import { api } from "~/trpc/react";
 
 interface BaseContentProps {
@@ -34,11 +34,6 @@ function ViewConfigContent({
   viewId,
   isSideNavOpen,
   dataGridRef,
-  activeViewId,
-  setActiveViewId,
-  onViewSelect,
-  setActiveTableId,
-  skipViewResetRef,
 }: {
   onToggleSideNav: () => void;
   baseId: string;
@@ -46,20 +41,13 @@ function ViewConfigContent({
   viewId: string;
   isSideNavOpen: boolean;
   dataGridRef: React.RefObject<HTMLDivElement | null>;
-  activeViewId: string | null;
-  setActiveViewId: (id: string | null) => void;
-  onViewSelect: (viewId: string) => void;
-  setActiveTableId: (id: string) => void;
-  skipViewResetRef: React.MutableRefObject<boolean>;
 }) {
   const { isConfigLoaded } = useViewConfig();
+  const { activeViewId, selectView, selectTableAndView } = useBaseContext();
 
   // Handler for selecting a view from a different table
   const handleTableAndViewSelect = (tableId: string, viewId: string) => {
-    // Set flag to skip the view reset when table changes
-    skipViewResetRef.current = true;
-    setActiveTableId(tableId);
-    setActiveViewId(viewId);
+    selectTableAndView(tableId, viewId);
   };
 
   // Fetch table with columns - toolbar needs column names for filter/sort summaries
@@ -90,7 +78,7 @@ function ViewConfigContent({
               baseId={baseId}
               tableId={tableId}
               selectedViewId={activeViewId}
-              onViewSelect={setActiveViewId}
+              onViewSelect={selectView}
               onTableAndViewSelect={handleTableAndViewSelect}
             />
           )}
@@ -110,7 +98,7 @@ function ViewConfigContent({
         onToggleSideNav={onToggleSideNav}
         tableId={tableId}
         viewId={viewId}
-        onViewSelect={onViewSelect}
+        onViewSelect={selectView}
       />
 
       {/* Content area with side nav and grid */}
@@ -120,7 +108,7 @@ function ViewConfigContent({
             baseId={baseId}
             tableId={tableId}
             selectedViewId={activeViewId}
-            onViewSelect={setActiveViewId}
+            onViewSelect={selectView}
             onTableAndViewSelect={handleTableAndViewSelect}
           />
         )}
@@ -145,14 +133,22 @@ function BaseContentInner({
   userEmail,
   activeTableId,
   activeViewId,
-  setActiveTableId,
-  setActiveViewId,
 }: BaseContentProps & {
   activeTableId: string | null;
   activeViewId: string | null;
-  setActiveTableId: (id: string | null) => void;
-  setActiveViewId: (id: string | null) => void;
 }) {
+  // Get context data and methods
+  const {
+    base,
+    tables,
+    selectTable,
+    selectView,
+    selectTableAndView,
+    createTable,
+    renameTable,
+    deleteTable,
+  } = useBaseContext();
+  
   const [isSideNavOpen, setIsSideNavOpen] = useState(true);
   const [newlyCreatedTableId, setNewlyCreatedTableId] = useState<string | null>(
     null,
@@ -163,293 +159,47 @@ function BaseContentInner({
   const dataGridRef = useRef<HTMLDivElement>(null);
   const { clearSelection } = useSelection();
 
-  // Track when we're doing a combined table+view selection to prevent view reset
-  const skipViewResetRef = useRef(false);
-
   // Get TRPC utils for cache invalidation
   const utils = api.useUtils();
 
-  // Fetch base data
-  const { data: base } = api.base.getById.useQuery(
-    { id: baseId },
-    {
-      refetchOnMount: false,
-      refetchOnWindowFocus: false,
-    },
-  );
+  // Note: Table/view selection, localStorage sync, and view auto-selection
+  // are now handled by BaseContext. No need to duplicate that logic here.
 
-  // Fetch tables for this base dynamically
-  const { data: tables = [] } = api.table.getAllByBase.useQuery(
-    { baseId },
-    {
-      refetchOnMount: true,
-      refetchOnWindowFocus: false,
-    },
-  );
-
-  // -------------------------------------------------------------------------
-  // RESTORE LAST VISITED TABLE/VIEW FROM LOCALSTORAGE
-  // -------------------------------------------------------------------------
-  // This runs once when the component mounts and tables are loaded
-  useEffect(() => {
-    if (tables.length === 0) return;
-    if (activeTableId) return; // Already initialized
-
-    // Try to restore from localStorage
-    const storageKey = `airtable-base-${baseId}-last-visited`;
-    const stored = localStorage.getItem(storageKey);
-
-    if (stored) {
-      try {
-        const { tableId, viewId } = JSON.parse(stored) as {
-          tableId: string;
-          viewId: string;
-        };
-
-        // Verify table still exists
-        const tableExists = tables.some((t) => t.id === tableId);
-        if (tableExists) {
-          setActiveTableId(tableId);
-          setActiveViewId(viewId); // Will be validated when views load
-          return;
-        }
-      } catch (e) {
-        // Invalid JSON, ignore
-        console.error("Failed to parse stored table/view:", e);
-      }
-    }
-
-    // Fallback: Select first table
-    setActiveTableId(tables[0]!.id);
-  }, [tables, activeTableId, baseId, setActiveTableId, setActiveViewId]);
-
-  // Fetch views for the active table to auto-select the first one
-  const { data: views } = api.view.getByTableId.useQuery(
-    { tableId: activeTableId! },
-    {
-      enabled: !!activeTableId,
-      refetchOnMount: true,
-      refetchOnWindowFocus: false,
-      staleTime: 0, // Always refetch
-      gcTime: 0, // Don't cache
-    },
-  );
-
-  // Auto-select first view when views load or table changes
-  useEffect(() => {
-    if (!views || views.length === 0) return;
-
-    // If we have an activeViewId, validate it still exists
-    if (activeViewId) {
-      const viewExists = views.some((v) => v.id === activeViewId);
-      if (!viewExists) {
-        // View was deleted, select first view
-        setActiveViewId(views[0]!.id);
-      }
-    } else {
-      // No active view, select first one
-      setActiveViewId(views[0]!.id);
-    }
-  }, [views, activeViewId, setActiveViewId]);
-
-  // Reset view when table changes (but not on initial mount or combined table+view selection)
-  const isInitialMount = useRef(true);
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-
-    // Skip reset if this is a combined table+view selection
-    if (skipViewResetRef.current) {
-      skipViewResetRef.current = false;
-      return;
-    }
-
-    setActiveViewId(null);
-  }, [activeTableId, setActiveViewId]);
-
-  // -------------------------------------------------------------------------
-  // SAVE LAST VISITED TABLE/VIEW TO LOCALSTORAGE
-  // -------------------------------------------------------------------------
-  // Save whenever user navigates to a different table or view
-  useEffect(() => {
-    if (!activeTableId || !activeViewId) return;
-
-    const storageKey = `airtable-base-${baseId}-last-visited`;
-    const data = {
-      tableId: activeTableId,
-      viewId: activeViewId,
-    };
-
-    localStorage.setItem(storageKey, JSON.stringify(data));
-  }, [baseId, activeTableId, activeViewId]);
-
-  const createTableMutation = api.table.create.useMutation({
-    onMutate: async (variables) => {
-      // Cancel outgoing refetches
-      await utils.table.getAllByBase.cancel({ baseId });
-
-      // Snapshot previous data
-      const previousTables = utils.table.getAllByBase.getData({ baseId });
-
-      // Generate a temporary ID for optimistic update
-      const tempId = `temp-${Date.now()}`;
-      const optimisticTable = {
-        id: tempId,
-        name: variables.name,
-        baseId: variables.baseId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      // Optimistically add the new table to the cache
-      utils.table.getAllByBase.setData({ baseId }, (old) => {
-        if (!old) return [optimisticTable];
-        return [...old, optimisticTable];
-      });
-
-      // DO NOT select the table yet - wait for user to name it or cancel
-      // Just track it for the modal
-      setNewlyCreatedTableId(tempId);
-      setNewlyCreatedTableName(variables.name);
-
-      return { previousTables, tempId, previousActiveTableId: activeTableId };
-    },
-    onSuccess: (newTable, _variables, context) => {
-      // Replace temp ID with real ID in cache
-      if (context?.tempId) {
-        utils.table.getAllByBase.setData({ baseId }, (old) => {
-          if (!old) return [newTable];
-          return old.map((table) =>
-            table.id === context.tempId ? newTable : table,
-          );
-        });
-
-        // Update tracked table ID to real ID
-        setNewlyCreatedTableId(newTable.id);
-      }
-    },
-    onError: (_err, _variables, context) => {
-      // Rollback on error
-      if (context?.previousTables) {
-        utils.table.getAllByBase.setData({ baseId }, context.previousTables);
-      }
-      // Clear newly created table tracking on error
-      setNewlyCreatedTableId(null);
-      setNewlyCreatedTableName(null);
-    },
-    onSettled: () => {
-      // Sync with server
-      void utils.table.getAllByBase.invalidate({ baseId });
-    },
-  });
-
-  const renameTableMutation = api.table.update.useMutation({
-    onMutate: async (variables) => {
-      // Cancel outgoing refetches
-      await utils.table.getAllByBase.cancel({ baseId });
-
-      // Snapshot previous data
-      const previousTables = utils.table.getAllByBase.getData({ baseId });
-
-      // Optimistically update the cache
-      utils.table.getAllByBase.setData({ baseId }, (old) => {
-        if (!old) return old;
-        return old.map((table) =>
-          table.id === variables.id
-            ? { ...table, name: variables.name }
-            : table,
-        );
-      });
-
-      // If we're renaming the newly created table, update the tracked name
-      if (variables.id === newlyCreatedTableId) {
-        setNewlyCreatedTableName(variables.name);
-      }
-
-      return { previousTables };
-    },
-    onError: (_err, _variables, context) => {
-      // Rollback on error
-      if (context?.previousTables) {
-        utils.table.getAllByBase.setData({ baseId }, context.previousTables);
-      }
-    },
-    onSettled: () => {
-      // Sync with server
-      void utils.table.getAllByBase.invalidate({ baseId });
-    },
-  });
-
-  const deleteTableMutation = api.table.delete.useMutation({
-    onMutate: async (variables) => {
-      // Cancel outgoing refetches
-      await utils.table.getAllByBase.cancel({ baseId });
-
-      // Snapshot previous data
-      const previousTables = utils.table.getAllByBase.getData({ baseId });
-
-      // Optimistically update the cache - remove the deleted table
-      utils.table.getAllByBase.setData({ baseId }, (old) => {
-        if (!old) return old;
-        return old.filter((table) => table.id !== variables.id);
-      });
-
-      // If the deleted table was active, select another table
-      if (
-        variables.id === activeTableId &&
-        previousTables &&
-        previousTables.length > 1
-      ) {
-        const remainingTables = previousTables.filter(
-          (t) => t.id !== variables.id,
-        );
-        if (remainingTables.length > 0) {
-          setActiveTableId(remainingTables[0]!.id);
-        }
-      }
-
-      return { previousTables };
-    },
-    onError: (_err, _variables, context) => {
-      // Rollback on error
-      if (context?.previousTables) {
-        utils.table.getAllByBase.setData({ baseId }, context.previousTables);
-      }
-    },
-    onSettled: () => {
-      // Sync with server
-      void utils.table.getAllByBase.invalidate({ baseId });
-    },
-  });
-
-  const handleAddTable = (name: string) => {
-    createTableMutation.mutate({
-      baseId,
-      name,
-    });
+  // Handler for adding a new table - triggers the naming modal workflow
+  const handleAddTable = async (name: string) => {
+    // Generate a temp ID and set it immediately to show the modal without delay
+    const tempId = `temp-${Date.now()}`;
+    setNewlyCreatedTableId(tempId);
+    setNewlyCreatedTableName(name);
+    
+    // Create table via context (this will take time due to server round-trip)
+    const newTable = await createTable(name);
+    
+    // Update with the real ID once the server responds
+    setNewlyCreatedTableId(newTable.id);
+    setNewlyCreatedTableName(newTable.name);
   };
 
+  // Handler for renaming a table
   const handleRenameTable = (tableId: string, newName: string) => {
-    renameTableMutation.mutate({
-      id: tableId,
-      name: newName,
-    });
-  };
-
-  const handleDeleteTable = (tableId: string) => {
-    // Don't allow deleting the last table
-    if (tables.length <= 1) {
-      return;
+    renameTable(tableId, newName);
+    
+    // If we're renaming the newly created table, update the tracked name
+    if (tableId === newlyCreatedTableId) {
+      setNewlyCreatedTableName(newName);
     }
-    deleteTableMutation.mutate({ id: tableId });
   };
 
+  // Handler for deleting a table
+  const handleDeleteTable = (tableId: string) => {
+    deleteTable(tableId);
+  };
+
+  // Handler for clearing the new table modal
   const handleClearNewTable = () => {
     // When modal is closed (either by save or cancel), select the newly created table
     if (newlyCreatedTableId) {
-      setActiveTableId(newlyCreatedTableId);
+      selectTable(newlyCreatedTableId);
     }
     // Clear the tracking state
     setNewlyCreatedTableId(null);
@@ -491,15 +241,10 @@ function BaseContentInner({
 
         {/* Table bar */}
         <TableBar
-          tables={tables}
-          activeTableId={activeTableId}
-          onTableSelect={setActiveTableId}
-          onAddTable={handleAddTable}
-          onRenameTable={handleRenameTable}
-          onDeleteTable={handleDeleteTable}
           newTableId={newlyCreatedTableId}
           newTableName={newlyCreatedTableName}
           onClearNewTable={handleClearNewTable}
+          onAddTable={handleAddTable}
         />
 
         {/* ViewConfigProvider wraps toolbar + sidebar + grid */}
@@ -513,11 +258,6 @@ function BaseContentInner({
               viewId={activeViewId}
               isSideNavOpen={isSideNavOpen}
               dataGridRef={dataGridRef}
-              activeViewId={activeViewId}
-              setActiveViewId={setActiveViewId}
-              onViewSelect={setActiveViewId}
-              setActiveTableId={setActiveTableId}
-              skipViewResetRef={skipViewResetRef}
             />
           </ViewConfigProvider>
         ) : (
@@ -544,26 +284,32 @@ export function BaseContent({
   initialTableId,
   initialViewId,
 }: BaseContentProps) {
-  // Use URL params if provided, otherwise use local state
-  const [activeTableId, setActiveTableId] = useState<string | null>(
-    initialTableId ?? null,
+  return (
+    // BaseContextProvider: Single source of truth for base/table/view state
+    <BaseContextProvider
+      baseId={baseId}
+      initialTableId={initialTableId}
+      initialViewId={initialViewId}
+    >
+      <BaseContentWithContext
+        baseId={baseId}
+        userInitial={userInitial}
+        userName={userName}
+        userEmail={userEmail}
+      />
+    </BaseContextProvider>
   );
-  const [activeViewId, setActiveViewId] = useState<string | null>(
-    initialViewId ?? null,
-  );
+}
 
-  // Update state when URL params change (e.g., navigation from search)
-  useEffect(() => {
-    if (initialTableId && initialTableId !== activeTableId) {
-      setActiveTableId(initialTableId);
-    }
-  }, [initialTableId]);
-
-  useEffect(() => {
-    if (initialViewId && initialViewId !== activeViewId) {
-      setActiveViewId(initialViewId);
-    }
-  }, [initialViewId]);
+// Inner component that reads from context
+function BaseContentWithContext({
+  baseId,
+  userInitial,
+  userName,
+  userEmail,
+}: Omit<BaseContentProps, "initialTableId" | "initialViewId">) {
+  // Read active table/view from context instead of local state
+  const { activeTableId, activeViewId } = useBaseContext();
 
   // Fetch table to get the column count
   const { data: table } = api.table.getById.useQuery(
@@ -598,27 +344,17 @@ export function BaseContent({
   const totalRows = rowData?.totalCount ?? 100;
 
   return (
-    // BaseContextProvider: Single source of truth for base/table/view state
-    // This runs in parallel with existing code - nothing breaks yet!
-    <BaseContextProvider
-      baseId={baseId}
-      initialTableId={activeTableId}
-      initialViewId={activeViewId}
-    >
-      <SelectionProvider totalRows={totalRows} totalColumns={totalColumns}>
-        <ContextMenuProvider>
-          <BaseContentInner
-            baseId={baseId}
-            userInitial={userInitial}
-            userName={userName}
-            userEmail={userEmail}
-            activeTableId={activeTableId}
-            activeViewId={activeViewId}
-            setActiveTableId={setActiveTableId}
-            setActiveViewId={setActiveViewId}
-          />
-        </ContextMenuProvider>
-      </SelectionProvider>
-    </BaseContextProvider>
+    <SelectionProvider totalRows={totalRows} totalColumns={totalColumns}>
+      <ContextMenuProvider>
+        <BaseContentInner
+          baseId={baseId}
+          userInitial={userInitial}
+          userName={userName}
+          userEmail={userEmail}
+          activeTableId={activeTableId}
+          activeViewId={activeViewId}
+        />
+      </ContextMenuProvider>
+    </SelectionProvider>
   );
 }

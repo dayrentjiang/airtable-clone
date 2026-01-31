@@ -7,6 +7,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 import { api } from "~/trpc/react";
@@ -270,6 +271,9 @@ export function BaseContextProvider({
 
   const utils = api.useUtils();
 
+  // Track temp ID to real ID mapping for optimistic updates
+  const tempIdMapRef = useRef<Map<string, string>>(new Map());
+
   const createTableMutation = api.table.create.useMutation({
     onMutate: async (variables) => {
       await utils.table.getAllByBase.cancel({ baseId });
@@ -294,6 +298,9 @@ export function BaseContextProvider({
     },
     onSuccess: (newTable, _variables, context) => {
       if (context?.tempId) {
+        // Store mapping from temp ID to real ID
+        tempIdMapRef.current.set(context.tempId, newTable.id);
+        
         utils.table.getAllByBase.setData({ baseId }, (old) => {
           if (!old) return [newTable];
           return old.map((table) =>
