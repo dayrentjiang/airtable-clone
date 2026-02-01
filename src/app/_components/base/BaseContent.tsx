@@ -12,8 +12,8 @@ import {
 } from "./DataGrid";
 import { IconSidebar } from "../layout/IconSidebar";
 import { BaseTopNav } from "./BaseTopNav";
-import { ViewConfigProvider, useViewConfig } from "./hooks/useViewConfig";
-import { BaseContextProvider, useBaseContext } from "./hooks/useBaseContext";
+import { ViewConfigProvider, useViewConfig } from "./_state/view-config";
+import { BaseContextProvider, useBaseContext } from "./_state/base-context";
 import { api } from "~/trpc/react";
 
 interface BaseContentProps {
@@ -148,7 +148,7 @@ function BaseContentInner({
     renameTable,
     deleteTable,
   } = useBaseContext();
-  
+
   const [isSideNavOpen, setIsSideNavOpen] = useState(true);
   const [newlyCreatedTableId, setNewlyCreatedTableId] = useState<string | null>(
     null,
@@ -166,24 +166,25 @@ function BaseContentInner({
   // are now handled by BaseContext. No need to duplicate that logic here.
 
   // Handler for adding a new table - triggers the naming modal workflow
-  const handleAddTable = async (name: string) => {
-    // Generate a temp ID and set it immediately to show the modal without delay
+  const handleAddTable = (name: string) => {
+    // Generate a temp ID shared with the context's optimistic update
+    // so the table tab and the modal reference the same ID
     const tempId = `temp-${Date.now()}`;
     setNewlyCreatedTableId(tempId);
     setNewlyCreatedTableName(name);
-    
-    // Create table via context (this will take time due to server round-trip)
-    const newTable = await createTable(name);
-    
-    // Update with the real ID once the server responds
-    setNewlyCreatedTableId(newTable.id);
-    setNewlyCreatedTableName(newTable.name);
+
+    // Fire-and-forget: the optimistic update shows the tab immediately,
+    // and we update to the real ID once the server responds
+    createTable(name, tempId).then((newTable) => {
+      setNewlyCreatedTableId(newTable.id);
+      setNewlyCreatedTableName(newTable.name);
+    });
   };
 
   // Handler for renaming a table
   const handleRenameTable = (tableId: string, newName: string) => {
     renameTable(tableId, newName);
-    
+
     // If we're renaming the newly created table, update the tracked name
     if (tableId === newlyCreatedTableId) {
       setNewlyCreatedTableName(newName);

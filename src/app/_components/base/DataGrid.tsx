@@ -12,7 +12,7 @@ import {
 } from "./DataGrid/hooks/useTableColumns";
 import { useWindowedRows } from "./DataGrid/hooks/useWindowedRows";
 import { WindowedRowsProvider } from "./DataGrid/hooks/useWindowedRowsContext";
-import { useViewConfig } from "./hooks/useViewConfig";
+import { useViewConfig } from "./_state/view-config";
 import { CellContextMenu } from "./DataGrid/components/CellContextMenu";
 import { ColumnHeaderContextMenu } from "./DataGrid/components/ColumnHeaderContextMenu";
 import { useContextMenu } from "./DataGrid/hooks/useContextMenu";
@@ -504,7 +504,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
           className="h-full overflow-auto"
           style={{ contain: "strict" }}
         >
-          <div className="flex pb-30">
+          <div className="pb-30 flex">
             <DataGridTable
               table={tableInstance}
               tableId={tableId}
@@ -558,7 +558,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
         </div>
 
         {/* Sticky bottom bar showing record count */}
-        <div className="absolute right-0 bottom-0 left-0 border-t border-gray-200 bg-gray-50 px-4 py-1">
+        <div className="absolute bottom-0 left-0 right-0 border-t border-gray-200 bg-gray-50 px-4 py-1">
           <div className="text-xs text-gray-600" style={{ width: tableWidth }}>
             {totalCount} {totalCount === 1 ? "record" : "records"}
           </div>

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Search, Settings } from "lucide-react";
 import { api } from "~/trpc/react";
-import { useBaseContext } from "./hooks/useBaseContext";
+import { useBaseContext } from "./_state/base-context";
 import type { BaseSideNavProps } from "./BaseSideNav/types";
 import { CreateViewDropdown } from "./BaseSideNav/CreateViewDropdown";
 import { CreateViewModal } from "./BaseSideNav/CreateViewModal";
@@ -26,7 +26,7 @@ export function BaseSideNav({
     renameView: renameViewFromContext,
     deleteView: deleteViewFromContext,
   } = useBaseContext();
-  
+
   const [isCreatingView, setIsCreatingView] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,11 +66,11 @@ export function BaseSideNav({
     name: string,
   ) => {
     if (!tableId) return;
-    
+
     setIsCreatingView(true);
     try {
-      const newView = await createViewFromContext(tableId, name, type);
-      onViewSelect(newView.id);
+      await createViewFromContext(tableId, name, type);
+      // No need to call onViewSelect - the mutation's onSuccess already sets activeViewId
       setIsDropdownOpen(false);
       setIsModalOpen(false);
       setPendingViewType(null);
@@ -88,7 +88,7 @@ export function BaseSideNav({
   // Delete view - now uses context method
   const handleDeleteView = (viewId: string) => {
     deleteViewFromContext(viewId);
-    
+
     // If deleted view was selected, select the first available view
     if (viewId === selectedViewId && views && views.length > 1) {
       const remainingView = views.find((v) => v.id !== viewId);
@@ -180,7 +180,7 @@ export function BaseSideNav({
     "shrink-0 text-sm leading-none text-gray-500 hover:text-gray-700";
 
   return (
-    <aside className="flex w-70 flex-col border-r border-gray-200 bg-gray-50/50">
+    <aside className="w-70 flex flex-col border-r border-gray-200 bg-gray-50/50">
       {/* Top section */}
       <div className="flex-1 px-2 py-2.5">
         {/* Create new */}

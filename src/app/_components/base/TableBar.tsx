@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
-import { useBaseContext } from "./hooks/useBaseContext";
+import { useBaseContext } from "./_state/base-context";
 import { TableTab } from "./TableBar/TableTab";
 import { TableMenu } from "./TableBar/TableMenu";
 import { TableListDropdown } from "./TableBar/TableListDropdown";
@@ -15,7 +15,7 @@ interface TableBarProps {
   newTableId?: string | null;
   newTableName?: string | null;
   onClearNewTable?: () => void;
-  onAddTable?: (name: string) => Promise<void>;
+  onAddTable?: (name: string) => void;
 }
 
 export function TableBar({
@@ -115,13 +115,13 @@ export function TableBar({
     }
   };
 
-  const handleAddTable = async (name: string) => {
+  const handleAddTable = (name: string) => {
     // If parent provided a handler (BaseContentInner), use it to manage modal state
     // Otherwise, just create the table via context
     if (onAddTable) {
-      await onAddTable(name);
+      onAddTable(name);
     } else {
-      await createTable(name);
+      void createTable(name);
     }
   };
 

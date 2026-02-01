@@ -45,9 +45,14 @@ export function AddTableButton({
   const buttonClickedRef = useRef(false);
 
   // Open rename modal when a new table is created
+  // Use requestAnimationFrame to wait for the new table tab to render in the DOM
+  // so that the modal can position itself correctly relative to the tab
   useEffect(() => {
     if (newTableId) {
-      setIsRenameModalOpen(true);
+      const rafId = requestAnimationFrame(() => {
+        setIsRenameModalOpen(true);
+      });
+      return () => cancelAnimationFrame(rafId);
     }
   }, [newTableId]);
 
@@ -93,7 +98,7 @@ export function AddTableButton({
 
     // Generate smart table name based on existing tables
     const baseName = "Table";
-    
+
     // Find the highest number in existing "Table X" names
     let highestNumber = 0;
     const regex = /^Table (\d+)$/i;
@@ -106,7 +111,7 @@ export function AddTableButton({
         }
       }
     });
-    
+
     // Use highest number + 1
     const finalName = `${baseName} ${highestNumber + 1}`;
 

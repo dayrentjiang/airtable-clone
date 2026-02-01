@@ -17,13 +17,13 @@ import {
   type LucideIcon,
   TableCellsSplit,
 } from "lucide-react";
-import { useBaseContext } from "./hooks/useBaseContext";
-import { SearchInput } from "./toolbar/SearchInput";
-import { FilterPopover } from "./toolbar/FilterPopover";
-import { SortPopover } from "./toolbar/SortPopover";
-import { HideFieldsPopover } from "./toolbar/HideFieldsPopover";
-import { ToolbarPopoversProvider } from "./hooks/useToolbarPopovers";
-import { ViewMenu } from "./toolbar/ViewMenu";
+import { useBaseContext } from "./_state/base-context";
+import { SearchInput } from "./ViewToolbar/SearchInput";
+import { FilterPopover } from "./ViewToolbar/FilterPopover";
+import { SortPopover } from "./ViewToolbar/SortPopover";
+import { HideFieldsPopover } from "./ViewToolbar/HideFieldsPopover";
+import { ToolbarPopoversProvider } from "./ViewToolbar/hooks/useToolbarPopovers";
+import { ViewMenu } from "./ViewToolbar/ViewMenu";
 import { Warning } from "../ui/Warning";
 import { api } from "~/trpc/react";
 

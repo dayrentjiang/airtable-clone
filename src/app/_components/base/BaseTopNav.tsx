@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import Image from "next/image";
 import { ChevronDown, History, ExternalLink } from "lucide-react";
-import { useBaseContext } from "./hooks/useBaseContext";
+import { useBaseContext } from "./_state/base-context";
 import { RenameBaseModal } from "./BaseTopNav/RenameBaseModal";
 import { api } from "~/trpc/react";
 
@@ -132,7 +132,7 @@ export function BaseTopNav({ baseId, onBaseNameClick }: BaseTopNavProps) {
           </button>
 
           {/* Share button */}
-          <button className="rounded-md bg-cyan-700 px-2.5 py-1.5 text-xs font-bold text-white shadow-sm hover:scale-101 hover:cursor-pointer md:px-3.5">
+          <button className="hover:scale-101 rounded-md bg-cyan-700 px-2.5 py-1.5 text-xs font-bold text-white shadow-sm hover:cursor-pointer md:px-3.5">
             Share
           </button>
         </div>

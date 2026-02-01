@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useViewConfig } from "../hooks/useViewConfig";
+import { useViewConfig } from "../_state/view-config";
 import { createPortal } from "react-dom";
 
 /**

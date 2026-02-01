@@ -2,24 +2,23 @@
 
 import {
   createContext,
-  useContext,
   useState,
   useEffect,
   useCallback,
   useMemo,
   useRef,
-  type ReactNode,
 } from "react";
 import { api } from "~/trpc/react";
+import type { BaseContextValue, BaseContextProviderProps } from "./types";
 
 /**
  * BASE CONTEXT
- * 
+ *
  * Single source of truth for base-level state:
  * - Current table/view selection
  * - Tables and views data (fetched once, shared by all components)
  * - Table/view operations (create, rename, delete)
- * 
+ *
  * WHY THIS EXISTS:
  * - Eliminates duplicate queries (views were fetched 3x in different components)
  * - Removes prop drilling (11 props through ViewConfigContent)
@@ -27,89 +26,16 @@ import { api } from "~/trpc/react";
  */
 
 // ============================================================================
-// TYPES
+// CONTEXT
 // ============================================================================
 
-interface BaseContextValue {
-  // Current selections
-  baseId: string;
-  activeTableId: string | null;
-  activeViewId: string | null;
+export const BaseContext = createContext<BaseContextValue | null>(null);
 
-  // Data (cached, fetched once)
-  base: { id: string; name: string } | null;
-  tables: Array<{
-    id: string;
-    name: string;
-    baseId: string;
-    createdAt: Date;
-    updatedAt: Date;
-  }>;
-  views: Array<{
-    id: string;
-    name: string;
-    type: string;
-    tableId: string;
-    config: unknown;
-    createdAt: Date;
-    updatedAt: Date;
-  }>;
-
-  // Computed/derived data
-  activeTable: {
-    id: string;
-    name: string;
-    baseId: string;
-    createdAt: Date;
-    updatedAt: Date;
-  } | null;
-  activeView: {
-    id: string;
-    name: string;
-    type: string;
-    tableId: string;
-    config: unknown;
-    createdAt: Date;
-    updatedAt: Date;
-  } | null;
-
-  // Loading states
-  isLoadingBase: boolean;
-  isLoadingTables: boolean;
-  isLoadingViews: boolean;
-
-  // Selection actions
-  selectTable: (tableId: string) => void;
-  selectView: (viewId: string) => void;
-  selectTableAndView: (tableId: string, viewId: string) => void;
-
-  // Table operations
-  createTable: (name: string) => Promise<{ id: string; name: string }>;
-  renameTable: (tableId: string, name: string) => void;
-  deleteTable: (tableId: string) => void;
-
-  // View operations
-  createView: (
-    tableId: string,
-    name: string,
-    type: "GRID" | "CALENDAR" | "KANBAN" | "GALLERY" | "FORM",
-  ) => Promise<{ id: string; name: string }>;
-  renameView: (viewId: string, name: string) => void;
-  deleteView: (viewId: string) => void;
-}
-
-const BaseContext = createContext<BaseContextValue | null>(null);
+BaseContext.displayName = "BaseContext";
 
 // ============================================================================
 // PROVIDER
 // ============================================================================
-
-interface BaseContextProviderProps {
-  children: ReactNode;
-  baseId: string;
-  initialTableId?: string | null;
-  initialViewId?: string | null;
-}
 
 export function BaseContextProvider({
   children,
@@ -248,7 +174,9 @@ export function BaseContextProvider({
   // -------------------------------------------------------------------------
 
   const selectTable = useCallback((tableId: string) => {
-    setActiveTableId(tableId);
+    // Resolve temp ID to real ID if the server has already responded
+    const resolvedId = tempIdMapRef.current.get(tableId) ?? tableId;
+    setActiveTableId(resolvedId);
     // Reset view - will auto-select first view when views load
     setActiveViewId(null);
   }, []);
@@ -257,13 +185,10 @@ export function BaseContextProvider({
     setActiveViewId(viewId);
   }, []);
 
-  const selectTableAndView = useCallback(
-    (tableId: string, viewId: string) => {
-      setActiveTableId(tableId);
-      setActiveViewId(viewId);
-    },
-    [],
-  );
+  const selectTableAndView = useCallback((tableId: string, viewId: string) => {
+    setActiveTableId(tableId);
+    setActiveViewId(viewId);
+  }, []);
 
   // -------------------------------------------------------------------------
   // TABLE OPERATIONS
@@ -273,6 +198,8 @@ export function BaseContextProvider({
 
   // Track temp ID to real ID mapping for optimistic updates
   const tempIdMapRef = useRef<Map<string, string>>(new Map());
+  // Allows callers to pass a temp ID into onMutate so both sides use the same ID
+  const pendingTempIdRef = useRef<string | null>(null);
 
   const createTableMutation = api.table.create.useMutation({
     onMutate: async (variables) => {
@@ -280,7 +207,9 @@ export function BaseContextProvider({
 
       const previousTables = utils.table.getAllByBase.getData({ baseId });
 
-      const tempId = `temp-${Date.now()}`;
+      // Use the caller-provided temp ID if available, otherwise generate one
+      const tempId = pendingTempIdRef.current ?? `temp-${Date.now()}`;
+      pendingTempIdRef.current = null;
       const optimisticTable = {
         id: tempId,
         name: variables.name,
@@ -300,7 +229,7 @@ export function BaseContextProvider({
       if (context?.tempId) {
         // Store mapping from temp ID to real ID
         tempIdMapRef.current.set(context.tempId, newTable.id);
-        
+
         utils.table.getAllByBase.setData({ baseId }, (old) => {
           if (!old) return [newTable];
           return old.map((table) =>
@@ -358,8 +287,14 @@ export function BaseContextProvider({
       });
 
       // If deleting active table, select another
-      if (variables.id === activeTableId && previousTables && previousTables.length > 1) {
-        const remainingTables = previousTables.filter((t) => t.id !== variables.id);
+      if (
+        variables.id === activeTableId &&
+        previousTables &&
+        previousTables.length > 1
+      ) {
+        const remainingTables = previousTables.filter(
+          (t) => t.id !== variables.id,
+        );
         if (remainingTables.length > 0) {
           setActiveTableId(remainingTables[0]!.id);
         }
@@ -378,7 +313,8 @@ export function BaseContextProvider({
   });
 
   const createTable = useCallback(
-    async (name: string) => {
+    async (name: string, tempId?: string) => {
+      if (tempId) pendingTempIdRef.current = tempId;
       return await createTableMutation.mutateAsync({ baseId, name });
     },
     [baseId, createTableMutation],
@@ -386,7 +322,9 @@ export function BaseContextProvider({
 
   const renameTable = useCallback(
     (tableId: string, name: string) => {
-      renameTableMutation.mutate({ id: tableId, name });
+      // Resolve temp ID to real ID if the server has already responded
+      const resolvedId = tempIdMapRef.current.get(tableId) ?? tableId;
+      renameTableMutation.mutate({ id: resolvedId, name });
     },
     [renameTableMutation],
   );
@@ -404,25 +342,37 @@ export function BaseContextProvider({
   // -------------------------------------------------------------------------
 
   const createViewMutation = api.view.create.useMutation({
-    onSuccess: (newView) => {
-      void utils.view.getByTableId.invalidate({ tableId: activeTableId! });
+    onSuccess: (newView, variables) => {
+      // Use tableId from mutation variables instead of closure
+      void utils.view.getByTableId.invalidate({ tableId: variables.tableId });
       setActiveViewId(newView.id);
     },
   });
 
   const renameViewMutation = api.view.rename.useMutation({
     onMutate: async (variables) => {
-      await utils.view.getByTableId.cancel({ tableId: activeTableId! });
+      // Find the tableId from the view being renamed
+      const viewToRename = views?.find((v) => v.id === variables.id);
+      const tableId = viewToRename?.tableId;
+
+      if (!tableId) {
+        // If we can't find the view, return empty context
+        return {
+          previousViews: undefined,
+          previousView: undefined,
+          tableId: undefined,
+        };
+      }
+
+      await utils.view.getByTableId.cancel({ tableId });
       await utils.view.getById.cancel({ id: variables.id });
 
-      const previousViews = utils.view.getByTableId.getData({
-        tableId: activeTableId!,
-      });
+      const previousViews = utils.view.getByTableId.getData({ tableId });
       const previousView = utils.view.getById.getData({ id: variables.id });
 
       // Update views list
       if (previousViews) {
-        utils.view.getByTableId.setData({ tableId: activeTableId! }, (old) =>
+        utils.view.getByTableId.setData({ tableId }, (old) =>
           old?.map((view) =>
             view.id === variables.id ? { ...view, name: variables.name } : view,
           ),
@@ -436,58 +386,77 @@ export function BaseContextProvider({
         );
       }
 
-      return { previousViews, previousView };
+      return { previousViews, previousView, tableId };
     },
     onError: (_err, variables, context) => {
-      if (context?.previousViews) {
+      if (!context?.tableId) return;
+
+      if (context.previousViews) {
         utils.view.getByTableId.setData(
-          { tableId: activeTableId! },
+          { tableId: context.tableId },
           context.previousViews,
         );
       }
-      if (context?.previousView) {
+      if (context.previousView) {
         utils.view.getById.setData({ id: variables.id }, context.previousView);
       }
     },
-    onSettled: (_data, _error, variables) => {
-      void utils.view.getByTableId.invalidate({ tableId: activeTableId! });
+    onSettled: (_data, _error, variables, context) => {
+      if (!context?.tableId) return;
+
+      void utils.view.getByTableId.invalidate({ tableId: context.tableId });
       void utils.view.getById.invalidate({ id: variables.id });
     },
   });
 
   const deleteViewMutation = api.view.delete.useMutation({
     onMutate: async (variables) => {
-      await utils.view.getByTableId.cancel({ tableId: activeTableId! });
+      // Find the tableId from the view being deleted
+      const viewToDelete = views?.find((v) => v.id === variables.id);
+      const tableId = viewToDelete?.tableId;
 
-      const previousViews = utils.view.getByTableId.getData({
-        tableId: activeTableId!,
-      });
+      if (!tableId) {
+        // If we can't find the view, return empty context
+        return { previousViews: undefined, tableId: undefined };
+      }
 
-      utils.view.getByTableId.setData({ tableId: activeTableId! }, (old) => {
+      await utils.view.getByTableId.cancel({ tableId });
+
+      const previousViews = utils.view.getByTableId.getData({ tableId });
+
+      utils.view.getByTableId.setData({ tableId }, (old) => {
         if (!old) return old;
         return old.filter((view) => view.id !== variables.id);
       });
 
       // If deleting active view, select another
-      if (variables.id === activeViewId && previousViews && previousViews.length > 1) {
-        const remainingViews = previousViews.filter((v) => v.id !== variables.id);
+      if (
+        variables.id === activeViewId &&
+        previousViews &&
+        previousViews.length > 1
+      ) {
+        const remainingViews = previousViews.filter(
+          (v) => v.id !== variables.id,
+        );
         if (remainingViews.length > 0) {
           setActiveViewId(remainingViews[0]!.id);
         }
       }
 
-      return { previousViews };
+      return { previousViews, tableId };
     },
     onError: (_err, _variables, context) => {
-      if (context?.previousViews) {
-        utils.view.getByTableId.setData(
-          { tableId: activeTableId! },
-          context.previousViews,
-        );
-      }
+      if (!context?.tableId || !context?.previousViews) return;
+
+      utils.view.getByTableId.setData(
+        { tableId: context.tableId },
+        context.previousViews,
+      );
     },
-    onSettled: () => {
-      void utils.view.getByTableId.invalidate({ tableId: activeTableId! });
+    onSettled: (_data, _error, _variables, context) => {
+      if (!context?.tableId) return;
+
+      void utils.view.getByTableId.invalidate({ tableId: context.tableId });
     },
   });
 
@@ -580,16 +549,4 @@ export function BaseContextProvider({
   );
 
   return <BaseContext.Provider value={value}>{children}</BaseContext.Provider>;
-}
-
-// ============================================================================
-// HOOK
-// ============================================================================
-
-export function useBaseContext() {
-  const context = useContext(BaseContext);
-  if (!context) {
-    throw new Error("useBaseContext must be used within BaseContextProvider");
-  }
-  return context;
 }

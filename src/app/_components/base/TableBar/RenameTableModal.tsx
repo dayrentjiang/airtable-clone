@@ -103,26 +103,17 @@ export function RenameTableModal({
     }
   };
 
-  if (!isOpen) return null;
-
   const anchorRect = anchorRef.current?.getBoundingClientRect();
+
+  // Don't render until the anchor element is available in the DOM
+  // This prevents the modal from flashing at (0, 0) when the new table tab hasn't rendered yet
+  if (!isOpen || !anchorRect) return null;
   const modalWidth = 320; // w-80 = 20rem = 320px
-  const top = anchorRect ? anchorRect.bottom + 4 : 0;
+  const top = anchorRect.bottom + 4;
 
   // Calculate left position: prefer left side, fall back to right if no space
-  let left = 0;
-  if (anchorRect) {
-    // Try to position on the left: modal's left edge = anchor's right edge - modal width
-    const leftPosition = anchorRect.right - modalWidth;
-
-    if (leftPosition >= 0) {
-      // Enough space on the left
-      left = leftPosition;
-    } else {
-      // Not enough space on left, position on the right
-      left = anchorRect.left;
-    }
-  }
+  const leftPosition = anchorRect.right - modalWidth;
+  const left = leftPosition >= 0 ? leftPosition : anchorRect.left;
 
   return (
     <div
