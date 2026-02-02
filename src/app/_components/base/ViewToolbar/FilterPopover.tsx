@@ -68,7 +68,8 @@ function FilterRow({
   onRemove,
   isFirst,
 }: FilterRowProps) {
-  // Local state for value input (for debouncing)
+  // Local state for value input - updates filter immediately
+  // The parent FilterPopover handles debounced saving to DB
   const [localValue, setLocalValue] = useState(String(filter.value ?? ""));
 
   // Sync local value when filter changes externally
@@ -82,29 +83,26 @@ function FilterRow({
   const operators = columnType === "NUMBER" ? NUMBER_OPERATORS : TEXT_OPERATORS;
   const needsValue = !NO_VALUE_OPERATORS.includes(filter.operator);
 
-  // Debounce the value input - only update filter after 300ms of no typing
-  useEffect(() => {
+  // Update filter immediately when local value changes
+  // No debouncing here - parent handles debounced DB saves
+  const handleValueChange = (newValue: string) => {
+    setLocalValue(newValue);
+
     if (!needsValue) return;
 
-    const timer = setTimeout(() => {
-      let parsedValue: string | number | undefined = localValue || undefined;
+    let parsedValue: string | number | undefined = newValue || undefined;
 
-      // For number columns, parse as number
-      if (columnType === "NUMBER" && localValue !== "") {
-        const num = parseFloat(localValue);
-        if (!isNaN(num)) {
-          parsedValue = num;
-        }
+    // For number columns, parse as number
+    if (columnType === "NUMBER" && newValue !== "") {
+      const num = parseFloat(newValue);
+      if (!isNaN(num)) {
+        parsedValue = num;
       }
+    }
 
-      // Only update if value actually changed
-      if (parsedValue !== filter.value) {
-        onUpdate(index, { ...filter, value: parsedValue });
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [localValue, needsValue, columnType, filter, index, onUpdate]);
+    // Update filter immediately
+    onUpdate(index, { ...filter, value: parsedValue });
+  };
 
   const handleColumnChange = (columnId: string) => {
     const newColumn = columns.find((c) => c.id === columnId);
@@ -187,12 +185,12 @@ function FilterRow({
         </div>
       </div>
 
-      {/* Value input (only if operator needs it) - uses local state for debouncing */}
+      {/* Value input (only if operator needs it) - updates immediately */}
       {needsValue && (
         <input
           type={columnType === "NUMBER" ? "number" : "text"}
           value={localValue}
-          onChange={(e) => setLocalValue(e.target.value)}
+          onChange={(e) => handleValueChange(e.target.value)}
           placeholder="Enter a value"
           className="h-7 min-w-0 flex-1 rounded border border-gray-300 px-2 text-xs placeholder:text-gray-400 focus:border-blue-500 focus:outline-none"
         />
@@ -230,13 +228,16 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
+  
+  // Track initial filters when popover opens to detect actual changes
+  const initialFiltersRef = useRef<string>("");
 
   // Use shared popover state
   const { isPopoverOpen, setOpenPopover } = useToolbarPopovers();
   const isOpen = isPopoverOpen("filter");
 
   // Get filter state directly from context (no draft state - live updates!)
-  const { filters, addFilter, updateFilter, removeFilter, saveConfig } =
+  const { filters, addFilter, updateFilter, removeFilter, saveConfig, isDirty } =
     useViewConfig();
 
   // Fetch columns for this table
@@ -247,7 +248,7 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
 
   const columns: Column[] = table?.columns ?? [];
 
-  // Calculate popover position when opening
+  // Calculate popover position and capture initial state when opening
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
@@ -258,13 +259,31 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
     }
   }, [isOpen]);
 
+  // Capture initial filters only when popover opens (not on every filter change)
+  useEffect(() => {
+    if (isOpen && !initialFiltersRef.current) {
+      // Only set initial state once when popover opens
+      initialFiltersRef.current = JSON.stringify(filters);
+    } else if (!isOpen) {
+      // Reset when popover closes
+      initialFiltersRef.current = "";
+    }
+  }, [isOpen, filters]);
+
   // Auto-save filters with debouncing (500ms after last change)
   useEffect(() => {
-    // Only auto-save if popover is open and filters have been modified
+    // Only auto-save if popover is open AND filters have actually changed
     if (!isOpen) return;
+    
+    const currentFilters = JSON.stringify(filters);
+    const hasChanged = currentFilters !== initialFiltersRef.current;
+    
+    if (!hasChanged) return; // Guard: Don't save if nothing changed
 
     const timer = setTimeout(() => {
       void saveConfig({ filters });
+      // Update initial state after saving
+      initialFiltersRef.current = currentFilters;
     }, 500);
 
     return () => clearTimeout(timer);
@@ -279,8 +298,14 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
         buttonRef.current &&
         !buttonRef.current.contains(event.target as Node)
       ) {
-        // Save immediately when closing (don't wait for debounce)
-        void saveConfig({ filters });
+        // Save immediately when closing if there are unsaved changes
+        const currentFilters = JSON.stringify(filters);
+        const hasChanged = currentFilters !== initialFiltersRef.current;
+        
+        if (hasChanged) {
+          void saveConfig({ filters });
+        }
+        
         setOpenPopover(null);
       }
     }

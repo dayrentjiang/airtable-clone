@@ -312,6 +312,10 @@ export function SortPopover({ tableId }: SortPopoverProps) {
   const [showAddSortPicker, setShowAddSortPicker] = useState(false);
   const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
   const [autoSort, setAutoSort] = useState(true);
+  
+  // Track initial sorts when popover opens to detect actual changes
+  const initialSortsRef = useRef<string>("");
+  
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const addSortPickerRef = useRef<HTMLDivElement>(null);
@@ -321,7 +325,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
   const isOpen = isPopoverOpen("sort");
 
   // Get sort state directly from context (live updates!)
-  const { sorts, addSort, updateSort, removeSort, saveConfig } =
+  const { sorts, addSort, updateSort, removeSort, saveConfig, isDirty } =
     useViewConfig();
 
   // Fetch columns for this table
@@ -354,13 +358,31 @@ export function SortPopover({ tableId }: SortPopoverProps) {
     }
   }, [isOpen]);
 
+  // Capture initial sorts only when popover opens (not on every sort change)
+  useEffect(() => {
+    if (isOpen && !initialSortsRef.current) {
+      // Only set initial state once when popover opens
+      initialSortsRef.current = JSON.stringify(sorts);
+    } else if (!isOpen) {
+      // Reset when popover closes
+      initialSortsRef.current = "";
+    }
+  }, [isOpen, sorts]);
+
   // Auto-save sorts with debouncing (500ms after last change)
   useEffect(() => {
-    // Only auto-save if popover is open and sorts have been modified
+    // Only auto-save if popover is open AND sorts have actually changed
     if (!isOpen) return;
+    
+    const currentSorts = JSON.stringify(sorts);
+    const hasChanged = currentSorts !== initialSortsRef.current;
+    
+    if (!hasChanged) return; // Guard: Don't save if nothing changed
 
     const timer = setTimeout(() => {
       void saveConfig({ sorts });
+      // Update initial state after saving
+      initialSortsRef.current = currentSorts;
     }, 500);
 
     return () => clearTimeout(timer);
@@ -375,8 +397,14 @@ export function SortPopover({ tableId }: SortPopoverProps) {
         buttonRef.current &&
         !buttonRef.current.contains(event.target as Node)
       ) {
-        // Save immediately when closing (don't wait for debounce)
-        void saveConfig({ sorts });
+        // Save immediately when closing if there are unsaved changes
+        const currentSorts = JSON.stringify(sorts);
+        const hasChanged = currentSorts !== initialSortsRef.current;
+        
+        if (hasChanged) {
+          void saveConfig({ sorts });
+        }
+        
         setOpenPopover(null);
         setShowAddSortPicker(false);
       }
