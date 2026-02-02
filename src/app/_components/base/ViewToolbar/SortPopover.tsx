@@ -114,7 +114,7 @@ function ColumnDropdown({ value, columns, onChange }: ColumnDropdownProps) {
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-60 rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="absolute top-full left-0 z-50 mt-1 w-60 rounded-lg border border-gray-200 bg-white shadow-lg">
           {/* Search input */}
           <div className="border-b border-gray-200 p-2">
             <input
@@ -197,14 +197,14 @@ function DirectionDropdown({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-30 flex h-7 items-center justify-between rounded border border-gray-200 bg-white px-2 text-xs text-gray-900 hover:border-gray-300 focus:border-blue-500 focus:outline-none"
+        className="flex h-7 w-30 items-center justify-between rounded border border-gray-200 bg-white px-2 text-xs text-gray-900 hover:border-gray-300 focus:border-blue-500 focus:outline-none"
       >
         <span>{selectedDirection?.label ?? "Select"}</span>
         <ChevronDown size={14} className="ml-1 shrink-0 text-gray-500" />
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-32 rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="absolute top-full left-0 z-50 mt-1 w-32 rounded-lg border border-gray-200 bg-white shadow-lg">
           {/* Direction list */}
           <div className="py-1">
             {directions.map((dir) => (
@@ -354,6 +354,18 @@ export function SortPopover({ tableId }: SortPopoverProps) {
     }
   }, [isOpen]);
 
+  // Auto-save sorts with debouncing (500ms after last change)
+  useEffect(() => {
+    // Only auto-save if popover is open and sorts have been modified
+    if (!isOpen) return;
+
+    const timer = setTimeout(() => {
+      void saveConfig({ sorts });
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [sorts, isOpen, saveConfig]);
+
   // Close popover when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -363,7 +375,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
         buttonRef.current &&
         !buttonRef.current.contains(event.target as Node)
       ) {
-        // Save config when closing popover
+        // Save immediately when closing (don't wait for debounce)
         void saveConfig({ sorts });
         setOpenPopover(null);
         setShowAddSortPicker(false);
@@ -454,7 +466,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
         createPortal(
           <div
             ref={popoverRef}
-            className="w-105 fixed z-50 rounded-lg border border-gray-200 bg-white shadow-lg"
+            className="fixed z-50 w-105 rounded-lg border border-gray-200 bg-white shadow-lg"
             style={{ top: popoverPosition.top, left: popoverPosition.left }}
           >
             {/* Header */}
@@ -500,7 +512,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
                     {showAddSortPicker && (
                       <div
                         ref={addSortPickerRef}
-                        className="absolute left-0 top-full z-50 mt-1 w-96 rounded-lg border border-gray-200 bg-white shadow-lg"
+                        className="absolute top-full left-0 z-50 mt-1 w-96 rounded-lg border border-gray-200 bg-white shadow-lg"
                       >
                         {/* Search input */}
                         <div className="border-b border-gray-200 p-2">

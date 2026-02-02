@@ -162,7 +162,7 @@ function FilterRow({
             </option>
           ))}
         </select>
-        <div className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400">
+        <div className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-gray-400">
           <ChevronDown size={12} />
         </div>
       </div>
@@ -182,7 +182,7 @@ function FilterRow({
             </option>
           ))}
         </select>
-        <div className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400">
+        <div className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-gray-400">
           <ChevronDown size={12} />
         </div>
       </div>
@@ -258,6 +258,18 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
     }
   }, [isOpen]);
 
+  // Auto-save filters with debouncing (500ms after last change)
+  useEffect(() => {
+    // Only auto-save if popover is open and filters have been modified
+    if (!isOpen) return;
+
+    const timer = setTimeout(() => {
+      void saveConfig({ filters });
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [filters, isOpen, saveConfig]);
+
   // Close popover when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -267,7 +279,7 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
         buttonRef.current &&
         !buttonRef.current.contains(event.target as Node)
       ) {
-        // Save config when closing popover
+        // Save immediately when closing (don't wait for debounce)
         void saveConfig({ filters });
         setOpenPopover(null);
       }
@@ -351,7 +363,7 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
         createPortal(
           <div
             ref={popoverRef}
-            className="w-140 fixed z-50 rounded-md border border-gray-300/60 bg-white py-2 shadow-lg"
+            className="fixed z-50 w-140 rounded-md border border-gray-300/60 bg-white py-2 shadow-lg"
             style={{ top: popoverPosition.top, left: popoverPosition.left }}
           >
             {/* Header */}

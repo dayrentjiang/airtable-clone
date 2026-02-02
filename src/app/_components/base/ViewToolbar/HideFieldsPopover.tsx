@@ -67,6 +67,18 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
     }
   }, [isOpen]);
 
+  // Auto-save hidden fields with debouncing (500ms after last change)
+  useEffect(() => {
+    // Only auto-save if popover is open and hidden fields have been modified
+    if (!isOpen) return;
+
+    const timer = setTimeout(() => {
+      void saveConfig({ hiddenFields });
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [hiddenFields, isOpen, saveConfig]);
+
   // Close popover when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -76,7 +88,7 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
         buttonRef.current &&
         !buttonRef.current.contains(event.target as Node)
       ) {
-        // Save config when closing popover
+        // Save immediately when closing (don't wait for debounce)
         void saveConfig({ hiddenFields });
         setOpenPopover(null);
       }
