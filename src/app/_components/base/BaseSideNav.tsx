@@ -4,24 +4,21 @@ import { useState, useRef, useEffect } from "react";
 import { Search, Settings } from "lucide-react";
 import { api } from "~/trpc/react";
 import { useBaseContext } from "./_state/base-context";
-import type { BaseSideNavProps } from "./BaseSideNav/types";
 import { CreateViewDropdown } from "./BaseSideNav/CreateViewDropdown";
 import { CreateViewModal } from "./BaseSideNav/CreateViewModal";
 import { ViewList } from "./BaseSideNav/ViewList";
 import { ViewSearchResults } from "./BaseSideNav/ViewSearchResults";
 
-export function BaseSideNav({
-  baseId,
-  tableId,
-  selectedViewId,
-  onViewSelect,
-  onTableAndViewSelect,
-}: BaseSideNavProps) {
-  // Get data from context instead of querying directly
-  // This eliminates the duplicate query - context already has the views!
+export function BaseSideNav() {
+  // All state comes from context — no props needed
   const {
+    baseId,
+    activeTableId: tableId,
+    activeViewId: selectedViewId,
     views,
     isLoadingViews: isLoading,
+    selectView: onViewSelect,
+    selectTableAndView: onTableAndViewSelect,
     createView: createViewFromContext,
     renameView: renameViewFromContext,
     deleteView: deleteViewFromContext,
@@ -85,17 +82,9 @@ export function BaseSideNav({
     renameViewFromContext(viewId, name);
   };
 
-  // Delete view - now uses context method
+  // Delete view - context handles selecting the next view in deleteViewMutation.onMutate
   const handleDeleteView = (viewId: string) => {
     deleteViewFromContext(viewId);
-
-    // If deleted view was selected, select the first available view
-    if (viewId === selectedViewId && views && views.length > 1) {
-      const remainingView = views.find((v) => v.id !== viewId);
-      if (remainingView) {
-        onViewSelect(remainingView.id);
-      }
-    }
   };
 
   const handleViewTypeClick = (

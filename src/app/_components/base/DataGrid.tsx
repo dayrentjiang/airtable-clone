@@ -42,8 +42,9 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     hideColumnContextMenu,
   } = useContextMenu();
 
-  // Get selection context for keyboard shortcuts
-  const { selectedRowIds, editingCell, clearSelection } = useSelection();
+  // Get selection context for keyboard shortcuts and dimension updates
+  const { selectedRowIds, editingCell, clearSelection, updateDimensions } =
+    useSelection();
 
   // Track if we've restored scroll position for this view
   const hasRestoredScrollRef = useRef(false);
@@ -274,6 +275,11 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
   const highlightSorts = sorts;
 
   const columns = useTableColumns(table?.columns, hiddenFields);
+
+  // Push grid dimensions to SelectionProvider for keyboard navigation bounds
+  useEffect(() => {
+    updateDimensions(totalCount, columns.length);
+  }, [totalCount, columns.length, updateDimensions]);
 
   // -------------------------------------------------------------------------
   // CALCULATE SEARCH MATCH COUNT

@@ -56,17 +56,9 @@ function ToolbarButton({ icon, label, onClick }: ToolbarButtonProps) {
 
 interface ViewToolbarProps {
   onToggleSideNav: () => void;
-  tableId: string;
-  viewId: string;
-  onViewSelect: (viewId: string) => void;
 }
 
-export function ViewToolbar({
-  onToggleSideNav,
-  tableId,
-  viewId,
-  onViewSelect,
-}: ViewToolbarProps) {
+export function ViewToolbar({ onToggleSideNav }: ViewToolbarProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
@@ -78,8 +70,16 @@ export function ViewToolbar({
   const menuRef = useRef<HTMLDivElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
 
-  // Use context for view data and operations
-  const { activeView: view, views, renameView, deleteView } = useBaseContext();
+  // All state comes from context — no props needed
+  // ViewToolbar is only rendered when activeTableId && activeViewId are set (parent guards this)
+  const {
+    activeTableId: tableId,
+    activeViewId: viewId,
+    activeView: view,
+    views,
+    renameView,
+    deleteView,
+  } = useBaseContext();
 
   // Get icon for current view type
   const ViewIcon = view?.type
@@ -116,7 +116,7 @@ export function ViewToolbar({
 
   const handleCreate100k = () => {
     setIsCreating(true);
-    bulkCreate.mutate({ tableId, count: 100000 });
+    bulkCreate.mutate({ tableId: tableId!, count: 100000 });
   };
 
   const handleOpenMenu = () => {
@@ -155,7 +155,7 @@ export function ViewToolbar({
       return;
     }
     // Use context method - optimistic updates are handled by the context
-    renameView(viewId, editingName.trim());
+    renameView(viewId!, editingName.trim());
     // Close editing state immediately (optimistic)
     setIsEditing(false);
     setEditingName("");
@@ -168,15 +168,9 @@ export function ViewToolbar({
       setIsMenuOpen(false);
       return;
     }
-    // Close menu immediately (optimistic)
     setIsMenuOpen(false);
-    // Select the first remaining view before deleting
-    const remainingView = views.find((v) => v.id !== viewId);
-    if (remainingView) {
-      onViewSelect(remainingView.id);
-    }
-    // Use context method - optimistic updates are handled by the context
-    deleteView(viewId);
+    // Context handles selecting the next view in deleteViewMutation.onMutate
+    deleteView(viewId!);
   };
 
   // Focus edit input when editing starts
@@ -307,10 +301,10 @@ export function ViewToolbar({
             label={isCreating ? "Creating..." : "Create 100k rows"}
             onClick={handleCreate100k}
           />
-          <HideFieldsPopover tableId={tableId} />
-          <FilterPopover tableId={tableId} />
+          <HideFieldsPopover tableId={tableId!} />
+          <FilterPopover tableId={tableId!} />
           <ToolbarButton icon={<LayoutList size={16} />} label="Group" />
-          <SortPopover tableId={tableId} />
+          <SortPopover tableId={tableId!} />
           <ToolbarButton icon={<PaintBucket size={16} />} label="Color" />
 
           <button className="flex h-8 cursor-pointer items-center justify-center rounded p-1.5 text-gray-600 hover:bg-gray-100">

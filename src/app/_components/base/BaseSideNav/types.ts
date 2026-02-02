@@ -18,14 +18,6 @@ export interface ExtendedViewType {
   color?: string;
 }
 
-export interface BaseSideNavProps {
-  baseId: string;
-  tableId: string | null;
-  selectedViewId: string | null;
-  onViewSelect: (viewId: string) => void;
-  onTableAndViewSelect?: (tableId: string, viewId: string) => void;
-}
-
 export interface ViewContextMenuProps {
   viewId: string;
   viewName: string;

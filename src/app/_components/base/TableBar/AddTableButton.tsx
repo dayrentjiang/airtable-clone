@@ -39,22 +39,11 @@ export function AddTableButton({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [localName, setLocalName] = useState<string | null>(null);
 
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonClickedRef = useRef(false);
-
-  // Open rename modal when a new table is created
-  // Use requestAnimationFrame to wait for the new table tab to render in the DOM
-  // so that the modal can position itself correctly relative to the tab
-  useEffect(() => {
-    if (newTableId) {
-      const rafId = requestAnimationFrame(() => {
-        setIsRenameModalOpen(true);
-      });
-      return () => cancelAnimationFrame(rafId);
-    }
-  }, [newTableId]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -115,9 +104,12 @@ export function AddTableButton({
     // Use highest number + 1
     const finalName = `${baseName} ${highestNumber + 1}`;
 
+    // Open modal immediately — don't wait for parent prop roundtrip
+    setLocalName(finalName);
+    setIsRenameModalOpen(true);
+
     // Create the table with dynamic name
     onAddTable(finalName);
-    // Modal will open automatically via useEffect when newTableId changes
   };
 
   return (
@@ -256,25 +248,24 @@ export function AddTableButton({
           );
         })()}
 
-      {/* Rename table modal - opens after table is created */}
-      {newTableId && (
+      {/* Rename table modal - isRenameModalOpen controls visibility directly */}
+      {isRenameModalOpen && (
         <RenameTableModal
           isOpen={isRenameModalOpen}
           onClose={() => {
             setIsRenameModalOpen(false);
-            // Clear the newly created table tracking when modal is closed
+            setLocalName(null);
             onClearNewTable?.();
           }}
           onSave={(newName) => {
-            // Rename the newly created table
             if (newTableId && onRenameTable) {
               onRenameTable(newTableId, newName);
             }
             setIsRenameModalOpen(false);
-            // Clear the newly created table tracking after saving
+            setLocalName(null);
             onClearNewTable?.();
           }}
-          currentName={newTableName ?? "Table 1"}
+          currentName={newTableName ?? localName ?? "Table 1"}
           anchorRef={newTableTabRef ?? buttonRef}
           existingTableNames={tables.map((table) => table.name)}
         />
