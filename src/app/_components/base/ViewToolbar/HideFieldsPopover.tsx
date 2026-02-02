@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useViewConfig } from "../hooks/useViewConfig";
-import { useToolbarPopovers } from "../hooks/useToolbarPopovers";
+import { useViewConfig } from "../_state/view-config";
+import { useToolbarPopovers } from "./hooks/useToolbarPopovers";
 import { api } from "~/trpc/react";
 import { Toggle } from "../../ui/Toggle";
 import { EyeOff, Search, X, FileText, Hash, GripVertical } from "lucide-react";

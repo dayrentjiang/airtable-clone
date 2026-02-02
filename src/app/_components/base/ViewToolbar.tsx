@@ -17,14 +17,15 @@ import {
   type LucideIcon,
   TableCellsSplit,
 } from "lucide-react";
-import { api } from "~/trpc/react";
-import { SearchInput } from "./toolbar/SearchInput";
-import { FilterPopover } from "./toolbar/FilterPopover";
-import { SortPopover } from "./toolbar/SortPopover";
-import { HideFieldsPopover } from "./toolbar/HideFieldsPopover";
-import { ToolbarPopoversProvider } from "./hooks/useToolbarPopovers";
-import { ViewMenu } from "./toolbar/ViewMenu";
+import { useBaseContext } from "./_state/base-context";
+import { SearchInput } from "./ViewToolbar/SearchInput";
+import { FilterPopover } from "./ViewToolbar/FilterPopover";
+import { SortPopover } from "./ViewToolbar/SortPopover";
+import { HideFieldsPopover } from "./ViewToolbar/HideFieldsPopover";
+import { ToolbarPopoversProvider } from "./ViewToolbar/hooks/useToolbarPopovers";
+import { ViewMenu } from "./ViewToolbar/ViewMenu";
 import { Warning } from "../ui/Warning";
+import { api } from "~/trpc/react";
 
 // Map view types to their icons
 const VIEW_TYPE_ICONS: Record<string, LucideIcon> = {
@@ -55,17 +56,9 @@ function ToolbarButton({ icon, label, onClick }: ToolbarButtonProps) {
 
 interface ViewToolbarProps {
   onToggleSideNav: () => void;
-  tableId: string;
-  viewId: string;
-  onViewSelect: (viewId: string) => void;
 }
 
-export function ViewToolbar({
-  onToggleSideNav,
-  tableId,
-  viewId,
-  onViewSelect,
-}: ViewToolbarProps) {
+export function ViewToolbar({ onToggleSideNav }: ViewToolbarProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
@@ -76,112 +69,17 @@ export function ViewToolbar({
   const viewSelectorRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
-  const utils = api.useUtils();
 
-  // Fetch current view data
-  const { data: view } = api.view.getById.useQuery(
-    { id: viewId },
-    { enabled: !!viewId },
-  );
-
-  // Fetch all views for the table (to check if we can delete)
-  const { data: views = [] } = api.view.getByTableId.useQuery(
-    { tableId },
-    { enabled: !!tableId },
-  );
-
-  // Rename view mutation with optimistic update
-  const renameViewMutation = api.view.rename.useMutation({
-    onMutate: async (variables) => {
-      // Cancel outgoing refetches
-      await utils.view.getById.cancel({ id: viewId });
-      await utils.view.getByTableId.cancel({ tableId });
-
-      // Snapshot previous data
-      const previousView = utils.view.getById.getData({ id: viewId });
-      const previousViews = utils.view.getByTableId.getData({ tableId });
-
-      // Optimistically update the cache
-      if (previousView) {
-        utils.view.getById.setData(
-          { id: viewId },
-          {
-            ...previousView,
-            name: variables.name,
-          },
-        );
-      }
-
-      utils.view.getByTableId.setData({ tableId }, (old) => {
-        if (!old) return old;
-        return old.map((v) =>
-          v.id === variables.id ? { ...v, name: variables.name } : v,
-        );
-      });
-
-      // Close editing state immediately
-      setIsEditing(false);
-      setEditingName("");
-
-      return { previousView, previousViews };
-    },
-    onError: (_err, _variables, context) => {
-      // Rollback on error
-      if (context?.previousView) {
-        utils.view.getById.setData({ id: viewId }, context.previousView);
-      }
-      if (context?.previousViews) {
-        utils.view.getByTableId.setData({ tableId }, context.previousViews);
-      }
-    },
-    onSettled: () => {
-      // Sync with server
-      void utils.view.getByTableId.invalidate({ tableId });
-      void utils.view.getById.invalidate({ id: viewId });
-    },
-  });
-
-  // Delete view mutation with optimistic update
-  const deleteViewMutation = api.view.delete.useMutation({
-    onMutate: async (variables) => {
-      // Cancel outgoing refetches
-      await utils.view.getByTableId.cancel({ tableId });
-
-      // Snapshot previous data
-      const previousViews = utils.view.getByTableId.getData({ tableId });
-
-      // Optimistically remove the view from the cache
-      utils.view.getByTableId.setData({ tableId }, (old) => {
-        if (!old) return old;
-        return old.filter((v) => v.id !== variables.id);
-      });
-
-      // Close menu immediately
-      setIsMenuOpen(false);
-
-      // Select another view immediately
-      if (previousViews && previousViews.length > 1) {
-        const remainingViews = previousViews.filter(
-          (v) => v.id !== variables.id,
-        );
-        if (remainingViews.length > 0) {
-          onViewSelect(remainingViews[0]!.id);
-        }
-      }
-
-      return { previousViews };
-    },
-    onError: (_err, _variables, context) => {
-      // Rollback on error
-      if (context?.previousViews) {
-        utils.view.getByTableId.setData({ tableId }, context.previousViews);
-      }
-    },
-    onSettled: () => {
-      // Sync with server
-      void utils.view.getByTableId.invalidate({ tableId });
-    },
-  });
+  // All state comes from context — no props needed
+  // ViewToolbar is only rendered when activeTableId && activeViewId are set (parent guards this)
+  const {
+    activeTableId: tableId,
+    activeViewId: viewId,
+    activeView: view,
+    views,
+    renameView,
+    deleteView,
+  } = useBaseContext();
 
   // Get icon for current view type
   const ViewIcon = view?.type
@@ -206,12 +104,11 @@ export function ViewToolbar({
   }, [view?.name]);
 
   const bulkCreate = api.row.bulkCreate.useMutation({
-    onSuccess: async (data) => {
-      alert(data.message);
-      await utils.row.invalidate();
+    onSuccess: async () => {
+      alert("Rows created successfully!");
       setIsCreating(false);
     },
-    onError: (error) => {
+    onError: (error: { message: string }) => {
       alert(`Error: ${error.message}`);
       setIsCreating(false);
     },
@@ -219,7 +116,7 @@ export function ViewToolbar({
 
   const handleCreate100k = () => {
     setIsCreating(true);
-    bulkCreate.mutate({ tableId, count: 100000 });
+    bulkCreate.mutate({ tableId: tableId!, count: 100000 });
   };
 
   const handleOpenMenu = () => {
@@ -257,10 +154,12 @@ export function ViewToolbar({
       setShowWarning(true);
       return;
     }
-    renameViewMutation.mutate({
-      id: viewId,
-      name: editingName.trim(),
-    });
+    // Use context method - optimistic updates are handled by the context
+    renameView(viewId!, editingName.trim());
+    // Close editing state immediately (optimistic)
+    setIsEditing(false);
+    setEditingName("");
+    setShowWarning(false);
   };
 
   const handleDelete = () => {
@@ -269,7 +168,9 @@ export function ViewToolbar({
       setIsMenuOpen(false);
       return;
     }
-    deleteViewMutation.mutate({ id: viewId });
+    setIsMenuOpen(false);
+    // Context handles selecting the next view in deleteViewMutation.onMutate
+    deleteView(viewId!);
   };
 
   // Focus edit input when editing starts
@@ -400,10 +301,10 @@ export function ViewToolbar({
             label={isCreating ? "Creating..." : "Create 100k rows"}
             onClick={handleCreate100k}
           />
-          <HideFieldsPopover tableId={tableId} />
-          <FilterPopover tableId={tableId} />
+          <HideFieldsPopover tableId={tableId!} />
+          <FilterPopover tableId={tableId!} />
           <ToolbarButton icon={<LayoutList size={16} />} label="Group" />
-          <SortPopover tableId={tableId} />
+          <SortPopover tableId={tableId!} />
           <ToolbarButton icon={<PaintBucket size={16} />} label="Color" />
 
           <button className="flex h-8 cursor-pointer items-center justify-center rounded p-1.5 text-gray-600 hover:bg-gray-100">

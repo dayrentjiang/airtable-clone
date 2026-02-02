@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useViewConfig } from "../hooks/useViewConfig";
-import { useToolbarPopovers } from "../hooks/useToolbarPopovers";
+import { useViewConfig } from "../_state/view-config";
+import { useToolbarPopovers } from "./hooks/useToolbarPopovers";
 import { api } from "~/trpc/react";
 import type { Sort } from "~/server/lib/types";
 import {
@@ -114,7 +114,7 @@ function ColumnDropdown({ value, columns, onChange }: ColumnDropdownProps) {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 z-50 mt-1 w-60 rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="absolute left-0 top-full z-50 mt-1 w-60 rounded-lg border border-gray-200 bg-white shadow-lg">
           {/* Search input */}
           <div className="border-b border-gray-200 p-2">
             <input
@@ -197,14 +197,14 @@ function DirectionDropdown({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex h-7 w-30 items-center justify-between rounded border border-gray-200 bg-white px-2 text-xs text-gray-900 hover:border-gray-300 focus:border-blue-500 focus:outline-none"
+        className="w-30 flex h-7 items-center justify-between rounded border border-gray-200 bg-white px-2 text-xs text-gray-900 hover:border-gray-300 focus:border-blue-500 focus:outline-none"
       >
         <span>{selectedDirection?.label ?? "Select"}</span>
         <ChevronDown size={14} className="ml-1 shrink-0 text-gray-500" />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 z-50 mt-1 w-32 rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="absolute left-0 top-full z-50 mt-1 w-32 rounded-lg border border-gray-200 bg-white shadow-lg">
           {/* Direction list */}
           <div className="py-1">
             {directions.map((dir) => (
@@ -454,7 +454,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
         createPortal(
           <div
             ref={popoverRef}
-            className="fixed z-50 w-105 rounded-lg border border-gray-200 bg-white shadow-lg"
+            className="w-105 fixed z-50 rounded-lg border border-gray-200 bg-white shadow-lg"
             style={{ top: popoverPosition.top, left: popoverPosition.left }}
           >
             {/* Header */}
@@ -500,7 +500,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
                     {showAddSortPicker && (
                       <div
                         ref={addSortPickerRef}
-                        className="absolute top-full left-0 z-50 mt-1 w-96 rounded-lg border border-gray-200 bg-white shadow-lg"
+                        className="absolute left-0 top-full z-50 mt-1 w-96 rounded-lg border border-gray-200 bg-white shadow-lg"
                       >
                         {/* Search input */}
                         <div className="border-b border-gray-200 p-2">

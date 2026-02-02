@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useViewConfig } from "../hooks/useViewConfig";
-import { useToolbarPopovers } from "../hooks/useToolbarPopovers";
+import { useViewConfig } from "../_state/view-config";
+import { useToolbarPopovers } from "./hooks/useToolbarPopovers";
 import { api } from "~/trpc/react";
 import type { Filter, FilterOperator } from "~/server/lib/types";
 import {
@@ -162,7 +162,7 @@ function FilterRow({
             </option>
           ))}
         </select>
-        <div className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-gray-400">
+        <div className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400">
           <ChevronDown size={12} />
         </div>
       </div>
@@ -182,7 +182,7 @@ function FilterRow({
             </option>
           ))}
         </select>
-        <div className="pointer-events-none absolute top-1/2 right-1.5 -translate-y-1/2 text-gray-400">
+        <div className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400">
           <ChevronDown size={12} />
         </div>
       </div>
@@ -351,7 +351,7 @@ export function FilterPopover({ tableId }: FilterPopoverProps) {
         createPortal(
           <div
             ref={popoverRef}
-            className="fixed z-50 w-140 rounded-md border border-gray-300/60 bg-white py-2 shadow-lg"
+            className="w-140 fixed z-50 rounded-md border border-gray-300/60 bg-white py-2 shadow-lg"
             style={{ top: popoverPosition.top, left: popoverPosition.left }}
           >
             {/* Header */}

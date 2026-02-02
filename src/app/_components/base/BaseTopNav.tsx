@@ -3,11 +3,11 @@
 import { useState, useRef } from "react";
 import Image from "next/image";
 import { ChevronDown, History, ExternalLink } from "lucide-react";
+import { useBaseContext } from "./_state/base-context";
 import { RenameBaseModal } from "./BaseTopNav/RenameBaseModal";
 import { api } from "~/trpc/react";
 
 interface BaseTopNavProps {
-  baseName: string;
   baseId: string;
   onBaseNameClick?: () => void;
 }
@@ -28,11 +28,11 @@ function BaseIcon() {
 
 const tabs = ["Data", "Automations", "Interfaces", "Forms"] as const;
 
-export function BaseTopNav({
-  baseName,
-  baseId,
-  onBaseNameClick,
-}: BaseTopNavProps) {
+export function BaseTopNav({ baseId, onBaseNameClick }: BaseTopNavProps) {
+  // Get base name from context instead of props
+  const { base } = useBaseContext();
+  const baseName = base?.name ?? "Untitled Base";
+
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const baseNameButtonRef = useRef<HTMLButtonElement>(null);
   const utils = api.useUtils();
@@ -132,7 +132,7 @@ export function BaseTopNav({
           </button>
 
           {/* Share button */}
-          <button className="rounded-md bg-cyan-700 px-2.5 py-1.5 text-xs font-bold text-white shadow-sm hover:scale-101 hover:cursor-pointer md:px-3.5">
+          <button className="hover:scale-101 rounded-md bg-cyan-700 px-2.5 py-1.5 text-xs font-bold text-white shadow-sm hover:cursor-pointer md:px-3.5">
             Share
           </button>
         </div>

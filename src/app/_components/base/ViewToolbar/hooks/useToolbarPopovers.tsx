@@ -1,3 +1,10 @@
+/**
+ * Toolbar Popovers Hook
+ * 
+ * Simple context to manage which toolbar popover is currently open.
+ * Ensures only one popover can be open at a time.
+ */
+
 "use client";
 
 import {
@@ -56,10 +63,12 @@ export function ToolbarPopoversProvider({
 
 export function useToolbarPopovers() {
   const context = useContext(ToolbarPopoversContext);
+
   if (!context) {
     throw new Error(
       "useToolbarPopovers must be used within ToolbarPopoversProvider",
     );
   }
+
   return context;
 }

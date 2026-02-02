@@ -38,20 +38,21 @@ interface SelectionContextValue {
   selectedColumns: Set<number>;
   totalRows: number;
   totalColumns: number;
+  updateDimensions: (totalRows: number, totalColumns: number) => void;
 }
 
 const SelectionContext = createContext<SelectionContextValue | null>(null);
 
 interface SelectionProviderProps {
   children: ReactNode;
-  totalRows: number;
-  totalColumns: number;
+  totalRows?: number;
+  totalColumns?: number;
 }
 
 export function SelectionProvider({
   children,
-  totalRows,
-  totalColumns,
+  totalRows: initialTotalRows = 0,
+  totalColumns: initialTotalColumns = 1,
 }: SelectionProviderProps) {
   const [selectedCell, setSelectedCell] = useState<CellPosition | null>(null);
   const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
@@ -59,6 +60,16 @@ export function SelectionProvider({
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
   const [selectedColumns, setSelectedColumns] = useState<Set<number>>(
     new Set(),
+  );
+  const [totalRows, setTotalRows] = useState(initialTotalRows);
+  const [totalColumns, setTotalColumns] = useState(initialTotalColumns);
+
+  const updateDimensions = useCallback(
+    (newTotalRows: number, newTotalColumns: number) => {
+      setTotalRows(newTotalRows);
+      setTotalColumns(newTotalColumns);
+    },
+    [],
   );
 
   const selectCell = useCallback((position: CellPosition | null) => {
@@ -364,6 +375,7 @@ export function SelectionProvider({
         selectedColumns,
         totalRows,
         totalColumns,
+        updateDimensions,
       }}
     >
       {children}
