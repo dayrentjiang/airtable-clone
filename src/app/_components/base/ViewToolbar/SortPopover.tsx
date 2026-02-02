@@ -114,7 +114,7 @@ function ColumnDropdown({ value, columns, onChange }: ColumnDropdownProps) {
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-60 rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="absolute top-full left-0 z-50 mt-1 w-60 rounded-lg border border-gray-200 bg-white shadow-lg">
           {/* Search input */}
           <div className="border-b border-gray-200 p-2">
             <input
@@ -197,14 +197,14 @@ function DirectionDropdown({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-30 flex h-7 items-center justify-between rounded border border-gray-200 bg-white px-2 text-xs text-gray-900 hover:border-gray-300 focus:border-blue-500 focus:outline-none"
+        className="flex h-7 w-30 items-center justify-between rounded border border-gray-200 bg-white px-2 text-xs text-gray-900 hover:border-gray-300 focus:border-blue-500 focus:outline-none"
       >
         <span>{selectedDirection?.label ?? "Select"}</span>
         <ChevronDown size={14} className="ml-1 shrink-0 text-gray-500" />
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-32 rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="absolute top-full left-0 z-50 mt-1 w-32 rounded-lg border border-gray-200 bg-white shadow-lg">
           {/* Direction list */}
           <div className="py-1">
             {directions.map((dir) => (
@@ -312,6 +312,10 @@ export function SortPopover({ tableId }: SortPopoverProps) {
   const [showAddSortPicker, setShowAddSortPicker] = useState(false);
   const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
   const [autoSort, setAutoSort] = useState(true);
+  
+  // Track initial sorts when popover opens to detect actual changes
+  const initialSortsRef = useRef<string>("");
+  
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const addSortPickerRef = useRef<HTMLDivElement>(null);
@@ -321,7 +325,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
   const isOpen = isPopoverOpen("sort");
 
   // Get sort state directly from context (live updates!)
-  const { sorts, addSort, updateSort, removeSort, saveConfig } =
+  const { sorts, addSort, updateSort, removeSort, saveConfig, isDirty } =
     useViewConfig();
 
   // Fetch columns for this table
@@ -354,6 +358,36 @@ export function SortPopover({ tableId }: SortPopoverProps) {
     }
   }, [isOpen]);
 
+  // Capture initial sorts only when popover opens (not on every sort change)
+  useEffect(() => {
+    if (isOpen && !initialSortsRef.current) {
+      // Only set initial state once when popover opens
+      initialSortsRef.current = JSON.stringify(sorts);
+    } else if (!isOpen) {
+      // Reset when popover closes
+      initialSortsRef.current = "";
+    }
+  }, [isOpen, sorts]);
+
+  // Auto-save sorts with debouncing (500ms after last change)
+  useEffect(() => {
+    // Only auto-save if popover is open AND sorts have actually changed
+    if (!isOpen) return;
+    
+    const currentSorts = JSON.stringify(sorts);
+    const hasChanged = currentSorts !== initialSortsRef.current;
+    
+    if (!hasChanged) return; // Guard: Don't save if nothing changed
+
+    const timer = setTimeout(() => {
+      void saveConfig({ sorts });
+      // Update initial state after saving
+      initialSortsRef.current = currentSorts;
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [sorts, isOpen, saveConfig]);
+
   // Close popover when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -363,8 +397,14 @@ export function SortPopover({ tableId }: SortPopoverProps) {
         buttonRef.current &&
         !buttonRef.current.contains(event.target as Node)
       ) {
-        // Save config when closing popover
-        void saveConfig({ sorts });
+        // Save immediately when closing if there are unsaved changes
+        const currentSorts = JSON.stringify(sorts);
+        const hasChanged = currentSorts !== initialSortsRef.current;
+        
+        if (hasChanged) {
+          void saveConfig({ sorts });
+        }
+        
         setOpenPopover(null);
         setShowAddSortPicker(false);
       }
@@ -454,7 +494,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
         createPortal(
           <div
             ref={popoverRef}
-            className="w-105 fixed z-50 rounded-lg border border-gray-200 bg-white shadow-lg"
+            className="fixed z-50 w-105 rounded-lg border border-gray-200 bg-white shadow-lg"
             style={{ top: popoverPosition.top, left: popoverPosition.left }}
           >
             {/* Header */}
@@ -500,7 +540,7 @@ export function SortPopover({ tableId }: SortPopoverProps) {
                     {showAddSortPicker && (
                       <div
                         ref={addSortPickerRef}
-                        className="absolute left-0 top-full z-50 mt-1 w-96 rounded-lg border border-gray-200 bg-white shadow-lg"
+                        className="absolute top-full left-0 z-50 mt-1 w-96 rounded-lg border border-gray-200 bg-white shadow-lg"
                       >
                         {/* Search input */}
                         <div className="border-b border-gray-200 p-2">

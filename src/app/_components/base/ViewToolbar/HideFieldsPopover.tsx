@@ -29,6 +29,10 @@ interface HideFieldsPopoverProps {
 export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
+  
+  // Track initial hidden fields when popover opens to detect actual changes
+  const initialHiddenFieldsRef = useRef<string>("");
+  
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -37,7 +41,7 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
   const isOpen = isPopoverOpen("hideFields");
 
   // Get hidden fields state from context
-  const { hiddenFields, toggleFieldVisibility, setHiddenFields, saveConfig } =
+  const { hiddenFields, toggleFieldVisibility, setHiddenFields, saveConfig, isDirty } =
     useViewConfig();
 
   // Fetch columns for this table
@@ -67,6 +71,36 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
     }
   }, [isOpen]);
 
+  // Capture initial hidden fields only when popover opens (not on every change)
+  useEffect(() => {
+    if (isOpen && !initialHiddenFieldsRef.current) {
+      // Only set initial state once when popover opens
+      initialHiddenFieldsRef.current = JSON.stringify(hiddenFields);
+    } else if (!isOpen) {
+      // Reset when popover closes
+      initialHiddenFieldsRef.current = "";
+    }
+  }, [isOpen, hiddenFields]);
+
+  // Auto-save hidden fields with debouncing (500ms after last change)
+  useEffect(() => {
+    // Only auto-save if popover is open AND hidden fields have actually changed
+    if (!isOpen) return;
+    
+    const currentHiddenFields = JSON.stringify(hiddenFields);
+    const hasChanged = currentHiddenFields !== initialHiddenFieldsRef.current;
+    
+    if (!hasChanged) return; // Guard: Don't save if nothing changed
+
+    const timer = setTimeout(() => {
+      void saveConfig({ hiddenFields });
+      // Update initial state after saving
+      initialHiddenFieldsRef.current = currentHiddenFields;
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [hiddenFields, isOpen, saveConfig]);
+
   // Close popover when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -76,8 +110,14 @@ export function HideFieldsPopover({ tableId }: HideFieldsPopoverProps) {
         buttonRef.current &&
         !buttonRef.current.contains(event.target as Node)
       ) {
-        // Save config when closing popover
-        void saveConfig({ hiddenFields });
+        // Save immediately when closing if there are unsaved changes
+        const currentHiddenFields = JSON.stringify(hiddenFields);
+        const hasChanged = currentHiddenFields !== initialHiddenFieldsRef.current;
+        
+        if (hasChanged) {
+          void saveConfig({ hiddenFields });
+        }
+        
         setOpenPopover(null);
       }
     }
