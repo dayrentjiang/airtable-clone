@@ -4,7 +4,7 @@ import { Plus } from "lucide-react";
 import { api } from "~/trpc/react";
 import { generateRowId } from "~/lib/id-generator";
 import { useSelection } from "../hooks/useSelection";
-import { useWindowedRowsContext } from "../hooks/useWindowedRowsContext";
+import { useDataGridContext } from "../_state";
 
 interface AddRowButtonProps {
   tableId: string;
@@ -13,7 +13,7 @@ interface AddRowButtonProps {
 
 export function AddRowButton({ tableId }: AddRowButtonProps) {
   const { selectCell } = useSelection();
-  const { addOptimisticRow, totalCount } = useWindowedRowsContext();
+  const { addOptimisticRow, totalCount } = useDataGridContext();
 
   const createRow = api.row.create.useMutation({
     // Optimistic update: Add row to UI immediately

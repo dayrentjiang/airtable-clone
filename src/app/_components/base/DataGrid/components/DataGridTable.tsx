@@ -1,61 +1,47 @@
 "use client";
 
-import { type Table } from "@tanstack/react-table";
-import { type VirtualItem } from "@tanstack/react-virtual";
 import { DataGridHeader } from "./DataGridHeader";
 import { AddRowButton } from "./AddRowButton";
 import { RowNumberCell } from "./RowNumberCell";
 import { DirectEditableCell } from "./DirectEditableCell";
 import { SkeletonRow } from "./SkeletonRow";
-import type { RowData } from "../hooks/useTableColumns";
 import { useSelection } from "../hooks/useSelection";
-import type { Filter, Sort } from "~/server/lib/types";
+import { useDataGridContext } from "../_state";
+import { useViewConfig } from "../../_state/view-config";
 
-interface DataGridTableProps {
-  table: Table<RowData>;
-  tableId: string;
-  viewId: string;
-  virtualRows: VirtualItem[];
-  paddingTop: number;
-  paddingBottom: number;
-  columnCount: number;
-  tableWidth: number;
-  rowsByIndex: Map<number, RowData>; // Map of loaded rows by index
-  totalCount: number; // Total rows in database (for scrollbar sizing)
-  filters: Filter[];
-  sorts: Sort[];
-  searchTerm?: string;
-}
+/**
+ * DATAGRID TABLE
+ *
+ * Renders the table with header and rows.
+ * All props now come from context - no more prop drilling!
+ */
+export function DataGridTable() {
+  // Get all data from context
+  const {
+    tableInstance,
+    tableId,
+    viewId,
+    virtualRows,
+    paddingTop,
+    paddingBottom,
+    tableWidth,
+    rowsByIndex,
+  } = useDataGridContext();
 
-export function DataGridTable({
-  table,
-  tableId,
-  viewId,
-  virtualRows,
-  paddingTop,
-  paddingBottom,
-  columnCount,
-  tableWidth,
-  rowsByIndex,
-  filters,
-  sorts,
-  searchTerm,
-}: DataGridTableProps) {
-  const columns = table.getAllColumns();
+  // Get view config for highlighting
+  const { filters, sorts, search } = useViewConfig();
+
+  // Get selection state
   const { isRowSelected, isColumnSelected } = useSelection();
+
+  const columns = tableInstance.getAllColumns();
 
   return (
     <table
       className="border-separate border-spacing-0"
       style={{ tableLayout: "fixed", width: tableWidth }}
     >
-      <DataGridHeader
-        headerGroups={table.getHeaderGroups()}
-        tableId={tableId}
-        filters={filters}
-        sorts={sorts}
-        rowsByIndex={rowsByIndex}
-      />
+      <DataGridHeader />
 
       <tbody className="bg-white">
         {/* Top padding for virtualization */}
@@ -142,7 +128,7 @@ export function DataGridTable({
                         columnIndex={cellIndex}
                         columnType={columnType}
                         value={cellValue}
-                        searchTerm={searchTerm}
+                        searchTerm={search}
                         filters={filters}
                         sorts={sorts}
                       />
@@ -157,7 +143,7 @@ export function DataGridTable({
           return (
             <SkeletonRow
               key={`loading-${virtualRow.index}`}
-              columnCount={columnCount}
+              columnCount={columns.length}
               rowHeight={virtualRow.size}
               columns={columns}
               index={virtualRow.index}
@@ -174,7 +160,7 @@ export function DataGridTable({
 
         {/* Add row button */}
         <tr>
-          <td colSpan={columnCount} className="border-r border-gray-200 p-0">
+          <td colSpan={columns.length} className="border-r border-gray-200 p-0">
             <AddRowButton tableId={tableId} viewId={viewId} />
           </td>
         </tr>

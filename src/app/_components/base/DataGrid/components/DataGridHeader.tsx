@@ -1,27 +1,24 @@
 "use client";
 
 import { useRef, useMemo } from "react";
-import { type HeaderGroup, flexRender } from "@tanstack/react-table";
-import type { RowData } from "../hooks/useTableColumns";
+import { flexRender } from "@tanstack/react-table";
 import { useSelection } from "../hooks/useSelection";
 import { useContextMenu } from "../hooks/useContextMenu";
-import type { Filter, Sort } from "~/server/lib/types";
+import { useDataGridContext } from "../_state";
+import { useViewConfig } from "../../_state/view-config";
 
-interface DataGridHeaderProps {
-  headerGroups: HeaderGroup<RowData>[];
-  tableId: string;
-  filters: Filter[];
-  sorts: Sort[];
-  rowsByIndex: Map<number, RowData>; // All loaded rows for select all functionality
-}
+/**
+ * DATAGRID HEADER
+ *
+ * Renders the table header row with column headers.
+ * All data now comes from context - no props needed!
+ */
+export function DataGridHeader() {
+  // Get data from context
+  const { tableInstance, tableId, rowsByIndex } = useDataGridContext();
+  const { filters, sorts } = useViewConfig();
 
-export function DataGridHeader({
-  headerGroups,
-  tableId,
-  filters,
-  sorts,
-  rowsByIndex,
-}: DataGridHeaderProps) {
+  // Get selection state
   const {
     isColumnSelected,
     toggleColumnSelection,
@@ -29,8 +26,11 @@ export function DataGridHeader({
     selectAllRows,
     deselectAllRows,
   } = useSelection();
+  
   const { showColumnContextMenu } = useContextMenu();
   const headerRefs = useRef<Map<string, HTMLTableHeaderCellElement>>(new Map());
+
+  const headerGroups = tableInstance.getHeaderGroups();
 
   // Create a set of column IDs that have filters applied
   const filteredColumnIds = useMemo(() => {

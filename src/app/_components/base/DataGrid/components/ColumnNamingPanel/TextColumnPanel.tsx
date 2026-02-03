@@ -111,7 +111,7 @@ export function TextColumnPanel({
   return (
     <div
       ref={panelRef}
-      className={`${disablePositioning ? '' : 'absolute top-5 mt-1'} ${disablePositioning ? '' : (position === "left" ? "right-0" : "left-0")} z-50 w-sm rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-lg`}
+      className={`${disablePositioning ? "" : "absolute top-5 mt-1"} ${disablePositioning ? "" : position === "left" ? "right-0" : "left-0"} z-50 w-sm rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-lg`}
       onClick={(e) => e.stopPropagation()}
     >
       {/* Field name input - FUNCTIONAL */}

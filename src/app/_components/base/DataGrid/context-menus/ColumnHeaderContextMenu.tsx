@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "~/trpc/react";
-import { TextColumnPanel } from "./ColumnNamingPanel/TextColumnPanel";
-import { NumberColumnPanel } from "./ColumnNamingPanel/NumberColumnPanel";
-import type { FieldType } from "./ColumnNamingPanel/FieldTypeSelector";
+import { TextColumnPanel } from "../components/ColumnNamingPanel/TextColumnPanel";
+import { NumberColumnPanel } from "../components/ColumnNamingPanel/NumberColumnPanel";
+import type { FieldType } from "../components/ColumnNamingPanel/FieldTypeSelector";
 import {
   Pencil,
   Copy,

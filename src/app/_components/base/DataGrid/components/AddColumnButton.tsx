@@ -27,11 +27,8 @@ import {
 } from "lucide-react";
 import { api } from "~/trpc/react";
 import { useSelection } from "../hooks/useSelection";
-import { TextColumnPanel, NumberColumnPanel } from "./ColumnNamingPanel/index";
-
-interface AddColumnButtonProps {
-  tableId: string;
-}
+import { TextColumnPanel, NumberColumnPanel } from "./ColumnNamingPanel/";
+import { useDataGridContext } from "../_state";
 
 interface FieldType {
   icon: React.ComponentType<{ className?: string }>;
@@ -45,6 +42,19 @@ interface FieldType {
 interface FieldSection {
   title: string;
   fields: FieldType[];
+}
+
+/**
+ * ADD COLUMN BUTTON
+ *
+ * Button to add a new column to the table.
+ * Gets tableId from context instead of props!
+ */
+export function AddColumnButton() {
+  // Get tableId from context
+  const { tableId } = useDataGridContext();
+  
+  return <AddColumnButtonImpl tableId={tableId} />;
 }
 
 const FIELD_SECTIONS: FieldSection[] = [
@@ -124,7 +134,9 @@ function FieldOption({
   );
 }
 
-export function AddColumnButton({ tableId }: AddColumnButtonProps) {
+// Rest of the component implementation moved below
+// (The state and logic from the duplicate function)
+function AddColumnButtonImpl({ tableId }: { tableId: string }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNamingOpen, setIsNamingOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<"TEXT" | "NUMBER" | null>(

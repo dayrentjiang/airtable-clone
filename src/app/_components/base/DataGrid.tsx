@@ -1,40 +1,72 @@
 "use client";
 
-import { useRef, useEffect, useMemo, useState } from "react";
-import { useReactTable, getCoreRowModel } from "@tanstack/react-table";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { api } from "~/trpc/react";
+import { useEffect, useRef } from "react";
 import { DataGridTable } from "./DataGrid/components/DataGridTable";
 import { AddColumnButton } from "./DataGrid/components/AddColumnButton";
-import {
-  useTableColumns,
-  type RowData,
-} from "./DataGrid/hooks/useTableColumns";
-import { useWindowedRows } from "./DataGrid/hooks/useWindowedRows";
-import { WindowedRowsProvider } from "./DataGrid/hooks/useWindowedRowsContext";
-import { useViewConfig } from "./_state/view-config";
-import { CellContextMenu } from "./DataGrid/components/CellContextMenu";
-import { ColumnHeaderContextMenu } from "./DataGrid/components/ColumnHeaderContextMenu";
+import { CellContextMenu } from "./DataGrid/context-menus/CellContextMenu";
+import { ColumnHeaderContextMenu } from "./DataGrid/context-menus/ColumnHeaderContextMenu";
 import { useContextMenu } from "./DataGrid/hooks/useContextMenu";
-import { ROW_HEIGHT, OVERSCAN_COUNT } from "./DataGrid/constants";
+import { useSelection } from "./DataGrid/hooks/useSelection";
+import { useViewConfig } from "./_state/view-config";
+import {
+  DataGridContextProvider,
+  useDataGridContext,
+} from "./DataGrid/_state";
 
-// Re-export SelectionProvider and ContextMenuProvider for use in parent components
+// Re-export providers and hooks for use in parent components
 export { SelectionProvider, useSelection } from "./DataGrid/hooks/useSelection";
 export { ContextMenuProvider } from "./DataGrid/hooks/useContextMenu";
 
-// Import useSelection for internal use
-import { useSelection } from "./DataGrid/hooks/useSelection";
-
-// Operators that don't require a value
-const NO_VALUE_OPERATORS = ["is_empty", "is_not_empty"];
-
 interface DataGridProps {
   tableId: string;
-  viewId: string; // Required - tables must have at least 1 view
+  viewId: string;
 }
 
+/**
+ * DATAGRID - Main Component
+ *
+ * This is the entry point. It wraps everything with DataGridContextProvider
+ * and delegates to DataGridInner which consumes the context.
+ *
+ * Pattern:
+ * DataGrid (wrapper) -> Provider -> DataGridInner (consumer)
+ */
 export function DataGrid({ tableId, viewId }: DataGridProps) {
-  const tableContainerRef = useRef<HTMLDivElement>(null);
+  return (
+    <DataGridContextProvider tableId={tableId} viewId={viewId}>
+      <DataGridInner />
+    </DataGridContextProvider>
+  );
+}
+
+/**
+ * DATAGRID INNER
+ *
+ * The actual implementation that consumes context.
+ * This component is simple because all logic lives in DataGridContext.
+ */
+function DataGridInner() {
+  // -------------------------------------------------------------------------
+  // CONTEXT
+  // -------------------------------------------------------------------------
+
+  // Get all grid state from context
+  const {
+    table,
+    tableContainerRef,
+    isLoadingTable,
+    isLoadingRows,
+    totalCount,
+    tableWidth,
+    viewId,
+    clearRowValues,
+    columns,
+  } = useDataGridContext();
+
+  // Get view config state
+  const { isConfigLoaded } = useViewConfig();
+
+  // Get context menu state
   const {
     contextMenuState,
     columnContextMenuState,
@@ -42,92 +74,18 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     hideColumnContextMenu,
   } = useContextMenu();
 
-  // Get selection context for keyboard shortcuts and dimension updates
+  // Get selection state for keyboard shortcuts
   const { selectedRowIds, editingCell, clearSelection, updateDimensions } =
     useSelection();
-
-  // Track if we've restored scroll position for this view
-  const hasRestoredScrollRef = useRef(false);
-
-  // -------------------------------------------------------------------------
-  // GET LIVE CONFIG FROM CONTEXT
-  // -------------------------------------------------------------------------
-  // This is the "live" state that user is editing (search, filters, sorts)
-  // Changes here immediately affect the query below
-  const {
-    search,
-    filters,
-    sorts,
-    hiddenFields,
-    setSearchMatchCount,
-    isConfigLoaded,
-  } = useViewConfig();
-
-  // Fetch table with columns - refetch on mount
-  const { data: table, isLoading: tableLoading } = api.table.getById.useQuery(
-    { id: tableId },
-    {
-      refetchOnMount: true,
-      refetchOnWindowFocus: false,
-    },
-  );
-
-  // -------------------------------------------------------------------------
-  // CLEAR ROW VALUES MUTATION WITH OPTIMISTIC UI
-  // -------------------------------------------------------------------------
-  const utils = api.useUtils();
-
-  // Track which rows are being cleared (for optimistic UI)
-  // Use a ref to accumulate all cleared rows across multiple deletions
-  const [clearingRowIds, setClearingRowIds] = useState<Set<string>>(new Set());
-  const allClearedRowIdsRef = useRef<Set<string>>(new Set());
-
-  const clearRowValuesMutation = api.row.clearRowValues.useMutation({
-    onMutate: async ({ ids }) => {
-      // Cancel any outgoing refetches to prevent race conditions
-      await utils.row.infiniteWithView.cancel();
-
-      // Add to accumulated set
-      ids.forEach((id) => allClearedRowIdsRef.current.add(id));
-
-      // Update state with all accumulated cleared rows
-      setClearingRowIds(new Set(allClearedRowIdsRef.current));
-
-      // Don't invalidate here - let optimistic state handle the UI
-    },
-    onError: (_error, { ids }) => {
-      // Remove these specific rows from cleared set on error
-      ids.forEach((id) => allClearedRowIdsRef.current.delete(id));
-      setClearingRowIds(new Set(allClearedRowIdsRef.current));
-
-      // Invalidate to refetch correct data
-      void utils.row.infiniteWithView.invalidate();
-      invalidate();
-    },
-    onSettled: async () => {
-      // After mutation completes (success or error), invalidate to sync with server
-      await utils.row.infiniteWithView.invalidate();
-      invalidate();
-
-      // The effect will clear clearingRowIds once it sees the data is actually cleared
-    },
-  });
-
-  // Store mutation in ref for use in event handlers
-  const clearRowValuesMutationRef = useRef(clearRowValuesMutation);
-  useEffect(() => {
-    clearRowValuesMutationRef.current = clearRowValuesMutation;
-  }, [clearRowValuesMutation]);
 
   // -------------------------------------------------------------------------
   // KEYBOARD HANDLER: Delete/Backspace to clear selected rows
   // -------------------------------------------------------------------------
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle if we have selected rows and not editing a cell
       if (selectedRowIds.size === 0 || editingCell) return;
 
-      // Skip if user is typing in an input, textarea, or contenteditable element
       const target = e.target as HTMLElement;
       if (
         target.tagName === "INPUT" ||
@@ -137,276 +95,26 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
         return;
       }
 
-      // Handle Backspace or Delete key
       if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();
-
-        // Convert Set to Array for mutation
         const rowIds = Array.from(selectedRowIds);
-
-        // Clear the row values using ref
-        clearRowValuesMutationRef.current.mutate({ ids: rowIds });
-
-        // Clear selection after clearing values
+        void clearRowValues(rowIds);
         clearSelection();
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [selectedRowIds, editingCell, clearSelection]); // Remove clearRowValuesMutation from deps
-
-  // -------------------------------------------------------------------------
-  // FETCH ROWS WITH WINDOWED OFFSET-BASED PAGINATION
-  // -------------------------------------------------------------------------
-  // This uses offset-based fetching instead of cursor-based infinite scroll.
-  // Benefits:
-  // - User can scroll to ANY position immediately (e.g., row 90,000)
-  // - Scrollbar reflects true dataset size from the start
-  // - Multiple windows are cached for smooth bi-directional scrolling
-  // - All filtering/sorting still happens in PostgreSQL
-
-  // Filter out incomplete filters (no value when needed)
-  // This prevents query from running when user clicks "Add condition"
-  const completeFilters = useMemo(() => {
-    return filters.filter((f) => {
-      // Operators like "is empty" don't need a value
-      if (NO_VALUE_OPERATORS.includes(f.operator)) {
-        return true;
-      }
-      // Other operators need a value to be complete
-      return f.value !== undefined && f.value !== null && f.value !== "";
-    });
-  }, [filters]);
-
-  // Use windowed rows hook for offset-based fetching
-  const {
-    rowsByIndex,
-    totalCount,
-    isLoading: rowsLoading,
-    addOptimisticRow,
-    invalidate,
-  } = useWindowedRows(
-    {
-      tableId,
-      viewId,
-      filters: completeFilters.length > 0 ? completeFilters : [],
-      sorts: sorts.length > 0 ? sorts : [],
-      search: search || undefined,
-      enabled: isConfigLoaded,
-    },
-    tableContainerRef,
-  );
-
-  // Convert rowsByIndex map to array for components that need it
-  // Apply optimistic updates for rows being cleared
-  const rows = useMemo(() => {
-    const arr: RowData[] = [];
-    for (const [index, row] of rowsByIndex.entries()) {
-      // If this row is being cleared optimistically, show it with empty data
-      if (clearingRowIds.has(row.id)) {
-        arr[index] = { ...row, data: {} };
-      } else {
-        arr[index] = row;
-      }
-    }
-    return arr;
-  }, [rowsByIndex, clearingRowIds]);
-
-  // Create optimistically updated rowsByIndex map for rendering
-  const optimisticRowsByIndex = useMemo(() => {
-    // If no rows are being cleared, return original map
-    if (clearingRowIds.size === 0) {
-      return rowsByIndex;
-    }
-
-    // Create a new map with optimistic updates
-    const newMap = new Map<number, RowData>();
-    for (const [index, row] of rowsByIndex.entries()) {
-      if (clearingRowIds.has(row.id)) {
-        // Clear the data for this row
-        newMap.set(index, { ...row, data: {} });
-      } else {
-        newMap.set(index, row);
-      }
-    }
-    return newMap;
-  }, [rowsByIndex, clearingRowIds]);
-
-  // -------------------------------------------------------------------------
-  // AUTO-CLEAR OPTIMISTIC STATE WHEN DATA IS CONFIRMED CLEARED
-  // -------------------------------------------------------------------------
-  useEffect(() => {
-    if (clearingRowIds.size === 0) return;
-
-    // Build a map of visible row IDs for faster lookup
-    const visibleRowIds = new Map<string, RowData>();
-    for (const row of rowsByIndex.values()) {
-      visibleRowIds.set(row.id, row);
-    }
-
-    // Check which clearing rows are confirmed cleared
-    const confirmedCleared = new Set<string>();
-
-    for (const rowId of clearingRowIds) {
-      const row = visibleRowIds.get(rowId);
-
-      if (row) {
-        // Row is visible - check if data is empty
-        const hasData = Object.keys(row.data).length > 0;
-        if (!hasData) {
-          // This row is confirmed cleared
-          confirmedCleared.add(rowId);
-        }
-      }
-      // If row is not visible, we can't confirm it yet - keep in clearing state
-    }
-
-    // Remove confirmed cleared rows from the accumulated set
-    if (confirmedCleared.size > 0) {
-      confirmedCleared.forEach((id) => allClearedRowIdsRef.current.delete(id));
-      setClearingRowIds(new Set(allClearedRowIdsRef.current));
-    }
-  }, [rowsByIndex, clearingRowIds]);
-
-  // Build column definitions (filtered by hiddenFields from context)
-  const highlightSearch = search;
-  const highlightFilters = completeFilters;
-  const highlightSorts = sorts;
-
-  const columns = useTableColumns(table?.columns, hiddenFields);
-
-  // Push grid dimensions to SelectionProvider for keyboard navigation bounds
-  useEffect(() => {
-    updateDimensions(totalCount, columns.length);
-  }, [totalCount, columns.length, updateDimensions]);
-
-  // -------------------------------------------------------------------------
-  // CALCULATE SEARCH MATCH COUNT
-  // -------------------------------------------------------------------------
-  // Count how many cells match the search term in loaded rows
-  // This updates the "X of Y" counter in the search input
-  useEffect(() => {
-    if (!search || !table?.columns) {
-      setSearchMatchCount(0);
-      return;
-    }
-
-    const searchLower = search.toLowerCase();
-    let matchCount = 0;
-
-    // Get visible column IDs (exclude hidden)
-    const visibleColumnIds = table.columns
-      .filter((col) => !hiddenFields.includes(col.id))
-      .map((col) => col.id);
-
-    // Count matches across all loaded rows and visible columns
-    for (const row of rowsByIndex.values()) {
-      for (const colId of visibleColumnIds) {
-        const cellValue = row.data[colId];
-        if (cellValue != null) {
-          const stringValue = String(cellValue).toLowerCase();
-          if (stringValue.includes(searchLower)) {
-            matchCount++;
-          }
-        }
-      }
-    }
-
-    setSearchMatchCount(matchCount);
-  }, [search, rowsByIndex, table?.columns, hiddenFields, setSearchMatchCount]);
-
-  // Create table instance
-  const tableInstance = useReactTable({
-    data: rows,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
-
-  const { rows: tableRows } = tableInstance.getRowModel();
-
-  // Virtual scrolling setup - use totalCount to reflect true table size
-  // This makes the scrollbar represent all rows, not just loaded ones
-  // Use Math.max to handle optimistic updates where rows.length may exceed totalCount
-  const virtualRowCount = Math.max(totalCount, tableRows.length);
-
-  const rowVirtualizer = useVirtualizer({
-    count: virtualRowCount,
-    getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => ROW_HEIGHT,
-    overscan: OVERSCAN_COUNT,
-    measureElement:
-      typeof window !== "undefined" && !navigator.userAgent.includes("Firefox")
-        ? (element) => element.getBoundingClientRect().height
-        : undefined, // Measure actual heights for better accuracy (except Firefox due to performance)
-  });
-
-  // Force virtualizer to recalculate when filters/sorts change
-  const filtersKey = useMemo(
-    () => JSON.stringify(completeFilters),
-    [completeFilters],
-  );
-  const sortsKey = useMemo(() => JSON.stringify(sorts), [sorts]);
-
-  useEffect(() => {
-    // Force a complete recalculation
-    rowVirtualizer.measure();
-
-    // Force a micro-scroll to trigger virtualizer update if at top
-    if (tableContainerRef.current) {
-      const currentScroll = tableContainerRef.current.scrollTop;
-      if (currentScroll === 0) {
-        tableContainerRef.current.scrollTop = 1;
-        setTimeout(() => {
-          if (tableContainerRef.current) {
-            tableContainerRef.current.scrollTop = 0;
-          }
-        }, 0);
-      }
-    }
-  }, [filtersKey, sortsKey, rowVirtualizer, virtualRowCount, rowsByIndex.size]);
-
-  const virtualRows = rowVirtualizer.getVirtualItems();
-  const totalSize = rowVirtualizer.getTotalSize();
-
-  // Track previous rowsByIndex size to detect when data arrives after filter/sort
-  const prevRowsByIndexSizeRef = useRef(0);
-  useEffect(() => {
-    const currentSize = rowsByIndex.size;
-    const prevSize = prevRowsByIndexSizeRef.current;
-
-    // If we went from 0 to having data, force virtualizer update
-    if (prevSize === 0 && currentSize > 0) {
-      // Force re-measure
-      rowVirtualizer.measure();
-
-      // Force re-render by triggering a micro-scroll
-      if (tableContainerRef.current?.scrollTop === 0) {
-        requestAnimationFrame(() => {
-          if (tableContainerRef.current) {
-            tableContainerRef.current.scrollTop = 0.1;
-            requestAnimationFrame(() => {
-              if (tableContainerRef.current) {
-                tableContainerRef.current.scrollTop = 0;
-              }
-            });
-          }
-        });
-      }
-    }
-
-    prevRowsByIndexSizeRef.current = currentSize;
-  }, [rowsByIndex.size, virtualRowCount, rowVirtualizer]);
-
-  // NOTE: rowsByIndex now comes from useWindowedRows hook
-  // No scroll clamping needed - windowed fetching handles any scroll position
+  }, [selectedRowIds, editingCell, clearSelection, clearRowValues]);
 
   // -------------------------------------------------------------------------
   // RESTORE SCROLL POSITION FROM LOCALSTORAGE
   // -------------------------------------------------------------------------
-  // When switching views, restore the scroll position to where user was
+
+  const hasRestoredScrollRef = useRef(false);
+
   useEffect(() => {
-    if (rowsByIndex.size === 0 || hasRestoredScrollRef.current) return;
+    if (totalCount === 0 || hasRestoredScrollRef.current) return;
 
     const storageKey = `airtable-scroll-${viewId}`;
     const savedScrollTop = localStorage.getItem(storageKey);
@@ -414,7 +122,6 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     if (savedScrollTop && tableContainerRef.current) {
       const scrollTop = parseInt(savedScrollTop, 10);
 
-      // Use setTimeout to ensure DOM is ready
       setTimeout(() => {
         if (tableContainerRef.current) {
           tableContainerRef.current.scrollTop = scrollTop;
@@ -424,12 +131,12 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     } else {
       hasRestoredScrollRef.current = true;
     }
-  }, [viewId, rowsByIndex.size]);
+  }, [viewId, totalCount, tableContainerRef]);
 
   // -------------------------------------------------------------------------
   // SAVE SCROLL POSITION TO LOCALSTORAGE
   // -------------------------------------------------------------------------
-  // Save scroll position as user scrolls (debounced via scroll events)
+
   useEffect(() => {
     const container = tableContainerRef.current;
     if (!container) return;
@@ -437,7 +144,6 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     let scrollTimeout: NodeJS.Timeout;
 
     const handleScroll = () => {
-      // Debounce: only save after user stops scrolling for 150ms
       clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(() => {
         const storageKey = `airtable-scroll-${viewId}`;
@@ -450,30 +156,25 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
       container.removeEventListener("scroll", handleScroll);
       clearTimeout(scrollTimeout);
     };
-  }, [viewId]);
+  }, [viewId, tableContainerRef]);
 
   // Reset restoration flag when view changes
   useEffect(() => {
     hasRestoredScrollRef.current = false;
   }, [viewId]);
 
-  // NOTE: Prefetching is now handled by useWindowedRows based on scroll position
+  // -------------------------------------------------------------------------
+  // PUSH DIMENSIONS TO SELECTION PROVIDER
+  // -------------------------------------------------------------------------
 
-  const paddingTop = virtualRows.length > 0 ? (virtualRows[0]?.start ?? 0) : 0;
-  const paddingBottom =
-    virtualRows.length > 0
-      ? totalSize - (virtualRows[virtualRows.length - 1]?.end ?? 0)
-      : 0;
-
-  // Calculate table width: row number column (66) + visible data columns (180 each)
-  const tableWidth = 66 + (columns.length - 1) * 180;
+  useEffect(() => {
+    updateDimensions(totalCount, columns.length);
+  }, [totalCount, columns.length, updateDimensions]);
 
   // -------------------------------------------------------------------------
   // LOADING STATES
   // -------------------------------------------------------------------------
 
-  // CRITICAL: Wait for view config to load before rendering
-  // This prevents showing unfiltered data before filters are applied
   if (!isConfigLoaded) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -482,9 +183,7 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     );
   }
 
-  // Show loading ONLY on initial load (no data yet)
-  // rowsLoading = true only when we have no data at all
-  if (tableLoading || rowsLoading) {
+  if (isLoadingTable || isLoadingRows) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-gray-500">Loading...</div>
@@ -492,7 +191,6 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     );
   }
 
-  // No table found
   if (!table) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -501,75 +199,60 @@ export function DataGrid({ tableId, viewId }: DataGridProps) {
     );
   }
 
-  // Wrap everything that needs the context in the provider
+  // -------------------------------------------------------------------------
+  // RENDER
+  // -------------------------------------------------------------------------
+
   return (
-    <WindowedRowsProvider value={{ addOptimisticRow, invalidate, totalCount }}>
-      <div className="relative h-full">
-        <div
-          ref={tableContainerRef}
-          className="h-full overflow-auto"
-          style={{ contain: "strict" }}
-        >
-          <div className="pb-30 flex">
-            <DataGridTable
-              table={tableInstance}
-              tableId={tableId}
-              viewId={viewId}
-              virtualRows={virtualRows}
-              paddingTop={paddingTop}
-              paddingBottom={paddingBottom}
-              columnCount={columns.length}
-              tableWidth={tableWidth}
-              rowsByIndex={optimisticRowsByIndex}
-              totalCount={totalCount}
-              filters={highlightFilters}
-              sorts={highlightSorts}
-              searchTerm={highlightSearch}
-            />
-            <AddColumnButton tableId={tableId} />
-          </div>
-
-          {/* Empty state overlay - show when there are 0 records */}
-          {totalCount === 0 && !rowsLoading && !tableLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80">
-              <div className="text-center">
-                <p className="text-sm text-gray-500">
-                  All records are filtered
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Global context menu for rows - rendered once at DataGrid level */}
-          {contextMenuState?.cellRef && (
-            <CellContextMenu
-              cellRef={contextMenuState.cellRef}
-              rowId={contextMenuState.rowId}
-              tableId={contextMenuState.tableId}
-              selectedRowIds={contextMenuState.selectedRowIds}
-              onClose={hideContextMenu}
-            />
-          )}
-
-          {/* Global context menu for columns - rendered once at DataGrid level */}
-          {columnContextMenuState?.headerRef && (
-            <ColumnHeaderContextMenu
-              headerRef={columnContextMenuState.headerRef}
-              columnId={columnContextMenuState.columnId}
-              tableId={columnContextMenuState.tableId}
-              onClose={hideColumnContextMenu}
-              initiallyOpenEditPanel={columnContextMenuState.openEditPanel}
-            />
-          )}
+    <div className="relative h-full">
+      <div
+        ref={tableContainerRef}
+        className="h-full overflow-auto"
+        style={{ contain: "strict" }}
+      >
+        <div className="pb-30 flex">
+          <DataGridTable />
+          <AddColumnButton />
         </div>
 
-        {/* Sticky bottom bar showing record count */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-gray-200 bg-gray-50 px-4 py-1">
-          <div className="text-xs text-gray-600" style={{ width: tableWidth }}>
-            {totalCount} {totalCount === 1 ? "record" : "records"}
+        {/* Empty state overlay */}
+        {totalCount === 0 && !isLoadingRows && !isLoadingTable && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80">
+            <div className="text-center">
+              <p className="text-sm text-gray-500">All records are filtered</p>
+            </div>
           </div>
+        )}
+
+        {/* Global context menu for rows */}
+        {contextMenuState?.cellRef && (
+          <CellContextMenu
+            cellRef={contextMenuState.cellRef}
+            rowId={contextMenuState.rowId}
+            tableId={contextMenuState.tableId}
+            selectedRowIds={contextMenuState.selectedRowIds}
+            onClose={hideContextMenu}
+          />
+        )}
+
+        {/* Global context menu for columns */}
+        {columnContextMenuState?.headerRef && (
+          <ColumnHeaderContextMenu
+            headerRef={columnContextMenuState.headerRef}
+            columnId={columnContextMenuState.columnId}
+            tableId={columnContextMenuState.tableId}
+            onClose={hideColumnContextMenu}
+            initiallyOpenEditPanel={columnContextMenuState.openEditPanel}
+          />
+        )}
+      </div>
+
+      {/* Sticky bottom bar showing record count */}
+      <div className="absolute bottom-0 left-0 right-0 border-t border-gray-200 bg-gray-50 px-4 py-1">
+        <div className="text-xs text-gray-600" style={{ width: tableWidth }}>
+          {totalCount} {totalCount === 1 ? "record" : "records"}
         </div>
       </div>
-    </WindowedRowsProvider>
+    </div>
   );
 }
