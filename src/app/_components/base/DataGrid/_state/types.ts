@@ -1,4 +1,4 @@
-import type { Table } from "@tanstack/react-table";
+import type { Table, ColumnDef } from "@tanstack/react-table";
 import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 import type { RowData } from "../hooks/useTableColumns";
 
@@ -35,7 +35,7 @@ export interface DataGridContextValue {
   } | null;
   rowsByIndex: Map<number, RowData>;
   totalCount: number;
-  columns: any[]; // ColumnDef from useTableColumns
+  columns: ColumnDef<RowData>[]; // Column definitions for TanStack Table
 
   // -------------------------------------------------------------------------
   // LOADING STATES
