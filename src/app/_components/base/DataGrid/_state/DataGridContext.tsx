@@ -304,7 +304,7 @@ export function DataGridContextProvider({
 
   const tableWidth = 66 + (columns.length - 1) * 180;
 
-  const paddingTop = virtualRows.length > 0 ? virtualRows[0]?.start ?? 0 : 0;
+  const paddingTop = virtualRows.length > 0 ? (virtualRows[0]?.start ?? 0) : 0;
   const paddingBottom =
     virtualRows.length > 0
       ? totalSize - (virtualRows[virtualRows.length - 1]?.end ?? 0)
